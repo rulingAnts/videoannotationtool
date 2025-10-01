@@ -68,16 +68,16 @@ For researchers focusing on grammar, case systems, and how participants are intr
 
 ## Getting Started
 
+For most users, we highly recommend using the **portable build for Windows (x64)** linked at the top of this page.
+
+## For Developers & Contributors (Installing from Source):
+
 ### Prerequisites
 
   * **Python 3.11**: This script is specifically built and tested for Python 3.11. **It will not work with Python 3.12 or higher** due to compatibility issues with some dependencies.
   * **FFmpeg**: You must have FFmpeg installed and in your system's PATH. You can download it from the official [FFmpeg website](https://ffmpeg.org/download.html).
 
 ### Installation
-
-For most users, we highly recommend using the **portable build for Windows (x64)** linked at the top of this page.
-
-**For Developers & Contributors (Installing from Source):**
 
 1.  **Clone this repository to your local machine:**
     ```bash
