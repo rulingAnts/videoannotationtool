@@ -46,11 +46,11 @@ These kits include video files widely used for the elicitation of verbal behavio
 
 - **MPI Staged Event Videos:** A series of video sets designed to explore features of event representation in the language of study, in particular, multi-verb constructions, event typicality, and event complexity.. (highly recommended for languages with serial verbs and clause chaining)
   
-  - **Link:** [https://archive.mpi.nl/mpi/islandora/object/lat%3A1839_00_0000_0000_0021_DC42_E](https://archive.mpi.nl/mpi/islandora/object/lat%3A1839_becc2150_e760_4270_aa0b_481511f88f1b)
+  - **Link:** [https://hdl.handle.net/1839/becc2150-e760-4270-aa0b-481511f88f1b](https://hdl.handle.net/1839/becc2150-e760-4270-aa0b-481511f88f1b)
 
 - **The Pear Story:** A famous, silent 6-minute video designed to elicit narrative discourse, often used to study grammar, narrative structure, and reference tracking. The video file can be downloaded and used directly.
   
-  - **Link:** [https://archive.mpi.nl/mpi/islandora/object/lat%3A1839_becc2150_e760_4270_aa0b_481511f88f1b](https://archive.mpi.nl/mpi/islandora/object/lat%3A1839_becc2150_e760_4270_aa0b_481511f88f1b)
+  - **Link:** [https://hdl.handle.net/1839/00-0000-0000-0015-690E-8](https://hdl.handle.net/1839/00-0000-0000-0015-690E-8)
 
 ### Kits for Participant Reference & Case Alignment
 
