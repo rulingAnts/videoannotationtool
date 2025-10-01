@@ -44,7 +44,7 @@ These kits include video files widely used for the elicitation of verbal behavio
   
   - **Link:** [https://archive.mpi.nl/mpi/islandora/object/lat%3A1839_00_0000_0000_0021_DC42_E](https://archive.mpi.nl/mpi/islandora/object/lat%3A1839_00_0000_0000_0021_DC42_E)
 
-- **MPI Staged Event Videos:** A series of video sets designed to explore features of event representation in the language of study, in particular, multi-verb constructions, event typicality, and event complexity.. (highly recommended for languages with serial verbs and clause chaining)*
+- **MPI Staged Event Videos:** A series of video sets designed to explore features of event representation in the language of study, in particular, multi-verb constructions, event typicality, and event complexity.. (highly recommended for languages with serial verbs and clause chaining)
   
   - **Link:** [https://archive.mpi.nl/mpi/islandora/object/lat%3A1839_00_0000_0000_0021_DC42_E](https://archive.mpi.nl/mpi/islandora/object/lat%3A1839_becc2150_e760_4270_aa0b_481511f88f1b)
 
