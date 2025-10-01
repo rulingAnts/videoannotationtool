@@ -62,9 +62,6 @@ For researchers focusing on grammar, case systems, and how participants are intr
 - **Caused Positions:** A set of video stimuli for eliciting descriptions of caused motion and placement events, useful for investigating transitivity and argument roles.
   
   - **Resource Link (Includes video files):** [MPI Field Manual Entry for Caused Positions](https://www.google.com/search?q=http://fieldmanuals.mpi.nl/volumes/2001/caused-positions/)
-- **The CEGS Stimulus Kit for Case Elicitation:** An elicitation toolkit focused on case marking and its acquisition. While primarily picture-based, it can be a valuable guide for designing comparable video stimuli.
-  
-  - **Resource Link:** [CEGS Elicitation Toolkit](https://www.google.com/search?q=http://academia.edu/794129/CEGS_An_elicitation_took_kit_for_studies_on_case_marking_and_its_acquisition)
 
 ---
 
