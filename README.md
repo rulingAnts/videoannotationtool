@@ -84,6 +84,25 @@ This is a high-priority task that will make the tool much easier for linguists t
 
 We welcome contributions from the community\! If you encounter a bug, have a feature request, or would like to contribute code, please follow our [CONTRIBUTING.md](https://www.google.com/search?q=CONTRIBUTING.md) guidelines.
 
+
+## 🚀 Call for Contributors: macOS Installer Optimization
+
+For macOS, the goal is to create a small, efficient, and professional **drag-and-drop `.app` bundle** that is under GitHub's 25MB limit.
+
+Standard macOS packaging tools like PyInstaller bundle the entire Python runtime and all large dependencies, which results in a file too large for GitHub releases.
+
+**Goal:** Create a thin **PyInstaller/py2app**-based `.app` bundle (under 25MB) that runs a custom shell script on the first launch to download the bulk of the required dependencies (like pre-compiled libraries or the specific Python 3.11 environment) and place them into the application's resources folder.
+
+This will involve:
+
+1. **Selecting an App-Bundling Tool:** Using **PyInstaller** or **py2app** to create the initial `.app` structure.
+2. ****Developing the Download Logic:** Writing a **Shell Script** or a small Python bootstrap script that, upon first run, uses `curl` or `wget` to download a single, large compressed file of pre-compiled dependencies from an external host (e.g., GitHub LFS, a CDN, or even a different GitHub Release asset).
+
+1. **Self-Extraction:** The script must then un-zip and install these files into the correct location inside the `.app` package content, making the application fully functional.
+  
+2. **Creating the DMG:** Building a final, professional `.dmg` (Disk Image) for distribution.
+
+
 ## License
 
 This software is released under the **GNU Affero General Public License, Version 3 (AGPL-3.0)**. The AGPL is a strong copyleft license that ensures the freedom of the software for all users. Any modifications or derivative works must also be licensed under the same terms, guaranteeing that this project will always remain free and open for the benefit of the linguistic community.
