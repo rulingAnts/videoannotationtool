@@ -58,10 +58,10 @@ For researchers focusing on grammar, case systems, and how participants are intr
 
 - **Cut and Break Clips:** A stimulus set of short video clips designed to elicit descriptions of cutting, breaking, and related events, which often prompt the use of different case/alignment patterns and argument structure.
   
-  - **Resource Link (Includes video files):** [MPI Field Manual Entry for Cut and Break Clips](http://fieldmanuals.mpi.nl/volumes/2001/cut-and-break-clips/)
+  - **Resource Link (Includes video files):** [https://hdl.handle.net/1839/9271a14b-a214-419f-a968-3e7fc9bad5fa](https://hdl.handle.net/1839/9271a14b-a214-419f-a968-3e7fc9bad5fa)
 - **Caused Positions:** A set of video stimuli for eliciting descriptions of caused motion and placement events, useful for investigating transitivity and argument roles.
   
-  - **Resource Link (Includes video files):** [MPI Field Manual Entry for Caused Positions](http://fieldmanuals.mpi.nl/volumes/2001/caused-positions/)
+  - **Resource Link (Includes video files):** [https://hdl.handle.net/1839/a43eb64c-cf57-4461-b6a7-d6512f5f8d84](https://hdl.handle.net/1839/a43eb64c-cf57-4461-b6a7-d6512f5f8d84)
 
 ---
 
