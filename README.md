@@ -149,6 +149,7 @@ This will involve:
   
 2. **Creating the DMG:** Building a final, professional `.dmg` (Disk Image) for distribution.
 
+## ⚖️ Licensing
 
 Copyright © 2025 Seth Johnston
 
