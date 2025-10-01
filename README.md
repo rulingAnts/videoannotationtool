@@ -150,11 +150,14 @@ This will involve:
 2. **Creating the DMG:** Building a final, professional `.dmg` (Disk Image) for distribution.
 
 
-## License
+Copyright © 2025 Seth Johnston
 
-This software is released under the **GNU Affero General Public License, Version 3 (AGPL-3.0)**. The AGPL is a strong copyleft license that ensures the freedom of the software for all users. Any modifications or derivative works must also be licensed under the same terms, guaranteeing that this project will always remain free and open for the benefit of the linguistic community.
+This software is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
-A copy of the full license text can be found in the [LICENSE](https://github.com/rulingAnts/videoannotationtool?tab=AGPL-3.0-1-ov-file) file.
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License along with this program. If not, see https://www.gnu.org/licenses/.
+
 
 ## Acknowledgments
 
