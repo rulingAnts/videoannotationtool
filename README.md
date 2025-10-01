@@ -28,22 +28,39 @@ The tool allows users to select a folder of video files, play them back, and rec
 
 ### Installation
 
-1.  Clone this repository to your local machine:
+For most users, we highly recommend using the **portable build for Windows (x64)** linked at the top of this page.
+
+**For Developers & Contributors (Installing from Source):**
+
+1.  **Clone this repository to your local machine:**
     ```bash
-    git clone https://github.com/rulingAnts/videoannotationtool.git
-    ```
-2.  Navigate to the project directory:
-    ```bash
+    git clone [https://github.com/rulingAnts/videoannotationtool.git](https://github.com/rulingAnts/videoannotationtool.git)
     cd videoannotationtool
     ```
-3.  Install the required Python libraries. It is highly recommended to use a virtual environment.
+
+2.  **Install Python Libraries:** It is *highly recommended* to use a virtual environment.
     ```bash
-    pip install opencv-python Pillow pyaudio pydub numpy
+    # Create the virtual environment
+    python3.11 -m venv venv
+    
+    # Activate the environment (Windows)
+    .\venv\Scripts\activate
+    
+    # Activate the environment (Linux/macOS)
+    source venv/bin/activate
+    
+    # Install the required packages
+    pip install -r requirements.txt
+    ```
+
+3.  **Run the application from your terminal:**
+    ```bash
+    python3.11 videoannotation.py
     ```
 
 ## Usage
 
-1.  Run the application from your terminal:
+1.  Run the application from your terminal (or double-click the portable app "Video Annotation Tool.exe"):
     ```bash
     python3.11 videoannotation.py
     ```
@@ -53,7 +70,17 @@ The tool allows users to select a folder of video files, play them back, and rec
 5.  Edit project metadata using the text box on the left, and remember to click **"Save"**.
 6.  Use the various export buttons to manage your audio data and prepare it for further analysis.
 
-## Contributing
+## 🚀 Call for Contributors: Windows Installer Development
+
+Currently, the portable build is large and must be manually updated. We are looking for contributors to help us develop a professional, small-footprint Windows Installer.
+
+This new installer will be a **Bootstrapper** (or **Network Installer**). It will be tiny (under 1MB) and will automatically perform all installation steps for the user:
+
+1.  **Download and Install** the correct Python 3.11 interpreter into the application folder.
+2.  **Download and Install** all Python dependencies (from PyPI) using `pip`.
+3.  **Create** a Start Menu shortcut.
+
+This is a high-priority task that will make the tool much easier for linguists to use! Please see **Issue #1** (or the top-pinned issue) for full details on how to contribute to this effort.
 
 We welcome contributions from the community\! If you encounter a bug, have a feature request, or would like to contribute code, please follow our [CONTRIBUTING.md](https://www.google.com/search?q=CONTRIBUTING.md) guidelines.
 
