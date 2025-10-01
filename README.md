@@ -128,7 +128,7 @@ This new installer will be a **Bootstrapper** (or **Network Installer**). It wil
 
 This is a high-priority task that will make the tool much easier for linguists to use! Please see **Issue #1** (or the top-pinned issue) for full details on how to contribute to this effort.
 
-We welcome contributions from the community\! If you encounter a bug, have a feature request, or would like to contribute code, please follow our [CONTRIBUTING.md](https://www.google.com/search?q=CONTRIBUTING.md) guidelines.
+We welcome contributions from the community\! If you encounter a bug, have a feature request, or would like to contribute code, please follow our [CONTRIBUTING.md](https://github.com/rulingAnts/videoannotationtool?tab=contributing-ov-file) guidelines.
 
 
 ## 🚀 Call for Contributors: macOS Installer Optimization
@@ -153,7 +153,7 @@ This will involve:
 
 This software is released under the **GNU Affero General Public License, Version 3 (AGPL-3.0)**. The AGPL is a strong copyleft license that ensures the freedom of the software for all users. Any modifications or derivative works must also be licensed under the same terms, guaranteeing that this project will always remain free and open for the benefit of the linguistic community.
 
-A copy of the full license text can be found in the [LICENSE](https://www.google.com/search?q=LICENSE) file.
+A copy of the full license text can be found in the [LICENSE](https://github.com/rulingAnts/videoannotationtool?tab=AGPL-3.0-1-ov-file) file.
 
 ## Acknowledgments
 
