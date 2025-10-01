@@ -2,7 +2,8 @@
 
 A simple and robust video annotation tool designed to streamline data collection and analysis for linguistic fieldwork.
 
-Download the latest portable build for Windows (x64) [here](https://drive.google.com/file/d/1Cos0r0hxpJkkUguE0EgueQcGlUY7-u3b/view?usp=sharing).
+Download the latest portable build for Windows (x64) [here](https://drive.google.com/file/d/1Cos0r0hxpJkkUguE0EgueQcGlUY7-u3b/view?usp=sharing). 
+This runs right out of the download folder without any further installation or setup necessary.
 
 ## About the Project
 
