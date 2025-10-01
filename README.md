@@ -19,6 +19,50 @@ The tool allows users to select a folder of video files, play them back, and rec
   * **Metadata Management:** Easily create and edit a `metadata.txt` file for each project, ensuring your data is well-documented.
   * **Audio File Management:** Import, export, and clear recorded `.wav` files with a single click.
 
+---
+
+## Usage and Recommended Stimulus Kits
+
+To get started quickly, you can use established, cross-culturally validated **video stimulus materials**. Simply download a kit, place the video files in a folder, and load that folder into the application using the **"Select Folder"** button.
+
+1. Click the "Select Folder" button to choose a directory containing your video files.
+  
+2. Select a video from the list on the left.
+  
+3. Use the video and audio controls on the right to play the video, record audio, and manage your annotations.
+  
+4. Edit project metadata using the text box on the left, and remember to click "Save".
+  
+5. Use the various export buttons to manage your audio data and prepare it for further analysis.
+  
+
+### General Stimulus Kits (Max Planck Institute for Psycholinguistics)
+
+These kits include video files widely used for the elicitation of verbal behavior and semantics:
+
+- **MPI Field Manuals and Stimulus Materials:** A repository of fieldwork manuals and stimulus materials, including many sets of video stimuli. *Free registration is often required for access.*
+  
+  - **Link:** https://archive.mpi.nl/mpi/islandora/object/lat%3A1839_00_0000_0000_0021_DC42_E
+- **The Pear Story:** A famous, silent 6-minute video designed to elicit narrative discourse, often used to study grammar, narrative structure, and reference tracking. The video file can be downloaded and used directly.
+  
+  - **Link:** https://archive.mpi.nl/mpi/islandora/object/lat%3A1839_becc2150_e760_4270_aa0b_481511f88f1b
+
+### Kits for Participant Reference & Case Alignment
+
+For researchers focusing on grammar, case systems, and how participants are introduced and tracked in discourse (e.g., switch reference, zero anaphora, ergativity, pronouns), these resources include ready-to-use video clips:
+
+- **Cut and Break Clips:** A stimulus set of short video clips designed to elicit descriptions of cutting, breaking, and related events, which often prompt the use of different case/alignment patterns and argument structure.
+  
+  - **Resource Link (Includes video files):** [MPI Field Manual Entry for Cut and Break Clips](https://www.google.com/search?q=http://fieldmanuals.mpi.nl/volumes/2001/cut-and-break-clips/)
+- **Caused Positions:** A set of video stimuli for eliciting descriptions of caused motion and placement events, useful for investigating transitivity and argument roles.
+  
+  - **Resource Link (Includes video files):** [MPI Field Manual Entry for Caused Positions](https://www.google.com/search?q=http://fieldmanuals.mpi.nl/volumes/2001/caused-positions/)
+- **The CEGS Stimulus Kit for Case Elicitation:** An elicitation toolkit focused on case marking and its acquisition. While primarily picture-based, it can be a valuable guide for designing comparable video stimuli.
+  
+  - **Resource Link:** [CEGS Elicitation Toolkit](https://www.google.com/search?q=http://academia.edu/794129/CEGS_An_elicitation_took_kit_for_studies_on_case_marking_and_its_acquisition)
+
+---
+
 ## Getting Started
 
 ### Prerequisites
