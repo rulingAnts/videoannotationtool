@@ -81,7 +81,7 @@ For most users, we highly recommend using the **portable build for Windows (x64)
 
 1.  **Clone this repository to your local machine:**
     ```bash
-    git clone [https://github.com/rulingAnts/videoannotationtool.git](https://github.com/rulingAnts/videoannotationtool.git)
+    git clone https://github.com/rulingAnts/videoannotationtool.git
     cd videoannotationtool
     ```
 
@@ -119,7 +119,7 @@ For most users, we highly recommend using the **portable build for Windows (x64)
 
 ## 🚀 Call for Contributors: Windows Installer Development
 
-Currently, the portable build is large and must be manually updated. We are looking for contributors to help us develop a professional, small-footprint Windows Installer.
+Currently, the portable build is large and must be manually updated (and also looks slightly sketchy). We are looking for contributors to help us develop a professional, small-footprint Windows Installer.
 
 This new installer will be a **Bootstrapper** (or **Network Installer**). It will be tiny (under 1MB) and will automatically perform all installation steps for the user:
 
