@@ -213,3 +213,55 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+
+# Java/Kotlin Specifics
+# --------------------------------------------------------------------------
+# Compiled class files
+*.class
+
+# Log files
+*.log
+
+# Maven artifacts
+target/
+pom.xml.tag
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# Gradle artifacts
+.gradle/
+build/
+out/
+gradlew.bat
+gradlew
+gradle-wrapper.jar
+
+# Kotlin artifacts
+.idea/
+.project
+.classpath
+.settings/
+.ds_store
+*.iml
+*.iws
+*.ipr
+
+# IntelliJ IDEA (Commonly used for Java/Kotlin)
+.idea/
+# You already have .idea/ but here are more specific ignores
+*.iml
+*.iws
+*.ipr
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/libraries/
+.idea/vcs.xml
+.idea/encodings.xml
+.idea/modules.xml
+.idea/uiDesigner.xml
+.idea/copyright/
+.idea/scopes/
+.idea/jarRepositories.xml
+
