@@ -3,7 +3,6 @@
 *.png
 *.jpg
 *.icns
-scripts
 assets
 
 # Byte-compiled / optimized / DLL files
