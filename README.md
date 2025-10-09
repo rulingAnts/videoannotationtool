@@ -160,6 +160,29 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
 You should have received a copy of the GNU Affero General Public License along with this program. If not, see https://www.gnu.org/licenses/.
 
 
+## Third-Party Libraries
+
+This project includes pre-built binaries of FFmpeg, distributed by **BtbN/FFmpeg-Builds**.
+
+FFmpeg is a suite of libraries and programs for handling video, audio, and other multimedia files and streams, licensed primarily under the GNU Lesser General Public License (LGPL) version 2.1 or later, or the GNU General Public License (GPL) version 2 or later, depending on the enabled components.
+
+### FFmpeg License and Source Code Distribution
+
+In compliance with the (L)GPL license, we are providing the complete corresponding source code for the FFmpeg binaries included in this distribution.
+
+* **FFmpeg Binary Source (BitBn Build):**
+    * **Included Archive:** `BitBn_FFmpeg_Source_Code.zip`
+    * **Original Source:** [Link to the specific BitBn/FFmpeg-Builds release page you used, e.g., `https://github.com/BtbN/FFmpeg-Builds/releases/tag/v6.1.1-latest-20231011`]
+
+* **Attribution Notice:**
+    > This software uses code of [FFmpeg](http://ffmpeg.org/) licensed under the **LGPLv2.1** and/or **GPLv2** (depending on the build variant) and its source code is available in the provided `BitBn_FFmpeg_Source_Code.zip` archive (with the [latest release](https://github.com/rulingAnts/videoannotationtool/releases/latest)).
+
+* **License Text:**
+    > A copy of the GNU Lesser General Public License, version 2.1, and the GNU General Public License, version 2, are included in the source code archive and should be read for full compliance details.
+
+***Disclaimer:*** *This information is for license compliance purposes and does not constitute legal advice. Please consult a legal professional for complete licensing guidance.*
+
+
 ## 🌟 Acknowledgments
 
 This project, and related tools, owe their existence to an **AI-first development methodology**, leveraging Large Language Models (LLMs) for the vast majority of coding and architecture.
