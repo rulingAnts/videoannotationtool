@@ -238,16 +238,143 @@ LABELS_ALL = {
     },
 }
 
+
+# Simple tooltip helper for Tkinter widgets
+class ToolTip:
+    def __init__(
+        self,
+        widget,
+        text: str = "",
+        delay: int = 500,
+        wrap_at_sep: bool = False,
+        max_width_ratio: float = 0.5,
+        max_width_pixels: int | None = None,
+    ):
+        self.widget = widget
+        self.text = text
+        self.delay = delay
+        self.wrap_at_sep = wrap_at_sep
+        self.max_width_ratio = max_width_ratio
+        self.max_width_pixels = max_width_pixels
+        self._after_id = None
+        self.tipwindow = None
+        # Bind events
+        self.widget.bind("<Enter>", self._on_enter)
+        self.widget.bind("<Leave>", self._on_leave)
+        self.widget.bind("<Motion>", self._on_motion)
+
+    def set_text(self, text: str):
+        self.text = text or ""
+
+    def _on_enter(self, event=None):
+        if not self.text:
+            return
+        self._schedule(event)
+
+    def _on_leave(self, event=None):
+        self._unschedule()
+        self._hide()
+
+    def _on_motion(self, event):
+        # Reposition tooltip near cursor if it's shown and keep it on-screen
+        if self.tipwindow:
+            x = event.x_root + 12
+            y = event.y_root + 8
+            self._place_tooltip(x, y)
+
+    def _schedule(self, event=None):
+        self._unschedule()
+        self._after_id = self.widget.after(self.delay, lambda e=event: self._show(e))
+
+    def _unschedule(self):
+        if self._after_id:
+            try:
+                self.widget.after_cancel(self._after_id)
+            except Exception:
+                pass
+            self._after_id = None
+
+    def _show(self, event=None):
+        if self.tipwindow or not self.text:
+            return
+        x = (event.x_root + 12) if event else (self.widget.winfo_rootx() + 12)
+        y = (event.y_root + 8) if event else (self.widget.winfo_rooty() + self.widget.winfo_height() + 8)
+        self.tipwindow = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+        # Determine wrap length based on screen size
+        screen_w = self.widget.winfo_screenwidth()
+        wrap_len = int(min(self.max_width_pixels or screen_w * self.max_width_ratio, screen_w - 16))
+        # Optionally insert line breaks at path separators for readability
+        text_to_show = self._format_text(self.text)
+        label = tk.Label(
+            tw,
+            text=text_to_show,
+            justify=tk.LEFT,
+            relief=tk.SOLID,
+            borderwidth=1,
+            background="#ffffe0",
+            wraplength=wrap_len,
+        )
+        label.pack(ipadx=4, ipady=2)
+        # After layout, adjust to keep on-screen
+        tw.update_idletasks()
+        self._place_tooltip(x, y)
+
+    def _hide(self):
+        if self.tipwindow:
+            try:
+                self.tipwindow.destroy()
+            except Exception:
+                pass
+            self.tipwindow = None
+
+    def _place_tooltip(self, x: int, y: int):
+        if not self.tipwindow:
+            return
+        screen_w = self.widget.winfo_screenwidth()
+        screen_h = self.widget.winfo_screenheight()
+        self.tipwindow.update_idletasks()
+        w = self.tipwindow.winfo_reqwidth()
+        h = self.tipwindow.winfo_reqheight()
+        # Clamp within screen bounds with margin
+        margin = 8
+        x = max(margin, min(x, screen_w - w - margin))
+        y = max(margin, min(y, screen_h - h - margin))
+        self.tipwindow.wm_geometry(f"+{x}+{y}")
+
+    def _format_text(self, text: str) -> str:
+        if not text:
+            return ""
+        if self.wrap_at_sep:
+            # Insert line breaks after path separators for readability.
+            # Handle both os.sep and os.altsep (e.g., "/" and "\\" on Windows).
+            seps = {os.sep}
+            if os.altsep:
+                seps.add(os.altsep)
+            formatted = text
+            for s in seps:
+                formatted = formatted.replace(s, s + "\n")
+            return formatted
+        return text
+
 # Helper for PyInstaller runtime resource resolution
 def resource_path(relative_path, check_system=True):
-    """Get absolute path to resource, works for dev (system PATH) and PyInstaller."""
+    """Get absolute path to resource, works for dev and PyInstaller (onefile/onedir)."""
+    # In dev, optionally prefer a system-installed binary if just a filename is provided
     if check_system:
         binary_name = os.path.basename(relative_path)
         system_path = shutil.which(binary_name)
         if system_path:
             return system_path
-    if hasattr(sys, '_MEIPASS'):
+    # When bundled by PyInstaller, _MEIPASS is set (especially in onefile)
+    if hasattr(sys, '_MEIPASS') and sys._MEIPASS:
         return os.path.join(sys._MEIPASS, relative_path)
+    # In onedir app bundles, prefer the executable directory (Contents/MacOS) over CWD
+    if getattr(sys, 'frozen', False):
+        base_dir = os.path.dirname(sys.executable)
+        return os.path.join(base_dir, relative_path)
+    # Fallback to current working directory
     return os.path.join(os.path.abspath("."), relative_path)
 
 # Configure OpenCV FFmpeg DLL path (Windows-specific)
@@ -305,6 +432,21 @@ class VideoAnnotationApp:
         self.ocenaudio_path = None
         self.settings_file = os.path.expanduser("~/.videooralannotation/settings.json")
         self.load_settings()
+
+        # Current folder display (shown under title/language bar)
+        self.folder_display_var = tk.StringVar(value=self.LABELS["no_folder_selected"])
+        self.folder_display_label = tk.Label(
+            root,
+            textvariable=self.folder_display_var,
+            anchor='w'
+        )
+        self.folder_display_label.pack(fill=tk.X, padx=10)
+        self.folder_display_tooltip = ToolTip(
+            self.folder_display_label,
+            text="",
+            wrap_at_sep=True,
+            max_width_ratio=0.5,
+        )
 
         # Main container
         self.main_frame = tk.Frame(root)
@@ -423,6 +565,19 @@ class VideoAnnotationApp:
                     widget.config(text=self.LABELS["edit_metadata"])
                 if isinstance(widget, tk.Button):
                     widget.config(text=self.LABELS["save_metadata"])
+        # Update current folder display text in case no folder is selected (localized)
+        if not self.folder_path:
+            self.update_folder_display()
+
+    def update_folder_display(self):
+        if self.folder_path:
+            # show only the folder name in the label, full path in tooltip
+            folder_name = os.path.basename(os.path.normpath(self.folder_path)) or self.folder_path
+            self.folder_display_var.set(folder_name)
+            self.folder_display_tooltip.set_text(self.folder_path)
+        else:
+            self.folder_display_var.set(self.LABELS["no_folder_selected"])
+            self.folder_display_tooltip.set_text("")
 
     def load_settings(self):
         try:
@@ -444,6 +599,7 @@ class VideoAnnotationApp:
     def select_folder(self):
         self.folder_path = filedialog.askdirectory(title="Select Folder with Video Files")
         if self.folder_path:
+            self.update_folder_display()
             # On Windows, delete all files starting with a period
             if sys.platform == "win32":
                 hidden_files = [f for f in os.listdir(self.folder_path) if f.startswith('.')]
@@ -560,7 +716,7 @@ class VideoAnnotationApp:
         extensions = ('.mpg', '.mpeg', '.mp4', '.avi', '.mkv', '.mov')
         
         if not self.folder_path:
-            messagebox.showinfo(LABELS_ALL["no_folder_selected"], LABELS_ALL["no_folder_selected"])
+            messagebox.showinfo(self.LABELS["no_folder_selected"], self.LABELS["no_folder_selected"])
             return
 
         try:
@@ -574,7 +730,7 @@ class VideoAnnotationApp:
                 self.video_listbox.insert(tk.END, os.path.basename(video_path))
             
             if not self.video_files:
-                messagebox.showinfo(LABELS_ALL["no_videos_found"], f"{LABELS_ALL['no_videos_found']} {self.folder_path}")
+                messagebox.showinfo(self.LABELS["no_videos_found"], f"{self.LABELS['no_videos_found']} {self.folder_path}")
 
         except PermissionError:
             messagebox.showerror("Permission Denied", f"You do not have permission to access the folder: {self.folder_path}")

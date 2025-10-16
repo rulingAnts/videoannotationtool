@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Helper to: generate icon, run PyInstaller to build a one-file, windowed executable,
 and optionally prepare an NSIS installer script.

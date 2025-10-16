@@ -1,7 +1,7 @@
 Build instructions for Windows onefile, windowed executable and NSIS installer
 
 Prereqs
-- Python 3.8+
+- Python 3.8+ - 3.11 (will not work on Python newer than 3.11 because of packages no longer available)
 - pip install pillow pyinstaller
 - On Windows: install NSIS (makensis) to compile the .nsi installer
 
@@ -9,7 +9,7 @@ Quick steps
 
 1. Generate the icon files (PNG + ICO):
 
-   python3 scripts/generate_icon.py
+   python scripts/generate_icon.py
 
    This writes `assets/icon.png` and `assets/icon.ico`.
 

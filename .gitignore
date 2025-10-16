@@ -1,3 +1,9 @@
+# Mac OS Installers
+*.dmg
+*.pkg
+*.mpkg
+build_mac.py
+
 #Icons
 *.ico
 *.png
