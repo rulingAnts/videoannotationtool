@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Video Annotation Tool</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <meta name="description" content="Annotate videos with recorded audio notes, manage metadata, and export results—simple and fast." />
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="brand">
+        <img src="./assets/icon-64.png" alt="App icon" width="32" height="32" onerror="this.style.display='none'" />
+        <h1>Video Annotation Tool</h1>
+      </div>
+      <div class="badge">Free • Open Source</div>
+    </header>
+
+    <section class="hero card">
+      <h2>Download <span id="latestVersion" class="badge" style="margin-left:8px">checking…</span></h2>
+      <p>Get the latest version for your computer. No coding or setup required.</p>
+      <div class="actions">
+        <a id="winLink" class="button primary" href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">
+          <span>Download for Windows</span>
+          <span class="small">(.exe)</span>
+        </a>
+        <a id="macLink" class="button secondary" href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">
+          <span>Download for macOS</span>
+          <span class="small">(.dmg)</span>
+        </a>
+      </div>
+      <p>If these buttons don’t start a download, open the <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">latest releases page</a> and pick your file there.</p>
+      <noscript><p><strong>Note:</strong> Direct download buttons use JavaScript. If disabled, please use the releases page link above.</p></noscript>
+    </section>
+
+    <section class="card grid">
+      <div>
+        <h2>What it does</h2>
+        <ul>
+          <li>Play videos and record native speaker descriptions of each.</li>
+          <li>Keep simple project info in a built‑in metadata editor.</li>
+          <li>Export all your recordings (and metadata) in one step.</li>
+          <li>Open recordings in Ocenaudio for trimming, normalizing, and fine‑tuning.</li>
+          <li>Combine all WAV files into a single audio file with subtle click markers between items.</li>
+          <li>Choose your language for the interface.</li>
+        </ul>
+      </div>
+      <div>
+        <h2>Screenshot</h2>
+        <div class="figure">
+          <img src="./assets/screenshots/screenshot.png" alt="Video Annotation Tool main window" />
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Quick start</h2>
+      <ol>
+        <li>Prepare a folder with your video files (MP4, MOV, AVI, MKV, etc.).</li>
+        <li>Open the app and click “Select Folder”. Pick your video folder.</li>
+        <li>Select a video from the list to preview the first frame.</li>
+        <li>Press “Record Audio” to capture your native-speaker description; press again to stop and save. The app saves a WAV with the same name as the video.</li>
+        <li>Use “Export Recorded Data” to copy all WAVs and metadata.txt to a folder of your choice.</li>
+      </ol>
+    </section>
+
+    <section class="card grid">
+      <div>
+        <h2>Install on Windows</h2>
+        <ul>
+          <li>Download the <strong>.exe</strong> above.</li>
+          <li>Double‑click to run. If SmartScreen appears, choose “More info” → “Run anyway”.</li>
+          <li>No separate install is required.</li>
+        </ul>
+      </div>
+      <div>
+        <h2>Install on macOS</h2>
+        <ul>
+          <li>Download the <strong>.dmg</strong> above and open it.</li>
+          <li>Drag “Video Annotation Tool.app” into Applications.</li>
+          <li>On first launch, you may need to allow it in System Settings → Privacy & Security.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Working in a project</h2>
+      <ul>
+        <li><strong>Folder display:</strong> The app shows the current project folder at the top; hover to see the full path.</li>
+        <li><strong>Video preview & playback:</strong> Pick a video to preview the first frame and play/stop as needed.</li>
+        <li><strong>Audio notes:</strong> Record a short WAV per video. If a file exists, the app will ask before overwriting.</li>
+        <li><strong>Metadata:</strong> Edit project info in the side panel; it’s saved to <code>metadata.txt</code> in your folder.</li>
+        <li><strong>Open in Ocenaudio:</strong> Launch all WAVs in Ocenaudio for further editing.</li>
+        <li><strong>Export / Import:</strong> Export all WAVs + metadata, or import WAVs that match your video names.</li>
+        <li><strong>Join WAVs:</strong> Make a single WAV of all items, with subtle click separators between each clip.</li>
+        <li><strong>Languages:</strong> Use the top dropdown to switch the interface language.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Troubleshooting</h2>
+      <ul>
+        <li><strong>Microphone access:</strong> If recording is silent or fails, check your OS microphone permissions for the app.</li>
+        <li><strong>macOS cannot open the app:</strong> Right‑click the app → Open, or allow it in Privacy & Security and try again.</li>
+        <li><strong>No videos listed:</strong> Confirm the folder contains supported video files (e.g., .mp4, .mov).</li>
+        <li><strong>Need help?</strong> Visit the <a href="https://github.com/rulingAnts/videoannotationtool/issues" target="_blank" rel="noopener">issue tracker</a>.</li>
+      </ul>
+    </section>
+
+    <p class="footer">
+      Latest release: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → Releases</a>
+      · Source code: <a href="https://github.com/rulingAnts/videoannotationtool" target="_blank" rel="noopener">GitHub</a>
+    </p>
+  </div>
+  <script>
+    (function(){
+      const owner = 'rulingAnts';
+      const repo = 'videoannotationtool';
+      const api = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
+      const winA = document.getElementById('winLink');
+      const macA = document.getElementById('macLink');
+      const ver = document.getElementById('latestVersion');
+
+      fetch(api, { headers: { 'Accept': 'application/vnd.github+json' }})
+        .then(r => {
+          if (!r.ok) throw new Error('HTTP '+r.status);
+          return r.json();
+        })
+        .then(data => {
+          const tag = data.tag_name || data.name || '';
+          if (ver) ver.textContent = tag ? tag : 'latest';
+          const assets = Array.isArray(data.assets) ? data.assets : [];
+          const findByExt = (ext) => assets.find(a => a && a.browser_download_url && a.name && a.name.toLowerCase().endsWith(ext));
+          const exe = findByExt('.exe');
+          const dmg = findByExt('.dmg');
+          if (exe && winA) {
+            winA.href = exe.browser_download_url;
+            winA.removeAttribute('target');
+            winA.removeAttribute('rel');
+          }
+          if (dmg && macA) {
+            macA.href = dmg.browser_download_url;
+            macA.removeAttribute('target');
+            macA.removeAttribute('rel');
+          }
+        })
+        .catch(err => {
+          if (ver) ver.textContent = 'latest';
+          console.warn('Failed to fetch latest release info:', err);
+        });
+    })();
+  </script>
+</body>
+</html>
