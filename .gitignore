@@ -6,10 +6,15 @@ build_mac.py
 
 #Icons
 *.ico
-*.png
 *.jpg
 *.icns
 assets
+ 
+# --- Overrides for documentation assets (allow screenshots on website) ---
+!docs/assets/
+!docs/assets/**
+!docs/assets/screenshots/
+!docs/assets/screenshots/**
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
