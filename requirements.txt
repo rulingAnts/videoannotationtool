@@ -1,6 +1,7 @@
-# Python 3.11 is required for this project
+# Python 3.11+ is required for this project (tested with 3.11 and 3.12)
 opencv-python
 Pillow
 PyAudio
 numpy
 pydub
+PySide6

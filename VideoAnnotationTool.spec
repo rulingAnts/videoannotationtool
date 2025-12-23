@@ -1,12 +1,14 @@
 # -*- mode: python ; coding: utf-8 -*-
+# PyInstaller spec for PySide6-based Video Annotation Tool (macOS)
 
+from PyInstaller.utils.hooks import collect_data_files
 
 a = Analysis(
-    ['/Users/Seth/GIT/videoannotationtool/./videoannotation.py'],
+    ['videoannotation.py'],
     pathex=[],
     binaries=[('/opt/homebrew/bin/ffmpeg', 'ffmpeg/bin'), ('/opt/homebrew/bin/ffprobe', 'ffmpeg/bin')],
-    datas=[],
-    hiddenimports=[],
+    datas=collect_data_files('PySide6', include_py_files=False),
+    hiddenimports=['PySide6.QtCore', 'PySide6.QtGui', 'PySide6.QtWidgets'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -32,7 +34,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['/Users/Seth/GIT/videoannotationtool/assets/icon.icns'],
+    icon='assets/icon.icns',
 )
 coll = COLLECT(
     exe,
@@ -46,6 +48,6 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='VideoAnnotationTool.app',
-    icon='/Users/Seth/GIT/videoannotationtool/./assets/icon.icns',
+    icon='assets/icon.icns',
     bundle_identifier=None,
 )

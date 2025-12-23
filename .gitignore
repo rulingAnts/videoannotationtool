@@ -276,3 +276,4 @@ gradle-wrapper.jar
 .idea/scopes/
 .idea/jarRepositories.xml
 
+videoannotation_tkinter*.py

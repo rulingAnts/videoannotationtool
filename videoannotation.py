@@ -1,21 +1,39 @@
-#!/usr/bin/env python3.11
-# videoannotation.py
+#!/usr/bin/env python3
+# videoannotation.py - PySide6 version
 # A simple video annotation tool with audio recording capabilities.
-#NOTE: This script works with python 3.11, NOT 3.12 (due to opencv and pydub issues) or 3.13
-import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+# NOTE: This script works with Python 3.11+
+
+import sys
 import os
 import cv2
-from PIL import Image, ImageTk
-import threading
-import pyaudio
-import wave
 import numpy as np
 import shutil
-from pydub import AudioSegment
 import subprocess
-import sys
 import json
+import argparse
+import logging
+import wave
+import threading
+from pathlib import Path
+from typing import Optional
+
+# Use PyAudio for audio (note: may not work in headless CI)
+try:
+    import pyaudio
+    PYAUDIO_AVAILABLE = True
+except (ImportError, OSError):
+    PYAUDIO_AVAILABLE = False
+    pyaudio = None
+
+from pydub import AudioSegment
+
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QPushButton, QListWidget, QLabel, QTextEdit, QMessageBox,
+    QFileDialog, QComboBox, QTabWidget, QSplitter
+)
+from PySide6.QtCore import Qt, QTimer, Signal, QThread, QObject
+from PySide6.QtGui import QImage, QPixmap, QKeyEvent
 
 # UI labels for easy translation, with language names in their own language
 LABELS_ALL = {
@@ -239,125 +257,6 @@ LABELS_ALL = {
 }
 
 
-# Simple tooltip helper for Tkinter widgets
-class ToolTip:
-    def __init__(
-        self,
-        widget,
-        text: str = "",
-        delay: int = 500,
-        wrap_at_sep: bool = False,
-        max_width_ratio: float = 0.5,
-        max_width_pixels: int | None = None,
-    ):
-        self.widget = widget
-        self.text = text
-        self.delay = delay
-        self.wrap_at_sep = wrap_at_sep
-        self.max_width_ratio = max_width_ratio
-        self.max_width_pixels = max_width_pixels
-        self._after_id = None
-        self.tipwindow = None
-        # Bind events
-        self.widget.bind("<Enter>", self._on_enter)
-        self.widget.bind("<Leave>", self._on_leave)
-        self.widget.bind("<Motion>", self._on_motion)
-
-    def set_text(self, text: str):
-        self.text = text or ""
-
-    def _on_enter(self, event=None):
-        if not self.text:
-            return
-        self._schedule(event)
-
-    def _on_leave(self, event=None):
-        self._unschedule()
-        self._hide()
-
-    def _on_motion(self, event):
-        # Reposition tooltip near cursor if it's shown and keep it on-screen
-        if self.tipwindow:
-            x = event.x_root + 12
-            y = event.y_root + 8
-            self._place_tooltip(x, y)
-
-    def _schedule(self, event=None):
-        self._unschedule()
-        self._after_id = self.widget.after(self.delay, lambda e=event: self._show(e))
-
-    def _unschedule(self):
-        if self._after_id:
-            try:
-                self.widget.after_cancel(self._after_id)
-            except Exception:
-                pass
-            self._after_id = None
-
-    def _show(self, event=None):
-        if self.tipwindow or not self.text:
-            return
-        x = (event.x_root + 12) if event else (self.widget.winfo_rootx() + 12)
-        y = (event.y_root + 8) if event else (self.widget.winfo_rooty() + self.widget.winfo_height() + 8)
-        self.tipwindow = tw = tk.Toplevel(self.widget)
-        tw.wm_overrideredirect(True)
-        tw.wm_geometry(f"+{x}+{y}")
-        # Determine wrap length based on screen size
-        screen_w = self.widget.winfo_screenwidth()
-        wrap_len = int(min(self.max_width_pixels or screen_w * self.max_width_ratio, screen_w - 16))
-        # Optionally insert line breaks at path separators for readability
-        text_to_show = self._format_text(self.text)
-        label = tk.Label(
-            tw,
-            text=text_to_show,
-            justify=tk.LEFT,
-            relief=tk.SOLID,
-            borderwidth=1,
-            background="#ffffe0",
-            wraplength=wrap_len,
-        )
-        label.pack(ipadx=4, ipady=2)
-        # After layout, adjust to keep on-screen
-        tw.update_idletasks()
-        self._place_tooltip(x, y)
-
-    def _hide(self):
-        if self.tipwindow:
-            try:
-                self.tipwindow.destroy()
-            except Exception:
-                pass
-            self.tipwindow = None
-
-    def _place_tooltip(self, x: int, y: int):
-        if not self.tipwindow:
-            return
-        screen_w = self.widget.winfo_screenwidth()
-        screen_h = self.widget.winfo_screenheight()
-        self.tipwindow.update_idletasks()
-        w = self.tipwindow.winfo_reqwidth()
-        h = self.tipwindow.winfo_reqheight()
-        # Clamp within screen bounds with margin
-        margin = 8
-        x = max(margin, min(x, screen_w - w - margin))
-        y = max(margin, min(y, screen_h - h - margin))
-        self.tipwindow.wm_geometry(f"+{x}+{y}")
-
-    def _format_text(self, text: str) -> str:
-        if not text:
-            return ""
-        if self.wrap_at_sep:
-            # Insert line breaks after path separators for readability.
-            # Handle both os.sep and os.altsep (e.g., "/" and "\\" on Windows).
-            seps = {os.sep}
-            if os.altsep:
-                seps.add(os.altsep)
-            formatted = text
-            for s in seps:
-                formatted = formatted.replace(s, s + "\n")
-            return formatted
-        return text
-
 # Helper for PyInstaller runtime resource resolution
 def resource_path(relative_path, check_system=True):
     """Get absolute path to resource, works for dev and PyInstaller (onefile/onedir)."""
@@ -377,6 +276,7 @@ def resource_path(relative_path, check_system=True):
     # Fallback to current working directory
     return os.path.join(os.path.abspath("."), relative_path)
 
+
 # Configure OpenCV FFmpeg DLL path (Windows-specific)
 def configure_opencv_ffmpeg():
     dll_name = "opencv_videoio_ffmpeg4120_64.dll"
@@ -391,6 +291,7 @@ def configure_opencv_ffmpeg():
             os.environ["OPENCV_FFMPEG_DLL_DIR"] = os.path.dirname(bundled_dll_path)
             os.environ["PATH"] = os.path.dirname(bundled_dll_path) + os.pathsep + os.environ.get("PATH", "")
 
+
 # Configure pydub to use FFmpeg
 def configure_pydub_ffmpeg():
     ffmpeg_path = resource_path(os.path.join("ffmpeg", "bin", "ffmpeg"))
@@ -403,203 +304,378 @@ def configure_pydub_ffmpeg():
     if os.path.exists(ffprobe_path):
         os.environ["PYDUB_FFPROBE"] = ffprobe_path
 
+
 configure_opencv_ffmpeg()
 configure_pydub_ffmpeg()
 
-class VideoAnnotationApp:
-    def __init__(self, root):
-        self.root = root
+
+# Audio playback worker (runs in QThread)
+class AudioPlaybackWorker(QObject):
+    finished = Signal()
+    error = Signal(str)
+    
+    def __init__(self, wav_path):
+        super().__init__()
+        self.wav_path = wav_path
+        self.should_stop = False
+    
+    def run(self):
+        if not PYAUDIO_AVAILABLE:
+            self.error.emit("PyAudio is not available")
+            self.finished.emit()
+            return
+            
+        try:
+            p = pyaudio.PyAudio()
+            wf = wave.open(self.wav_path, 'rb')
+            stream = p.open(
+                format=p.get_format_from_width(wf.getsampwidth()),
+                channels=wf.getnchannels(),
+                rate=wf.getframerate(),
+                output=True
+            )
+            
+            data = wf.readframes(1024)
+            while data and not self.should_stop:
+                stream.write(data)
+                data = wf.readframes(1024)
+            
+            stream.stop_stream()
+            stream.close()
+            p.terminate()
+            wf.close()
+        except Exception as e:
+            self.error.emit(f"Audio playback failed: {e}")
+        finally:
+            self.finished.emit()
+    
+    def stop(self):
+        self.should_stop = True
+
+
+# Audio recording worker (runs in QThread)
+class AudioRecordingWorker(QObject):
+    finished = Signal()
+    error = Signal(str)
+    
+    def __init__(self, wav_path):
+        super().__init__()
+        self.wav_path = wav_path
+        self.should_stop = False
+        self.frames = []
+    
+    def run(self):
+        if not PYAUDIO_AVAILABLE:
+            self.error.emit("PyAudio is not available")
+            self.finished.emit()
+            return
+            
+        try:
+            p = pyaudio.PyAudio()
+            stream = p.open(
+                format=pyaudio.paInt16,
+                channels=1,
+                rate=44100,
+                input=True,
+                frames_per_buffer=1024
+            )
+            
+            while not self.should_stop:
+                data = stream.read(1024, exception_on_overflow=False)
+                self.frames.append(data)
+            
+            stream.stop_stream()
+            stream.close()
+            p.terminate()
+            
+            # Save WAV file
+            if self.frames:
+                wf = wave.open(self.wav_path, 'wb')
+                wf.setnchannels(1)
+                wf.setsampwidth(2)
+                wf.setframerate(44100)
+                wf.writeframes(b''.join(self.frames))
+                wf.close()
+        except Exception as e:
+            self.error.emit(f"Recording failed: {e}")
+        finally:
+            self.finished.emit()
+    
+    def stop(self):
+        self.should_stop = True
+
+
+# Main application window
+class VideoAnnotationApp(QMainWindow):
+    ui_info = Signal(str, str)
+    ui_warning = Signal(str, str)
+    ui_error = Signal(str, str)
+    def __init__(self):
+        super().__init__()
         self.language = "English"
         self.LABELS = LABELS_ALL[self.language]
-
-        # Language selection dropdown (shows native names)
-        self.language_var = tk.StringVar(value=self.LABELS["language_name"])
-        self.language_dropdown = ttk.Combobox(
-            root,
-            textvariable=self.language_var,
-            values=[LABELS_ALL[k]["language_name"] for k in LABELS_ALL],
-            state="readonly"
-        )
-        self.language_dropdown.pack(fill=tk.X, padx=10, pady=5)
-        self.language_dropdown.bind("<<ComboboxSelected>>", self.change_language)
-
+        
         self.folder_path = None
         self.video_files = []
         self.current_video = None
-        self.audio_stream = None
-        self.recording_thread = None
-        self.is_recording = False
         self.ocenaudio_path = None
         self.settings_file = os.path.expanduser("~/.videooralannotation/settings.json")
-        self.load_settings()
-
-        # Current folder display (shown under title/language bar)
-        self.folder_display_var = tk.StringVar(value=self.LABELS["no_folder_selected"])
-        self.folder_display_label = tk.Label(
-            root,
-            textvariable=self.folder_display_var,
-            anchor='w'
-        )
-        self.folder_display_label.pack(fill=tk.X, padx=10)
-        self.folder_display_tooltip = ToolTip(
-            self.folder_display_label,
-            text="",
-            wrap_at_sep=True,
-            max_width_ratio=0.5,
-        )
-
-        # Main container
-        self.main_frame = tk.Frame(root)
-        self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-        # Left frame: Video list
-        self.list_frame = tk.Frame(self.main_frame)
-        self.list_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5)
-
-        # Select folder button
-        self.select_button = tk.Button(self.list_frame, text=self.LABELS["select_folder"], command=self.select_folder)
-        self.select_button.pack(fill=tk.X, pady=5)
-
-        # Button for opening recordings in Ocenaudio
-        self.open_ocenaudio_button = tk.Button(self.list_frame, text=self.LABELS["open_ocenaudio"], command=self.open_in_ocenaudio, state=tk.DISABLED)
-        self.open_ocenaudio_button.pack(fill=tk.X, pady=5)
-
-        # Export WAVs button
-        self.export_wavs_button = tk.Button(self.list_frame, text=self.LABELS["export_wavs"], command=self.export_wavs, state=tk.DISABLED)
-        self.export_wavs_button.pack(fill=tk.X, pady=5)
-
-        # Clear WAVs button
-        self.clear_wavs_button = tk.Button(self.list_frame, text=self.LABELS["clear_wavs"], command=self.clear_wavs, state=tk.DISABLED)
-        self.clear_wavs_button.pack(fill=tk.X, pady=5)
-
-        # Import WAVs button
-        self.import_wavs_button = tk.Button(self.list_frame, text=self.LABELS["import_wavs"], command=self.import_wavs, state=tk.DISABLED)
-        self.import_wavs_button.pack(fill=tk.X, pady=5)
-
-        # Button for joining WAV files
-        self.join_wavs_button = tk.Button(self.list_frame, text=self.LABELS["join_wavs"], command=self.join_all_wavs, state=tk.DISABLED)
-        self.join_wavs_button.pack(fill=tk.X, pady=5)
-
-        # Listbox for video files with scrollbar
-        self.video_listbox_frame = tk.Frame(self.list_frame)
-        self.video_listbox_frame.pack(fill=tk.BOTH, expand=True)
-        self.video_listbox = tk.Listbox(self.video_listbox_frame, width=40, height=5)
-        self.video_listbox.pack(side=tk.LEFT, fill=tk.Y, expand=True)
-        self.video_scrollbar = tk.Scrollbar(self.video_listbox_frame, orient=tk.VERTICAL, command=self.video_listbox.yview)
-        self.video_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.video_listbox.config(yscrollcommand=self.video_scrollbar.set)
-        self.video_listbox.bind('<<ListboxSelect>>', self.on_video_select)
-
-        # Metadata editor frame placeholder
-        self.metadata_editor_frame = None
-
-        # Right frame: Video player and audio controls
-        self.media_frame = tk.Frame(self.main_frame)
-        self.media_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5)
-
-        # Video player section
-        self.video_label = tk.Label(self.media_frame, text=self.LABELS["video_listbox_no_video"])
-        self.video_label.pack()
-
-        self.video_controls = tk.Frame(self.media_frame)
-        self.video_controls.pack(pady=5)
-
-        self.play_video_button = tk.Button(self.video_controls, text=self.LABELS["play_video"], command=self.play_video, state=tk.DISABLED)
-        self.play_video_button.pack(side=tk.LEFT, padx=5)
-
-        self.stop_video_button = tk.Button(self.video_controls, text=self.LABELS["stop_video"], command=self.stop_video, state=tk.DISABLED)
-        self.stop_video_button.pack(side=tk.LEFT, padx=5)
-
-        # Audio annotation section
-        self.audio_frame = tk.Frame(self.media_frame)
-        self.audio_frame.pack(pady=10)
-
-        self.audio_label = tk.Label(self.audio_frame, text=self.LABELS["audio_no_annotation"])
-        self.audio_label.pack()
-
-        self.audio_controls = tk.Frame(self.audio_frame)
-        self.audio_controls.pack(pady=5)
-
-        self.play_audio_button = tk.Button(self.audio_controls, text=self.LABELS["play_audio"], command=self.play_audio, state=tk.DISABLED)
-        self.play_audio_button.pack(side=tk.LEFT, padx=5)
-
-        self.stop_audio_button = tk.Button(self.audio_controls, text=self.LABELS["stop_audio"], command=self.stop_audio, state=tk.DISABLED)
-        self.stop_audio_button.pack(side=tk.LEFT, padx=5)
-
-        self.record_button = tk.Button(self.audio_controls, text=self.LABELS["record_audio"], command=self.toggle_recording, state=tk.DISABLED)
-        self.record_button.pack(side=tk.LEFT, padx=5)
-
+        
         # Video playback state
         self.playing_video = False
         self.cap = None
+        self.video_timer = QTimer()
+        self.video_timer.timeout.connect(self.update_video_frame)
+        
+        # Audio playback state
+        self.audio_thread = None
+        self.audio_worker = None
+        
+        # Recording state
+        self.is_recording = False
+        self.recording_thread = None
+        self.recording_worker = None
+        
+        self.load_settings()
+        self.init_ui()
+        self.setWindowTitle(self.LABELS["app_title"])
+        self.resize(1400, 800)
+        self.ui_info.connect(self._show_info)
+        self.ui_warning.connect(self._show_warning)
+        self.ui_error.connect(self._show_error)
 
-        self.root.title(self.LABELS["app_title"])
+        # If a folder was persisted, reflect it in the UI
+        if self.folder_path:
+            self.update_folder_display()
+            # Enable folder-dependent actions
+            self.export_wavs_button.setEnabled(True)
+            self.clear_wavs_button.setEnabled(True)
+            self.import_wavs_button.setEnabled(True)
+            self.join_wavs_button.setEnabled(True)
+            self.open_ocenaudio_button.setEnabled(True)
+            # Populate list and metadata view
+            self.load_video_files()
+            self.open_metadata_editor()
 
-    def change_language(self, event=None):
-        selected_name = self.language_var.get()
+    def _show_info(self, title, text):
+        QMessageBox.information(self, title, text)
+
+    def _show_warning(self, title, text):
+        QMessageBox.warning(self, title, text)
+
+    def _show_error(self, title, text):
+        QMessageBox.critical(self, title, text)
+
+    def _show_worker_error(self, msg):
+        QMessageBox.critical(self, "Error", msg)
+    
+    def init_ui(self):
+        # Central widget
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+        
+        # Language selector at top
+        self.language_dropdown = QComboBox()
+        self.language_dropdown.addItems([LABELS_ALL[k]["language_name"] for k in LABELS_ALL])
+        self.language_dropdown.setCurrentText(self.LABELS["language_name"])
+        self.language_dropdown.currentTextChanged.connect(self.change_language)
+        main_layout.addWidget(self.language_dropdown)
+        
+        # Current folder display
+        self.folder_display_label = QLabel(self.LABELS["no_folder_selected"])
+        self.folder_display_label.setAlignment(Qt.AlignLeft)
+        self.folder_display_label.setToolTip("")
+        main_layout.addWidget(self.folder_display_label)
+        
+        # Horizontal splitter for left and right panels
+        splitter = QSplitter(Qt.Horizontal)
+        main_layout.addWidget(splitter)
+        
+        # Left panel: Video list and buttons
+        left_panel = QWidget()
+        left_layout = QVBoxLayout(left_panel)
+        
+        # Action buttons
+        self.select_button = QPushButton(self.LABELS["select_folder"])
+        self.select_button.clicked.connect(self.select_folder)
+        left_layout.addWidget(self.select_button)
+        
+        self.open_ocenaudio_button = QPushButton(self.LABELS["open_ocenaudio"])
+        self.open_ocenaudio_button.clicked.connect(self.open_in_ocenaudio)
+        self.open_ocenaudio_button.setEnabled(False)
+        left_layout.addWidget(self.open_ocenaudio_button)
+        
+        self.export_wavs_button = QPushButton(self.LABELS["export_wavs"])
+        self.export_wavs_button.clicked.connect(self.export_wavs)
+        self.export_wavs_button.setEnabled(False)
+        left_layout.addWidget(self.export_wavs_button)
+        
+        self.clear_wavs_button = QPushButton(self.LABELS["clear_wavs"])
+        self.clear_wavs_button.clicked.connect(self.clear_wavs)
+        self.clear_wavs_button.setEnabled(False)
+        left_layout.addWidget(self.clear_wavs_button)
+        
+        self.import_wavs_button = QPushButton(self.LABELS["import_wavs"])
+        self.import_wavs_button.clicked.connect(self.import_wavs)
+        self.import_wavs_button.setEnabled(False)
+        left_layout.addWidget(self.import_wavs_button)
+        
+        self.join_wavs_button = QPushButton(self.LABELS["join_wavs"])
+        self.join_wavs_button.clicked.connect(self.join_all_wavs)
+        self.join_wavs_button.setEnabled(False)
+        left_layout.addWidget(self.join_wavs_button)
+        
+        # Video list
+        self.video_listbox = QListWidget()
+        self.video_listbox.currentRowChanged.connect(self.on_video_select)
+        left_layout.addWidget(self.video_listbox)
+        
+        # Metadata editor
+        metadata_label = QLabel(self.LABELS["edit_metadata"])
+        metadata_label.setStyleSheet("font-weight: bold; font-size: 12pt;")
+        left_layout.addWidget(metadata_label)
+        
+        self.metadata_text = QTextEdit()
+        self.metadata_text.setMinimumHeight(150)
+        left_layout.addWidget(self.metadata_text)
+        
+        save_metadata_btn = QPushButton(self.LABELS["save_metadata"])
+        save_metadata_btn.clicked.connect(self.save_metadata)
+        left_layout.addWidget(save_metadata_btn)
+        
+        splitter.addWidget(left_panel)
+        
+        # Right panel: Tab widget with Videos tab
+        right_panel = QTabWidget()
+        
+        # Videos tab
+        videos_tab = QWidget()
+        videos_layout = QVBoxLayout(videos_tab)
+        
+        # Video display
+        self.video_label = QLabel(self.LABELS["video_listbox_no_video"])
+        self.video_label.setAlignment(Qt.AlignCenter)
+        self.video_label.setMinimumSize(640, 480)
+        self.video_label.setStyleSheet("background-color: black; color: white;")
+        videos_layout.addWidget(self.video_label)
+        
+        # Video controls
+        video_controls_layout = QHBoxLayout()
+        self.play_video_button = QPushButton(self.LABELS["play_video"])
+        self.play_video_button.clicked.connect(self.play_video)
+        self.play_video_button.setEnabled(False)
+        video_controls_layout.addWidget(self.play_video_button)
+        
+        self.stop_video_button = QPushButton(self.LABELS["stop_video"])
+        self.stop_video_button.clicked.connect(self.stop_video)
+        self.stop_video_button.setEnabled(False)
+        video_controls_layout.addWidget(self.stop_video_button)
+        videos_layout.addLayout(video_controls_layout)
+        
+        # Audio annotation section
+        self.audio_label = QLabel(self.LABELS["audio_no_annotation"])
+        self.audio_label.setAlignment(Qt.AlignCenter)
+        videos_layout.addWidget(self.audio_label)
+        
+        # Audio controls
+        audio_controls_layout = QHBoxLayout()
+        self.play_audio_button = QPushButton(self.LABELS["play_audio"])
+        self.play_audio_button.clicked.connect(self.play_audio)
+        self.play_audio_button.setEnabled(False)
+        audio_controls_layout.addWidget(self.play_audio_button)
+        
+        self.stop_audio_button = QPushButton(self.LABELS["stop_audio"])
+        self.stop_audio_button.clicked.connect(self.stop_audio)
+        self.stop_audio_button.setEnabled(False)
+        audio_controls_layout.addWidget(self.stop_audio_button)
+        
+        self.record_button = QPushButton(self.LABELS["record_audio"])
+        self.record_button.clicked.connect(self.toggle_recording)
+        self.record_button.setEnabled(False)
+        audio_controls_layout.addWidget(self.record_button)
+        videos_layout.addLayout(audio_controls_layout)
+        
+        videos_layout.addStretch()
+        
+        right_panel.addTab(videos_tab, "Videos")
+        splitter.addWidget(right_panel)
+        
+        # Set splitter sizes (left panel smaller than right)
+        splitter.setSizes([400, 1000])
+    
+    def change_language(self, selected_name):
         for key, labels in LABELS_ALL.items():
             if labels["language_name"] == selected_name:
                 self.language = key
                 self.LABELS = LABELS_ALL[self.language]
                 break
-        self.root.title(self.LABELS["app_title"])
+        self.setWindowTitle(self.LABELS["app_title"])
         self.refresh_ui_texts()
-
+    
     def refresh_ui_texts(self):
-        self.select_button.config(text=self.LABELS["select_folder"])
-        self.open_ocenaudio_button.config(text=self.LABELS["open_ocenaudio"])
-        self.export_wavs_button.config(text=self.LABELS["export_wavs"])
-        self.clear_wavs_button.config(text=self.LABELS["clear_wavs"])
-        self.import_wavs_button.config(text=self.LABELS["import_wavs"])
-        self.join_wavs_button.config(text=self.LABELS["join_wavs"])
-        self.video_label.config(text=self.LABELS["video_listbox_no_video"])
-        self.play_video_button.config(text=self.LABELS["play_video"])
-        self.stop_video_button.config(text=self.LABELS["stop_video"])
-        self.audio_label.config(text=self.LABELS["audio_no_annotation"])
-        self.play_audio_button.config(text=self.LABELS["play_audio"])
-        self.stop_audio_button.config(text=self.LABELS["stop_audio"])
-        self.record_button.config(text=self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
-        if hasattr(self, "metadata_editor_frame") and self.metadata_editor_frame:
-            for widget in self.metadata_editor_frame.winfo_children():
-                if isinstance(widget, tk.Label):
-                    widget.config(text=self.LABELS["edit_metadata"])
-                if isinstance(widget, tk.Button):
-                    widget.config(text=self.LABELS["save_metadata"])
-        # Update current folder display text in case no folder is selected (localized)
-        if not self.folder_path:
-            self.update_folder_display()
-
+        self.select_button.setText(self.LABELS["select_folder"])
+        self.open_ocenaudio_button.setText(self.LABELS["open_ocenaudio"])
+        self.export_wavs_button.setText(self.LABELS["export_wavs"])
+        self.clear_wavs_button.setText(self.LABELS["clear_wavs"])
+        self.import_wavs_button.setText(self.LABELS["import_wavs"])
+        self.join_wavs_button.setText(self.LABELS["join_wavs"])
+        self.play_video_button.setText(self.LABELS["play_video"])
+        self.stop_video_button.setText(self.LABELS["stop_video"])
+        self.play_audio_button.setText(self.LABELS["play_audio"])
+        self.stop_audio_button.setText(self.LABELS["stop_audio"])
+        self.record_button.setText(self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
+        
+        if not self.current_video:
+            self.video_label.setText(self.LABELS["video_listbox_no_video"])
+            self.audio_label.setText(self.LABELS["audio_no_annotation"])
+        
+        self.update_folder_display()
+    
     def update_folder_display(self):
         if self.folder_path:
-            # show only the folder name in the label, full path in tooltip
             folder_name = os.path.basename(os.path.normpath(self.folder_path)) or self.folder_path
-            self.folder_display_var.set(folder_name)
-            self.folder_display_tooltip.set_text(self.folder_path)
+            self.folder_display_label.setText(folder_name)
+            self.folder_display_label.setToolTip(self.folder_path)
         else:
-            self.folder_display_var.set(self.LABELS["no_folder_selected"])
-            self.folder_display_tooltip.set_text("")
-
+            self.folder_display_label.setText(self.LABELS["no_folder_selected"])
+            self.folder_display_label.setToolTip("")
+    
     def load_settings(self):
         try:
             if os.path.exists(self.settings_file):
                 with open(self.settings_file, 'r') as f:
                     settings = json.load(f)
                     self.ocenaudio_path = settings.get('ocenaudio_path')
+                    saved_lang = settings.get('language')
+                    if saved_lang and saved_lang in LABELS_ALL:
+                        self.language = saved_lang
+                        self.LABELS = LABELS_ALL[self.language]
+                    last_folder = settings.get('last_folder')
+                    if last_folder and os.path.isdir(last_folder):
+                        self.folder_path = last_folder
         except Exception as e:
-            messagebox.showwarning("Settings Error", f"Failed to load settings: {e}")
-
+            logging.warning(f"Failed to load settings: {e}")
+    
     def save_settings(self):
         try:
             os.makedirs(os.path.dirname(self.settings_file), exist_ok=True)
             with open(self.settings_file, 'w') as f:
-                json.dump({'ocenaudio_path': self.ocenaudio_path}, f)
+                json.dump({
+                    'ocenaudio_path': self.ocenaudio_path,
+                    'language': self.language,
+                    'last_folder': self.folder_path
+                }, f)
         except Exception as e:
-            messagebox.showwarning("Settings Error", f"Failed to save settings: {e}")
-
+            logging.warning(f"Failed to save settings: {e}")
+    
     def select_folder(self):
-        self.folder_path = filedialog.askdirectory(title="Select Folder with Video Files")
-        if self.folder_path:
+        initial_dir = self.folder_path or os.path.expanduser("~")
+        folder = QFileDialog.getExistingDirectory(self, "Select Folder with Video Files", initial_dir)
+        if folder:
+            self.folder_path = folder
             self.update_folder_display()
+            
             # On Windows, delete all files starting with a period
             if sys.platform == "win32":
                 hidden_files = [f for f in os.listdir(self.folder_path) if f.startswith('.')]
@@ -610,21 +686,402 @@ class VideoAnnotationApp:
                     except Exception as e:
                         errors.append(f"Delete {f}: {e}")
                 if errors:
-                    messagebox.showwarning("Cleanup Errors", "Some hidden files could not be deleted:\n" + "\n".join(errors))
+                    QMessageBox.warning(self, "Cleanup Errors", "Some hidden files could not be deleted:\n" + "\n".join(errors))
+            
             self.load_video_files()
             self.open_metadata_editor()
-            self.export_wavs_button.config(state=tk.NORMAL)
-            self.clear_wavs_button.config(state=tk.NORMAL)
-            self.import_wavs_button.config(state=tk.NORMAL)
-            self.join_wavs_button.config(state=tk.NORMAL)
-            self.open_ocenaudio_button.config(state=tk.NORMAL)
-
+            self.export_wavs_button.setEnabled(True)
+            self.clear_wavs_button.setEnabled(True)
+            self.import_wavs_button.setEnabled(True)
+            self.join_wavs_button.setEnabled(True)
+            self.open_ocenaudio_button.setEnabled(True)
+            self.save_settings()
+    
+    def load_video_files(self):
+        self.video_listbox.clear()
+        self.video_files = []
+        extensions = ('.mpg', '.mpeg', '.mp4', '.avi', '.mkv', '.mov')
+        
+        if not self.folder_path:
+            QMessageBox.information(self, self.LABELS["no_folder_selected"], self.LABELS["no_folder_selected"])
+            return
+        
+        try:
+            for filename in os.listdir(self.folder_path):
+                full_path = os.path.join(self.folder_path, filename)
+                if os.path.isfile(full_path) and filename.lower().endswith(extensions):
+                    self.video_files.append(full_path)
+            
+            self.video_files.sort()
+            for video_path in self.video_files:
+                self.video_listbox.addItem(os.path.basename(video_path))
+            
+            if not self.video_files:
+                QMessageBox.information(self, self.LABELS["no_videos_found"], f"{self.LABELS['no_videos_found']} {self.folder_path}")
+        
+        except PermissionError:
+            QMessageBox.critical(self, "Permission Denied", f"You do not have permission to access the folder: {self.folder_path}")
+        except FileNotFoundError:
+            QMessageBox.critical(self, "Folder Not Found", f"The selected folder no longer exists: {self.folder_path}")
+        except Exception as e:
+            QMessageBox.critical(self, "An Error Occurred", f"An unexpected error occurred: {e}")
+        
+        self.current_video = None
+        self.update_media_controls()
+    
+    def open_metadata_editor(self):
+        metadata_path = os.path.join(self.folder_path, "metadata.txt")
+        default_content = (
+            "name: \n"
+            "date: \n"
+            "location: \n"
+            "researcher: \n"
+            "speaker: \n"
+            "permissions for use given by speaker: \n"
+        )
+        if not os.path.exists(metadata_path):
+            with open(metadata_path, "w") as f:
+                f.write(default_content)
+        with open(metadata_path, "r") as f:
+            content = f.read()
+        
+        self.metadata_text.setPlainText(content)
+    
+    def save_metadata(self):
+        if not self.folder_path:
+            return
+        metadata_path = os.path.join(self.folder_path, "metadata.txt")
+        content = self.metadata_text.toPlainText()
+        with open(metadata_path, "w") as f:
+            f.write(content)
+        QMessageBox.information(self, self.LABELS["saved"], self.LABELS["metadata_saved"])
+    
+    def on_video_select(self, current_row):
+        if current_row < 0:
+            return
+        self.current_video = self.video_listbox.item(current_row).text()
+        self.update_media_controls()
+        self.show_first_frame()
+    
+    def show_first_frame(self):
+        if not self.current_video:
+            self.video_label.setText("No video selected")
+            return
+        video_path = os.path.join(self.folder_path, self.current_video)
+        cap = cv2.VideoCapture(video_path)
+        ret, frame = cap.read()
+        if ret:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame = cv2.resize(frame, (640, 480))
+            h, w, ch = frame.shape
+            bytes_per_line = ch * w
+            qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888)
+            pixmap = QPixmap.fromImage(qt_image)
+            self.video_label.setPixmap(pixmap)
+        else:
+            self.video_label.setText("Cannot read video")
+        cap.release()
+    
+    def update_media_controls(self):
+        if self.current_video:
+            self.play_video_button.setEnabled(True)
+            self.stop_video_button.setEnabled(True)
+            self.record_button.setEnabled(True)
+            self.record_button.setText(self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
+            
+            wav_path = os.path.join(self.folder_path, os.path.splitext(self.current_video)[0] + '.wav')
+            if os.path.exists(wav_path):
+                self.audio_label.setText(f"{self.LABELS['audio_label_prefix']}{os.path.splitext(self.current_video)[0]}.wav")
+                self.play_audio_button.setEnabled(True)
+                self.stop_audio_button.setEnabled(True)
+            else:
+                self.audio_label.setText(self.LABELS["audio_no_annotation"])
+                self.play_audio_button.setEnabled(False)
+                self.stop_audio_button.setEnabled(False)
+        else:
+            self.video_label.setText(self.LABELS["video_listbox_no_video"])
+            self.play_video_button.setEnabled(False)
+            self.stop_video_button.setEnabled(False)
+            self.audio_label.setText(self.LABELS["audio_no_annotation"])
+            self.play_audio_button.setEnabled(False)
+            self.stop_audio_button.setEnabled(False)
+            self.record_button.setEnabled(False)
+            self.record_button.setText(self.LABELS["record_audio"])
+    
+    def play_video(self):
+        if not self.current_video:
+            return
+        self.stop_video()
+        video_path = os.path.join(self.folder_path, self.current_video)
+        self.cap = cv2.VideoCapture(video_path)
+        if not self.cap.isOpened():
+            QMessageBox.critical(self, "Error", "Cannot open video file.")
+            return
+        self.playing_video = True
+        self.video_timer.start(30)  # ~30 FPS
+    
+    def update_video_frame(self):
+        if self.playing_video and self.cap:
+            ret, frame = self.cap.read()
+            if ret:
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                frame = cv2.resize(frame, (640, 480))
+                h, w, ch = frame.shape
+                bytes_per_line = ch * w
+                qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888)
+                pixmap = QPixmap.fromImage(qt_image)
+                self.video_label.setPixmap(pixmap)
+            else:
+                self.stop_video()
+    
+    def stop_video(self):
+        self.playing_video = False
+        self.video_timer.stop()
+        if self.cap:
+            self.cap.release()
+            self.cap = None
+        self.show_first_frame()
+    
+    def play_audio(self):
+        if not self.current_video:
+            return
+        self.stop_audio()
+        wav_path = os.path.join(self.folder_path, os.path.splitext(self.current_video)[0] + '.wav')
+        if not os.path.exists(wav_path):
+            return
+        
+        if not PYAUDIO_AVAILABLE:
+            QMessageBox.warning(self, "Error", "PyAudio is not available. Cannot play audio.")
+            return
+        
+        self.audio_thread = QThread()
+        self.audio_worker = AudioPlaybackWorker(wav_path)
+        self.audio_worker.moveToThread(self.audio_thread)
+        self.audio_thread.started.connect(self.audio_worker.run)
+        self.audio_worker.finished.connect(self.audio_thread.quit)
+        self.audio_worker.finished.connect(self.audio_worker.deleteLater)
+        self.audio_thread.finished.connect(self.audio_thread.deleteLater)
+        self.audio_worker.error.connect(self._show_worker_error)
+        self.audio_thread.start()
+    
+    def stop_audio(self):
+        if self.audio_worker:
+            self.audio_worker.stop()
+        if self.audio_thread:
+            self.audio_thread.quit()
+            self.audio_thread.wait()
+    
+    def toggle_recording(self):
+        if not self.current_video:
+            return
+        
+        if self.is_recording:
+            self.is_recording = False
+            if self.recording_worker:
+                self.recording_worker.stop()
+            if self.recording_thread:
+                self.recording_thread.quit()
+                self.recording_thread.wait()
+            self.update_media_controls()
+        else:
+            wav_path = os.path.join(self.folder_path, os.path.splitext(self.current_video)[0] + '.wav')
+            if os.path.exists(wav_path):
+                reply = QMessageBox.question(self, self.LABELS["overwrite"], 
+                                            self.LABELS["overwrite_audio"],
+                                            QMessageBox.Yes | QMessageBox.No)
+                if reply == QMessageBox.No:
+                    return
+            
+            if not PYAUDIO_AVAILABLE:
+                QMessageBox.warning(self, "Error", "PyAudio is not available. Cannot record audio.")
+                return
+            
+            self.is_recording = True
+            self.record_button.setText(self.LABELS["stop_recording"])
+            
+            self.recording_thread = QThread()
+            self.recording_worker = AudioRecordingWorker(wav_path)
+            self.recording_worker.moveToThread(self.recording_thread)
+            self.recording_thread.started.connect(self.recording_worker.run)
+            self.recording_worker.finished.connect(self.recording_thread.quit)
+            self.recording_worker.finished.connect(self.recording_worker.deleteLater)
+            self.recording_thread.finished.connect(self.recording_thread.deleteLater)
+            self.recording_worker.finished.connect(self.update_media_controls)
+            self.recording_worker.error.connect(self._show_worker_error)
+            self.recording_thread.start()
+    
+    def open_in_ocenaudio(self):
+        if not self.folder_path:
+            QMessageBox.critical(self, "Error", "No folder selected.")
+            return
+        
+        wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
+        if not wav_files:
+            QMessageBox.information(self, "No Files", "No WAV files found in the current folder to open.")
+            return
+        
+        wav_files.sort()
+        file_paths = [os.path.join(self.folder_path, f) for f in wav_files]
+        
+        if self.ocenaudio_path and os.path.exists(self.ocenaudio_path):
+            command = [self.ocenaudio_path] + file_paths
+        else:
+            possible_paths = []
+            if sys.platform == "darwin":
+                possible_paths = ["/Applications/ocenaudio.app/Contents/MacOS/ocenaudio"]
+            elif sys.platform == "win32":
+                possible_paths = [
+                    r"C:\Program Files\ocenaudio\ocenaudio.exe",
+                    r"C:\ocenaudio\ocenaudio.exe",
+                    r"C:\Program Files (x86)\ocenaudio\ocenaudio.exe",
+                    os.path.expandvars(r"%USERPROFILE%\ocenaudio\ocenaudio.exe"),
+                    os.path.expandvars(r"%LOCALAPPDATA%\ocenaudio\ocenaudio.exe")
+                ]
+            else:
+                possible_paths = [shutil.which("ocenaudio")]
+            
+            ocenaudio_path = None
+            for path in possible_paths:
+                if path and os.path.exists(path):
+                    ocenaudio_path = path
+                    break
+            
+            if not ocenaudio_path:
+                ocenaudio_path, _ = QFileDialog.getOpenFileName(
+                    self,
+                    "Locate Ocenaudio Executable",
+                    "",
+                    "Executable Files (*.exe);;All Files (*)" if sys.platform == "win32" else "All Files (*)"
+                )
+                if not ocenaudio_path:
+                    QMessageBox.warning(self, "Ocenaudio Not Found", "Ocenaudio not found. Please install it to use this feature.")
+                    return
+            
+            self.ocenaudio_path = ocenaudio_path
+            self.save_settings()
+            command = [self.ocenaudio_path] + file_paths
+        
+        try:
+            subprocess.Popen(command)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to open Ocenaudio: {e}")
+    
+    def export_wavs(self):
+        if not self.folder_path:
+            QMessageBox.critical(self, "Error", "No folder selected.")
+            return
+        
+        wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
+        export_dir = QFileDialog.getExistingDirectory(self, "Select Export Folder for WAV Files")
+        if not export_dir:
+            return
+        
+        overwrite_files = []
+        for wav in wav_files:
+            dst = os.path.join(export_dir, wav)
+            if os.path.exists(dst):
+                overwrite_files.append(wav)
+        
+        metadata_dst = os.path.join(export_dir, "metadata.txt")
+        if os.path.exists(metadata_dst):
+            overwrite_files.append("metadata.txt")
+        
+        if overwrite_files:
+            reply = QMessageBox.question(
+                self,
+                "Overwrite Files?",
+                "The following files already exist in the export folder and will be overwritten:\n"
+                + "\n".join(overwrite_files)
+                + "\n\nDo you want to overwrite them?",
+                QMessageBox.Yes | QMessageBox.No
+            )
+            if reply == QMessageBox.No:
+                QMessageBox.information(self, "Export Cancelled", "Export was cancelled to avoid overwriting files.")
+                return
+        
+        errors = []
+        for wav in wav_files:
+            src = os.path.join(self.folder_path, wav)
+            dst = os.path.join(export_dir, wav)
+            try:
+                shutil.copy2(src, dst)
+            except Exception as e:
+                errors.append(f"{wav}: {e}")
+        
+        metadata_src = os.path.join(self.folder_path, "metadata.txt")
+        try:
+            shutil.copy2(metadata_src, metadata_dst)
+        except Exception as e:
+            errors.append(f"metadata.txt: {e}")
+        
+        if errors:
+            QMessageBox.critical(self, "Export Errors", "Some files could not be exported:\n" + "\n".join(errors))
+        else:
+            QMessageBox.information(self, "Export Recorded Data", f"Exported {len(wav_files)} WAV files and metadata.txt to {export_dir}.")
+    
+    def clear_wavs(self):
+        if not self.folder_path:
+            QMessageBox.critical(self, "Error", "No folder selected.")
+            return
+        
+        wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
+        if not wav_files:
+            QMessageBox.information(self, "Clear Recorded Data", "No WAV files found in the current folder.")
+            return
+        
+        reply = QMessageBox.question(
+            self,
+            "Confirm Delete",
+            f"Are you sure you want to delete {len(wav_files)} WAV files from this folder?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        if reply == QMessageBox.No:
+            return
+        
+        errors = []
+        for wav in wav_files:
+            try:
+                os.remove(os.path.join(self.folder_path, wav))
+            except Exception as e:
+                errors.append(f"{wav}: {e}")
+        
+        metadata_path = os.path.join(self.folder_path, "metadata.txt")
+        default_content = (
+            "name: \n"
+            "date: \n"
+            "location: \n"
+            "researcher: \n"
+            "speaker: \n"
+            "permissions for use given by speaker: \n"
+        )
+        try:
+            with open(metadata_path, "w") as f:
+                f.write(default_content)
+        except Exception as e:
+            errors.append(f"metadata.txt reset: {e}")
+        
+        if errors:
+            QMessageBox.critical(self, "Delete Errors", "Some files could not be deleted or metadata.txt could not be reset:\n" + "\n".join(errors))
+        else:
+            QMessageBox.information(self, "Clear Recorded Data", f"Deleted {len(wav_files)} WAV files and reset metadata.txt.")
+        
+        self.load_video_files()
+        self.open_metadata_editor()
+    
     def import_wavs(self):
         if not self.folder_path:
-            messagebox.showerror("Error", "No folder selected.")
+            QMessageBox.critical(self, "Error", "No folder selected.")
             return
-        if not messagebox.askyesno("Confirm Import", "Importing will delete all current WAV files and reset metadata. Are you sure you want to continue?"):
+        
+        reply = QMessageBox.question(
+            self,
+            "Confirm Import",
+            "Importing will delete all current WAV files and reset metadata. Are you sure you want to continue?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        if reply == QMessageBox.No:
             return
+        
         # Clear existing WAVs in destination folder
         wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
         errors = []
@@ -633,20 +1090,24 @@ class VideoAnnotationApp:
                 os.remove(os.path.join(self.folder_path, wav))
             except Exception as e:
                 errors.append(f"Delete {wav}: {e}")
+        
         # Select import folder
-        import_dir = filedialog.askdirectory(title="Select Folder to Import Files From")
+        import_dir = QFileDialog.getExistingDirectory(self, "Select Folder to Import Files From")
         if not import_dir:
             return
+        
         # Prepare to import WAV files, excluding macOS hidden files
         import_files = [f for f in os.listdir(import_dir) if f.lower().endswith('.wav') and not f.startswith('.')]
         video_basenames = set(os.path.splitext(os.path.basename(f))[0] for f in self.video_files)
         mismatched_wavs = []
         imported_count = 0
         matched = False
+        
         for wav in import_files:
             wav_basename = os.path.splitext(wav)[0]
             if wav_basename in video_basenames:
                 matched = True
+        
         # Copy metadata.txt only if at least one WAV matches
         metadata_src = os.path.join(import_dir, "metadata.txt")
         metadata_dst = os.path.join(self.folder_path, "metadata.txt")
@@ -669,6 +1130,7 @@ class VideoAnnotationApp:
                     f.write(default_content)
             except Exception as e:
                 errors.append(f"metadata.txt create: {e}")
+        
         # Check for overwrites
         overwrite_files = []
         for wav in import_files:
@@ -677,17 +1139,23 @@ class VideoAnnotationApp:
                 dst = os.path.join(self.folder_path, wav)
                 if os.path.exists(dst):
                     overwrite_files.append(wav)
+        
         if os.path.exists(metadata_dst) and os.path.exists(metadata_src):
             overwrite_files.append("metadata.txt")
+        
         if overwrite_files:
-            if not messagebox.askyesno(
+            reply = QMessageBox.question(
+                self,
                 "Overwrite Files?",
                 "The following files already exist and will be overwritten by import:\n"
                 + "\n".join(overwrite_files)
-                + "\n\nDo you want to overwrite them?"
-            ):
-                messagebox.showinfo("Import Cancelled", "Import was cancelled to avoid overwriting files.")
+                + "\n\nDo you want to overwrite them?",
+                QMessageBox.Yes | QMessageBox.No
+            )
+            if reply == QMessageBox.No:
+                QMessageBox.information(self, "Import Cancelled", "Import was cancelled to avoid overwriting files.")
                 return
+        
         # Import WAV files
         for wav in import_files:
             wav_basename = os.path.splitext(wav)[0]
@@ -701,421 +1169,43 @@ class VideoAnnotationApp:
                     errors.append(f"Import {wav}: {e}")
             else:
                 mismatched_wavs.append(wav)
-        if mismatched_wavs:
-            messagebox.showwarning("WAV Filename Mismatch", "The following WAV files do not match any video filenames and were not imported:\n" + "\n".join(mismatched_wavs))
-        if errors:
-            messagebox.showerror("Import Errors", "Some files could not be imported or deleted:\n" + "\n".join(errors))
-        else:
-            messagebox.showinfo("Import Recorded Data", f"Imported {imported_count} WAV files and metadata.txt.")
-        self.load_video_files()
-        self.open_metadata_editor()
-
-    def load_video_files(self):
-        self.video_listbox.delete(0, tk.END)
-        self.video_files = []
-        extensions = ('.mpg', '.mpeg', '.mp4', '.avi', '.mkv', '.mov')
         
-        if not self.folder_path:
-            messagebox.showinfo(self.LABELS["no_folder_selected"], self.LABELS["no_folder_selected"])
-            return
-
-        try:
-            for filename in os.listdir(self.folder_path):
-                full_path = os.path.join(self.folder_path, filename)
-                if os.path.isfile(full_path) and filename.lower().endswith(extensions):
-                    self.video_files.append(full_path)
-
-            self.video_files.sort()
-            for video_path in self.video_files:
-                self.video_listbox.insert(tk.END, os.path.basename(video_path))
-            
-            if not self.video_files:
-                messagebox.showinfo(self.LABELS["no_videos_found"], f"{self.LABELS['no_videos_found']} {self.folder_path}")
-
-        except PermissionError:
-            messagebox.showerror("Permission Denied", f"You do not have permission to access the folder: {self.folder_path}")
-        except FileNotFoundError:
-            messagebox.showerror("Folder Not Found", f"The selected folder no longer exists: {self.folder_path}")
-        except Exception as e:
-            messagebox.showerror("An Error Occurred", f"An unexpected error occurred: {e}")
-
-        self.current_video = None
-        self.update_media_controls()
-
-    def open_metadata_editor(self):
-        metadata_path = os.path.join(self.folder_path, "metadata.txt")
-        default_content = (
-            "name: \n"
-            "date: \n"
-            "location: \n"
-            "researcher: \n"
-            "speaker: \n"
-            "permissions for use given by speaker: \n"
-        )
-        if not os.path.exists(metadata_path):
-            with open(metadata_path, "w") as f:
-                f.write(default_content)
-        with open(metadata_path, "r") as f:
-            content = f.read()
-
-        if hasattr(self, "metadata_editor_frame") and self.metadata_editor_frame:
-            self.metadata_editor_frame.destroy()
-
-        self.metadata_editor_frame = tk.Frame(self.list_frame)
-        self.metadata_editor_frame.pack(pady=10, fill=tk.BOTH, expand=True)
-
-        tk.Label(self.metadata_editor_frame, text=self.LABELS["edit_metadata"], font=("Arial", 12, "bold")).pack()
-        self.metadata_text = tk.Text(self.metadata_editor_frame, width=40, height=10)
-        self.metadata_text.pack(pady=5, fill=tk.BOTH, expand=True)
-        self.metadata_text.insert(tk.END, content)
-
-        save_btn = tk.Button(self.metadata_editor_frame, text=self.LABELS["save_metadata"], command=self.save_metadata)
-        save_btn.pack(pady=5)
-
-    def save_metadata(self):
-        metadata_path = os.path.join(self.folder_path, "metadata.txt")
-        content = self.metadata_text.get("1.0", tk.END)
-        with open(metadata_path, "w") as f:
-            f.write(content)
-        messagebox.showinfo(self.LABELS["saved"], self.LABELS["metadata_saved"])
-
-    def on_video_select(self, event):
-        selection = self.video_listbox.curselection()
-        if not selection:
-            return
-        self.current_video = self.video_listbox.get(selection[0])
-        self.update_media_controls()
-        self.show_first_frame()
-
-    def show_first_frame(self):
-        if not self.current_video:
-            self.video_label.config(image='', text="No video selected")
-            return
-        video_path = os.path.join(self.folder_path, self.current_video)
-        cap = cv2.VideoCapture(video_path)
-        ret, frame = cap.read()
-        if ret:
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame = cv2.resize(frame, (640, 480))
-            img = Image.fromarray(frame)
-            imgtk = ImageTk.PhotoImage(image=img)
-            self.video_label.imgtk = imgtk
-            self.video_label.config(image=imgtk, text="")
-        else:
-            img = Image.new('RGB', (640, 480), color='black')
-            imgtk = ImageTk.PhotoImage(image=img)
-            self.video_label.imgtk = imgtk
-            self.video_label.config(image=imgtk, text="")
-        cap.release()
-
-    def update_media_controls(self):
-        if self.current_video:
-            self.play_video_button.config(state=tk.NORMAL)
-            self.stop_video_button.config(state=tk.NORMAL)
-            self.record_button.config(state=tk.NORMAL, text=self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
-            wav_path = os.path.join(self.folder_path, os.path.splitext(self.current_video)[0] + '.wav')
-            if os.path.exists(wav_path):
-                self.audio_label.config(text=f"{self.LABELS['audio_label_prefix']}{os.path.splitext(self.current_video)[0]}.wav")
-                self.play_audio_button.config(state=tk.NORMAL)
-                self.stop_audio_button.config(state=tk.NORMAL)
-            else:
-                self.audio_label.config(text=self.LABELS["audio_no_annotation"])
-                self.play_audio_button.config(state=tk.DISABLED)
-                self.stop_audio_button.config(state=tk.DISABLED)
-        else:
-            self.video_label.config(text=self.LABELS["video_listbox_no_video"])
-            self.play_video_button.config(state=tk.DISABLED)
-            self.stop_video_button.config(state=tk.DISABLED)
-            self.audio_label.config(text=self.LABELS["audio_no_annotation"])
-            self.play_audio_button.config(state=tk.DISABLED)
-            self.stop_audio_button.config(state=tk.DISABLED)
-            self.record_button.config(state=tk.DISABLED, text=self.LABELS["record_audio"])
-
-    def open_in_ocenaudio(self):
-        if not self.folder_path:
-            messagebox.showerror("Error", "No folder selected.")
-            return
-
-        wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
-        if not wav_files:
-            messagebox.showinfo("No Files", "No WAV files found in the current folder to open.")
-            return
-
-        wav_files.sort()
-        file_paths = [os.path.join(self.folder_path, f) for f in wav_files]
-
-        if self.ocenaudio_path and os.path.exists(self.ocenaudio_path):
-            command = [self.ocenaudio_path] + file_paths
-        else:
-            possible_paths = []
-            if sys.platform == "darwin":
-                possible_paths = ["/Applications/ocenaudio.app/Contents/MacOS/ocenaudio"]
-            elif sys.platform == "win32":
-                possible_paths = [
-                    r"C:\Program Files\ocenaudio\ocenaudio.exe",
-                    r"C:\ocenaudio\ocenaudio.exe",
-                    r"C:\Program Files (x86)\ocenaudio\ocenaudio.exe",
-                    os.path.expandvars(r"%USERPROFILE%\ocenaudio\ocenaudio.exe"),
-                    os.path.expandvars(r"%LOCALAPPDATA%\ocenaudio\ocenaudio.exe")
-                ]
-            else:
-                possible_paths = [shutil.which("ocenaudio")]
-
-            ocenaudio_path = None
-            for path in possible_paths:
-                if path and os.path.exists(path):
-                    ocenaudio_path = path
-                    break
-
-            if not ocenaudio_path:
-                ocenaudio_path = filedialog.askopenfilename(
-                    title="Locate Ocenaudio Executable",
-                    filetypes=[("Executable Files", "*.exe" if sys.platform == "win32" else "*")]
-                )
-                if not ocenaudio_path:
-                    messagebox.showwarning("Ocenaudio Not Found", "Ocenaudio not found. Please install it to use this feature.")
-                    return
-
-            self.ocenaudio_path = ocenaudio_path
-            self.save_settings()
-            command = [self.ocenaudio_path] + file_paths
-
-        try:
-            subprocess.Popen(command)
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to open Ocenaudio: {e}")
-
-    def play_video(self):
-        if not self.current_video:
-            return
-        self.stop_video()
-        video_path = os.path.join(self.folder_path, self.current_video)
-        self.cap = cv2.VideoCapture(video_path)
-        if not self.cap.isOpened():
-            messagebox.showerror("Error", "Cannot open video file.")
-            return
-        self.playing_video = True
-        self.video_label.config(text="")
-        def update_frame():
-            if self.playing_video:
-                ret, frame = self.cap.read()
-                if ret:
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    frame = cv2.resize(frame, (640, 480))
-                    img = Image.fromarray(frame)
-                    imgtk = ImageTk.PhotoImage(image=img)
-                    self.video_label.imgtk = imgtk
-                    self.video_label.configure(image=imgtk)
-                    self.video_label.after(30, update_frame)
-                else:
-                    self.stop_video()
-        update_frame()
-
-    def export_wavs(self):
-        if not self.folder_path:
-            messagebox.showerror("Error", "No folder selected.")
-            return
-        wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
-        export_dir = filedialog.askdirectory(title="Select Export Folder for WAV Files")
-        if not export_dir:
-            return
-        overwrite_files = []
-        for wav in wav_files:
-            dst = os.path.join(export_dir, wav)
-            if os.path.exists(dst):
-                overwrite_files.append(wav)
-        metadata_dst = os.path.join(export_dir, "metadata.txt")
-        if os.path.exists(metadata_dst):
-            overwrite_files.append("metadata.txt")
-        if overwrite_files:
-            if not messagebox.askyesno(
-                "Overwrite Files?",
-                "The following files already exist in the export folder and will be overwritten:\n"
-                + "\n".join(overwrite_files)
-                + "\n\nDo you want to overwrite them?"
-            ):
-                messagebox.showinfo("Export Cancelled", "Export was cancelled to avoid overwriting files.")
-                return
-
-        errors = []
-        for wav in wav_files:
-            src = os.path.join(self.folder_path, wav)
-            dst = os.path.join(export_dir, wav)
-            try:
-                shutil.copy2(src, dst)
-            except Exception as e:
-                errors.append(f"{wav}: {e}")
-        metadata_src = os.path.join(self.folder_path, "metadata.txt")
-        try:
-            shutil.copy2(metadata_src, metadata_dst)
-        except Exception as e:
-            errors.append(f"metadata.txt: {e}")
+        if mismatched_wavs:
+            QMessageBox.warning(self, "WAV Filename Mismatch", "The following WAV files do not match any video filenames and were not imported:\n" + "\n".join(mismatched_wavs))
+        
         if errors:
-            messagebox.showerror("Export Errors", "Some files could not be exported:\n" + "\n".join(errors))
+            QMessageBox.critical(self, "Import Errors", "Some files could not be imported or deleted:\n" + "\n".join(errors))
         else:
-            messagebox.showinfo("Export Recorded Data", f"Exported {len(wav_files)} WAV files and metadata.txt to {export_dir}.")
-
-    def clear_wavs(self):
-        if not self.folder_path:
-            messagebox.showerror("Error", "No folder selected.")
-            return
-        wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
-        if not wav_files:
-            messagebox.showinfo("Clear Recorded Data", "No WAV files found in the current folder.")
-            return
-        if not messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete {len(wav_files)} WAV files from this folder?"):
-            return
-        errors = []
-        for wav in wav_files:
-            try:
-                os.remove(os.path.join(self.folder_path, wav))
-            except Exception as e:
-                errors.append(f"{wav}: {e}")
-        metadata_path = os.path.join(self.folder_path, "metadata.txt")
-        default_content = (
-            "name: \n"
-            "date: \n"
-            "location: \n"
-            "researcher: \n"
-            "speaker: \n"
-            "permissions for use given by speaker: \n"
-        )
-        try:
-            with open(metadata_path, "w") as f:
-                f.write(default_content)
-        except Exception as e:
-            errors.append(f"metadata.txt reset: {e}")
-        if errors:
-            messagebox.showerror("Delete Errors", "Some files could not be deleted or metadata.txt could not be reset:\n" + "\n".join(errors))
-        else:
-            messagebox.showinfo("Clear Recorded Data", f"Deleted {len(wav_files)} WAV files and reset metadata.txt.")
+            QMessageBox.information(self, "Import Recorded Data", f"Imported {imported_count} WAV files and metadata.txt.")
+        
         self.load_video_files()
         self.open_metadata_editor()
-
-    def stop_video(self):
-        self.playing_video = False
-        if self.cap:
-            self.cap.release()
-            self.cap = None
-        self.show_first_frame()
-
-    def play_audio(self):
-        if not self.current_video:
-            return
-        self.stop_audio()
-        wav_path = os.path.join(self.folder_path, os.path.splitext(self.current_video)[0] + '.wav')
-        if not os.path.exists(wav_path):
-            return
-
-        try:
-            p = pyaudio.PyAudio()
-            wf = wave.open(wav_path, 'rb')
-            stream = p.open(format=p.get_format_from_width(wf.getsampwidth()),
-                            channels=wf.getnchannels(),
-                            rate=wf.getframerate(),
-                            output=True)
-
-            def playback():
-                try:
-                    data = wf.readframes(1024)
-                    while data and self.audio_stream == stream:
-                        stream.write(data)
-                        data = wf.readframes(1024)
-                except Exception as e:
-                    self.root.after(0, lambda: messagebox.showerror("Error", f"Audio playback failed: {e}"))
-                finally:
-                    stream.stop_stream()
-                    stream.close()
-                    p.terminate()
-                    wf.close()
-
-            self.audio_stream = stream
-            threading.Thread(target=playback, daemon=True).start()
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to play audio: {e}")
-
-    def stop_audio(self):
-        self.audio_stream = None
-
-    def toggle_recording(self):
-        if not self.current_video:
-            return
-
-        if self.is_recording:
-            self.is_recording = False
-            if self.recording_thread:
-                self.recording_thread.join(timeout=1.0)
-                self.recording_thread = None
-            self.update_media_controls()
-        else:
-            wav_path = os.path.join(self.folder_path, os.path.splitext(self.current_video)[0] + '.wav')
-            if os.path.exists(wav_path):
-                if not messagebox.askyesno(self.LABELS["overwrite"], self.LABELS["overwrite_audio"]):
-                    return
-
-            try:
-                p = pyaudio.PyAudio()
-                stream = p.open(format=pyaudio.paInt16,
-                                channels=1,
-                                rate=44100,
-                                input=True,
-                                frames_per_buffer=1024)
-
-                frames = []
-                self.is_recording = True
-                self.record_button.config(text=self.LABELS["stop_recording"])
-
-                def record():
-                    try:
-                        while self.is_recording:
-                            data = stream.read(1024, exception_on_overflow=False)
-                            frames.append(data)
-                    except Exception as e:
-                        self.root.after(0, lambda: messagebox.showerror("Error", f"Recording failed: {e}"))
-                    finally:
-                        stream.stop_stream()
-                        stream.close()
-                        p.terminate()
-                        if frames and not self.is_recording:
-                            wf = wave.open(wav_path, 'wb')
-                            wf.setnchannels(1)
-                            wf.setsampwidth(2)
-                            wf.setframerate(44100)
-                            wf.writeframes(b''.join(frames))
-                            wf.close()
-                            self.root.after(0, lambda: messagebox.showinfo(self.LABELS["saved"], self.LABELS["metadata_saved"]))
-                        self.root.after(0, self.update_media_controls)
-
-                self.recording_thread = threading.Thread(target=record, daemon=True)
-                self.recording_thread.start()
-            except Exception as e:
-                self.is_recording = False
-                self.record_button.config(text=self.LABELS["record_audio"])
-                messagebox.showerror("Error", f"Failed to start recording: {e}")
-
+    
     def join_all_wavs(self):
         if not self.folder_path:
-            messagebox.showerror("Error", "No folder selected.")
+            QMessageBox.critical(self, "Error", "No folder selected.")
             return
-
+        
         wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
         if not wav_files:
-            messagebox.showinfo("No Files", "No WAV files found in the current folder.")
+            QMessageBox.information(self, "No Files", "No WAV files found in the current folder.")
             return
-
+        
         ffmpeg_path = resource_path(os.path.join("ffmpeg", "bin", "ffmpeg"))
         if not os.path.exists(ffmpeg_path):
-            messagebox.showerror("Error", "FFmpeg not found. Please ensure FFmpeg is installed or bundled with the executable.")
+            QMessageBox.critical(self, "Error", "FFmpeg not found. Please ensure FFmpeg is installed or bundled with the executable.")
             return
-
-        output_file = filedialog.asksaveasfilename(
-            defaultextension=".wav",
-            filetypes=[("WAV files", "*.wav")],
-            title="Save Combined WAV File"
+        
+        output_file, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Combined WAV File",
+            "",
+            "WAV files (*.wav)"
         )
         if not output_file:
             return
-
+        
+        # Run in a separate thread to avoid blocking the UI
         def process_and_join():
             try:
                 wav_files.sort()
@@ -1127,6 +1217,7 @@ class VideoAnnotationApp:
                 click_segment = silence_segment + click_sound + silence_segment
                 combined_audio = AudioSegment.empty()
                 combined_audio = combined_audio.set_frame_rate(std_rate).set_channels(std_channels).set_sample_width(std_sample_width)
+                
                 for i, file in enumerate(wav_files):
                     file_path = os.path.join(self.folder_path, file)
                     audio = AudioSegment.from_file(file_path, format="wav")
@@ -1139,13 +1230,14 @@ class VideoAnnotationApp:
                     combined_audio += audio
                     if i < len(wav_files) - 1:
                         combined_audio += click_segment
+                
                 combined_audio.export(output_file, format="wav")
-                self.root.after(0, lambda: messagebox.showinfo(self.LABELS["success"], f"{self.LABELS['wavs_joined']}\n{output_file}"))
+                self.ui_info.emit(self.LABELS["success"], f"{self.LABELS['wavs_joined']}\n{output_file}")
             except Exception as e:
-                self.root.after(0, lambda: messagebox.showerror("Error", f"An error occurred while joining files:\n{e}"))
-
+                self.ui_error.emit("Error", f"An error occurred while joining files:\n{e}")
+        
         threading.Thread(target=process_and_join, daemon=True).start()
-
+    
     def generate_click_sound_pydub(self, duration_ms, freq, rate):
         """Generates a short, subtle click sound using a high-frequency sine wave with a rapid decay."""
         t = np.linspace(0, duration_ms / 1000, int(rate * duration_ms / 1000), endpoint=False)
@@ -1160,8 +1252,42 @@ class VideoAnnotationApp:
             channels=1
         )
 
+
+def main():
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description="Video Annotation Tool")
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+    parser.add_argument("--log-file", type=str, help="Log file path")
+    args = parser.parse_args()
+    
+    # Setup logging
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    log_handlers = []
+    
+    if args.log_file:
+        log_handlers.append(logging.FileHandler(args.log_file))
+    
+    if args.debug:
+        log_handlers.append(logging.StreamHandler(sys.stdout))
+    
+    if log_handlers:
+        logging.basicConfig(
+            level=log_level,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=log_handlers
+        )
+    
+    logging.info("Starting Video Annotation Tool (PySide6 version)")
+    
+    # Create and run the application
+    app = QApplication(sys.argv)
+    app.setApplicationName("Video Annotation Tool")
+    
+    window = VideoAnnotationApp()
+    window.show()
+    
+    sys.exit(app.exec())
+
+
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = VideoAnnotationApp(root)
-    root.geometry("1400x800")
-    root.mainloop()
+    main()
