@@ -16,57 +16,6 @@ from pydub import AudioSegment
 import subprocess
 import sys
 import json
-import argparse
-import logging
-import faulthandler
-import traceback
-
-# Global file handle to keep faulthandler output alive when logging to a file
-_DEBUG_FILE_HANDLE = None
-
-def _setup_logging_and_debug(debug: bool = False, log_file: str | None = None):
-    global _DEBUG_FILE_HANDLE
-    # Reset root logger handlers to avoid duplicate logs on re-run
-    root_logger = logging.getLogger()
-    for h in list(root_logger.handlers):
-        root_logger.removeHandler(h)
-    level = logging.DEBUG if debug else logging.INFO
-    fmt = "%(asctime)s.%(msecs)03d %(levelname)s [%(threadName)s] %(name)s: %(message)s"
-    datefmt = "%H:%M:%S"
-    # Console handler
-    console = logging.StreamHandler()
-    console.setLevel(level)
-    console.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
-    root_logger.addHandler(console)
-    root_logger.setLevel(level)
-    # Optional file handler that shares the same file with faulthandler
-    if log_file:
-        try:
-            _DEBUG_FILE_HANDLE = open(log_file, "a", buffering=1)
-            file_handler = logging.StreamHandler(_DEBUG_FILE_HANDLE)
-            file_handler.setLevel(level)
-            file_handler.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
-            root_logger.addHandler(file_handler)
-            try:
-                faulthandler.enable(_DEBUG_FILE_HANDLE)
-            except Exception:
-                # Fall back to stderr
-                try:
-                    faulthandler.enable()
-                except Exception:
-                    pass
-        except Exception:
-            # Fall back to default faulthandler
-            try:
-                faulthandler.enable()
-            except Exception:
-                pass
-    else:
-        try:
-            faulthandler.enable()
-        except Exception:
-            pass
-    logging.getLogger("videoannotation").debug("Logging initialized. debug=%s, log_file=%s", debug, log_file)
 
 # UI labels for easy translation, with language names in their own language
 LABELS_ALL = {
@@ -100,32 +49,6 @@ LABELS_ALL = {
         "metadata_saved": "Metadata saved!",
         "success": "Success",
         "wavs_joined": "All WAV files successfully joined into:",
-        "videos_tab_title": "Videos",
-        "images_tab_title": "Still Images",
-        "image_no_selection": "No image selected",
-        "image_failed_to_load": "Failed to load",
-        "selected_image_label": "Selected Image:",
-        "show_filenames": "Show filenames",
-        "zoom_label": "Zoom",
-        "zoom_tip_plus_minus": "Tip: Use + and - keys to zoom",
-        "double_click_tip_image": "Double-click an image to view it fullscreen",
-        "double_click_tip_video": "Double-click the video to view it fullscreen",
-        "show_advisory_startup": "Show advisory on startup",
-        "advisory_title": "Advisory",
-        "dont_show_again": "Don't show again",
-        "ok": "OK",
-        "advisory_message": (
-            "This tool is for use by field linguists in one of two situations:\n\n"
-            "First, for video elictation kits, for example from Max Planck Institute. Some best practices for these:\n"
-            "(1) Obtain and thoroughly read the activity directions for the video elicitation set you're using. There may be a specific protocol to follow for best results.\n"
-            "(2) Best practice for these sessions in any case: have a separate recording device continuously recording the full session. This will help you later untangle things like participant reference or topic continuity persisting across separate recordings (ideally wide-pickup audio + video. Can be lower quality than the clip recordings if needed for storage space and bandwidth, especially lower quality video is ok).\n\n"
-            "Secondly, these may be useful for GPA review sessions, especially in Phase 1. You can take a series of photos with your camera, save them in a folder, load that folder with this tool, and then record descriptions of each photo with this tool. A 'Review' tab for GPA session review is planned for a future release."
-        ),
-        "restore_defaults": "Restore Default Settings",
-        "restore_confirm_title": "Confirm Restore",
-        "restore_confirm_message": "This will clear all saved settings, including last folder and language. Proceed?",
-        "restore_done_title": "Settings Restored",
-        "restore_done_message": "Default settings restored.",
     },
     "Bahasa Indonesia": {
         "language_name": "Bahasa Indonesia",
@@ -157,32 +80,6 @@ LABELS_ALL = {
         "metadata_saved": "Metadata tersimpan!",
         "success": "Berhasil",
         "wavs_joined": "Semua berkas WAV berhasil digabungkan menjadi:",
-        "videos_tab_title": "Video",
-        "images_tab_title": "Gambar Diam",
-        "image_no_selection": "Tidak ada gambar yang dipilih",
-        "image_failed_to_load": "Gagal memuat",
-        "selected_image_label": "Gambar yang Dipilih:",
-        "show_filenames": "Tampilkan nama berkas",
-        "zoom_label": "Perbesaran",
-        "zoom_tip_plus_minus": "Tips: Gunakan tombol + dan - untuk memperbesar",
-        "double_click_tip_image": "Klik ganda gambar untuk melihat layar penuh",
-        "double_click_tip_video": "Klik ganda video untuk melihat layar penuh",
-        "show_advisory_startup": "Tampilkan pemberitahuan saat mulai",
-        "advisory_title": "Pemberitahuan",
-        "dont_show_again": "Jangan tampilkan lagi",
-        "ok": "OK",
-        "advisory_message": (
-            "Alat ini untuk digunakan oleh linguis lapangan dalam dua situasi:\n\n"
-            "Pertama, untuk paket elisitasi video, misalnya dari Max Planck Institute. Beberapa praktik terbaik untuk ini:\n"
-            "(1) Dapatkan dan baca dengan saksama petunjuk aktivitas untuk set elisitasi video yang Anda gunakan. Mungkin ada protokol khusus yang harus diikuti untuk hasil terbaik.\n"
-            "(2) Praktik terbaik dalam sesi apa pun: miliki perangkat perekam terpisah yang terus merekam seluruh sesi. Ini akan membantu Anda nantinya mengurai hal-hal seperti rujukan partisipan atau kesinambungan topik yang berlanjut di antara rekaman terpisah (idealnya audio + video dengan cakupan luas. Boleh berkualitas lebih rendah daripada rekaman klip jika diperlukan untuk ruang penyimpanan dan bandwidth, khususnya video berkualitas lebih rendah tidak masalah).\n\n"
-            "Selain itu, alat ini dapat berguna untuk sesi peninjauan GPA, terutama pada Fase 1. Anda dapat mengambil serangkaian foto dengan kamera, menyimpannya dalam sebuah folder, memuat folder itu dengan alat ini, lalu merekam deskripsi setiap foto dengan alat ini. Tab 'Review' untuk peninjauan sesi GPA direncanakan untuk rilis di masa mendatang."
-        ),
-        "restore_defaults": "Pulihkan Pengaturan Bawaan",
-        "restore_confirm_title": "Konfirmasi Pemulihan",
-        "restore_confirm_message": "Ini akan menghapus semua pengaturan yang disimpan, termasuk folder terakhir dan bahasa. Lanjutkan?",
-        "restore_done_title": "Pengaturan Dipulihkan",
-        "restore_done_message": "Pengaturan bawaan telah dipulihkan.",
     },
     "한국어": {
         "language_name": "한국어",
@@ -214,32 +111,6 @@ LABELS_ALL = {
         "metadata_saved": "메타데이터가 저장되었습니다!",
         "success": "성공",
         "wavs_joined": "모든 WAV 파일이 성공적으로 결합되었습니다:",
-        "videos_tab_title": "비디오",
-        "images_tab_title": "정지 이미지",
-        "image_no_selection": "선택된 이미지 없음",
-        "image_failed_to_load": "불러오기 실패",
-        "selected_image_label": "선택된 이미지:",
-        "show_filenames": "파일 이름 표시",
-        "zoom_label": "확대/축소",
-        "zoom_tip_plus_minus": "팁: +와 - 키로 확대/축소",
-        "double_click_tip_image": "이미지를 더블 클릭하여 전체 화면으로 보기",
-        "double_click_tip_video": "비디오를 더블 클릭하여 전체 화면으로 보기",
-        "show_advisory_startup": "시작 시 안내 표시",
-        "advisory_title": "안내",
-        "dont_show_again": "다시 표시하지 않기",
-        "ok": "확인",
-        "advisory_message": (
-            "이 도구는 현장 언어학자를 위한 두 가지 상황에서 사용됩니다:\n\n"
-            "첫째, Max Planck Institute 등의 비디오 유도 키트에 사용합니다. 모범 사례는 다음과 같습니다:\n"
-            "(1) 사용 중인 비디오 유도 세트의 활동 지침을 확보하여 꼼꼼히 읽으십시오. 최상의 결과를 위해 따라야 할 특정 프로토콜이 있을 수 있습니다.\n"
-            "(2) 어떤 경우에도 모범 사례: 별도의 녹음 장치를 사용하여 전체 세션을 지속적으로 녹음하십시오. 이는 분리된 녹음들 사이에서 참가자 지시나 주제 연속성 등을 나중에 구분하는 데 도움이 됩니다(이상적으로는 광범위 포착 오디오 + 비디오. 저장 공간과 대역폭이 필요하다면 클립 녹음보다 낮은 품질이어도 괜찮으며, 특히 비디오는 낮은 품질이어도 무방합니다).\n\n"
-            "둘째, 특히 1단계에서 GPA 리뷰 세션에 유용할 수 있습니다. 카메라로 일련의 사진을 찍어 폴더에 저장하고, 이 도구로 그 폴더를 불러온 다음 각 사진에 대한 설명을 이 도구로 녹음할 수 있습니다. GPA 세션 리뷰를 위한 'Review' 탭은 향후 릴리스에서 제공될 예정입니다."
-        ),
-        "restore_defaults": "기본 설정 복원",
-        "restore_confirm_title": "복원 확인",
-        "restore_confirm_message": "저장된 모든 설정(마지막 폴더 및 언어 포함)을 삭제합니다. 진행하시겠습니까?",
-        "restore_done_title": "설정 복원됨",
-        "restore_done_message": "기본 설정이 복원되었습니다.",
     },
     "Nederlands": {
         "language_name": "Nederlands",
@@ -271,32 +142,6 @@ LABELS_ALL = {
         "metadata_saved": "Metadata opgeslagen!",
         "success": "Succes",
         "wavs_joined": "Alle WAV-bestanden succesvol samengevoegd tot:",
-        "videos_tab_title": "Video's",
-        "images_tab_title": "Stilstaande Afbeeldingen",
-        "image_no_selection": "Geen afbeelding geselecteerd",
-        "image_failed_to_load": "Laden mislukt",
-        "selected_image_label": "Geselecteerde Afbeelding:",
-        "show_filenames": "Bestandsnamen tonen",
-        "zoom_label": "Zoom",
-        "zoom_tip_plus_minus": "Tip: Gebruik + en - om te zoomen",
-        "double_click_tip_image": "Dubbelklik op een afbeelding voor volledig scherm",
-        "double_click_tip_video": "Dubbelklik op de video voor volledig scherm",
-        "show_advisory_startup": "Toon advies bij opstarten",
-        "advisory_title": "Advies",
-        "dont_show_again": "Niet opnieuw tonen",
-        "ok": "OK",
-        "advisory_message": (
-            "Deze tool is bedoeld voor veldlinguïsten in twee situaties:\n\n"
-            "Eerst, voor video-elicitatiesets, bijvoorbeeld van het Max Planck Institute. Enkele best practices hiervoor:\n"
-            "(1) Verkrijg en lees de activiteitsinstructies voor de video-elicitatieset die u gebruikt grondig. Er kan een specifiek protocol zijn dat u moet volgen voor de beste resultaten.\n"
-            "(2) Best practice in elk geval: gebruik een apart opnameapparaat dat de volledige sessie continu opneemt. Dit helpt later bij het ontwarren van zaken zoals verwijzing naar deelnemers of onderwerpcontinuïteit die voortduurt over afzonderlijke opnamen (bij voorkeur audio + video met brede opname. Dit mag van lagere kwaliteit zijn dan de clipopnamen indien nodig voor opslagruimte en bandbreedte; vooral video van lagere kwaliteit is oké).\n\n"
-            "Ten tweede kunnen deze nuttig zijn voor GPA-reviewsessies, vooral in Fase 1. U kunt een reeks foto’s met uw camera maken, ze in een map opslaan, die map met deze tool laden en vervolgens beschrijvingen van elke foto met deze tool opnemen. Een 'Review'-tab voor GPA-sessieherziening is gepland voor een toekomstige release."
-        ),
-        "restore_defaults": "Standaardinstellingen herstellen",
-        "restore_confirm_title": "Herstel bevestigen",
-        "restore_confirm_message": "Dit verwijdert alle opgeslagen instellingen, inclusief laatste map en taal. Doorgaan?",
-        "restore_done_title": "Instellingen hersteld",
-        "restore_done_message": "Standaardinstellingen hersteld.",
     },
     "Português (Brasil)": {
         "language_name": "Português (Brasil)",
@@ -328,32 +173,6 @@ LABELS_ALL = {
         "metadata_saved": "Metadados salvos!",
         "success": "Sucesso",
         "wavs_joined": "Todos os arquivos WAV foram unidos com sucesso em:",
-        "videos_tab_title": "Vídeos",
-        "images_tab_title": "Imagens Estáticas",
-        "image_no_selection": "Nenhuma imagem selecionada",
-        "image_failed_to_load": "Falha ao carregar",
-        "selected_image_label": "Imagem Selecionada:",
-        "show_filenames": "Mostrar nomes de arquivos",
-        "zoom_label": "Zoom",
-        "zoom_tip_plus_minus": "Dica: Use as teclas + e - para zoom",
-        "double_click_tip_image": "Clique duas vezes na imagem para tela cheia",
-        "double_click_tip_video": "Clique duas vezes no vídeo para tela cheia",
-        "show_advisory_startup": "Exibir aviso na inicialização",
-        "advisory_title": "Aviso",
-        "dont_show_again": "Não mostrar novamente",
-        "ok": "OK",
-        "advisory_message": (
-            "Esta ferramenta é para uso por linguistas de campo em duas situações:\n\n"
-            "Primeiro, para kits de elicitação de vídeo, por exemplo, do Max Planck Institute. Algumas práticas recomendadas:\n"
-            "(1) Obtenha e leia cuidadosamente as instruções de atividade do conjunto de elicitação de vídeo que você está usando. Pode haver um protocolo específico a ser seguido para melhores resultados.\n"
-            "(2) Prática recomendada em qualquer sessão: tenha um dispositivo de gravação separado gravando continuamente toda a sessão. Isso ajudará você posteriormente a esclarecer coisas como referência de participantes ou continuidade de tópico que persiste em gravações separadas (idealmente áudio + vídeo de captura ampla. Pode ser de qualidade inferior às gravações de clipes, se necessário, por espaço de armazenamento e largura de banda; especialmente vídeo de qualidade inferior está ok).\n\n"
-            "Em segundo lugar, isso pode ser útil para sessões de revisão do GPA, especialmente na Fase 1. Você pode tirar uma série de fotos com sua câmera, salvá-las em uma pasta, carregar essa pasta com esta ferramenta e então gravar descrições de cada foto com esta ferramenta. Uma guia 'Revisão' para revisão de sessões GPA está planejada para uma versão futura."
-        ),
-        "restore_defaults": "Restaurar Configurações Padrão",
-        "restore_confirm_title": "Confirmar Restauração",
-        "restore_confirm_message": "Isso limpará todas as configurações salvas, incluindo a última pasta e idioma. Deseja continuar?",
-        "restore_done_title": "Configurações Restauradas",
-        "restore_done_message": "Configurações padrão restauradas.",
     },
     "Español (Latinoamérica)": {
         "language_name": "Español (Latinoamérica)",
@@ -385,32 +204,6 @@ LABELS_ALL = {
         "metadata_saved": "¡Metadatos guardados!",
         "success": "Éxito",
         "wavs_joined": "Todos los archivos WAV se unieron exitosamente en:",
-        "videos_tab_title": "Videos",
-        "images_tab_title": "Imágenes fijas",
-        "image_no_selection": "No se seleccionó ninguna imagen",
-        "image_failed_to_load": "Error al cargar",
-        "selected_image_label": "Imagen seleccionada:",
-        "show_filenames": "Mostrar nombres de archivo",
-        "zoom_label": "Zoom",
-        "zoom_tip_plus_minus": "Consejo: Usa las teclas + y - para zoom",
-        "double_click_tip_image": "Haz doble clic en la imagen para verla a pantalla completa",
-        "double_click_tip_video": "Haz doble clic en el video para verlo a pantalla completa",
-        "show_advisory_startup": "Mostrar aviso al iniciar",
-        "advisory_title": "Aviso",
-        "dont_show_again": "No volver a mostrar",
-        "ok": "OK",
-        "advisory_message": (
-            "Esta herramienta está destinada a lingüistas de campo en dos situaciones:\n\n"
-            "Primero, para conjuntos de elicitación en video, por ejemplo del Max Planck Institute. Algunas buenas prácticas para estos:\n"
-            "(1) Obtenga y lea detenidamente las instrucciones de la actividad para el conjunto de elicitación de video que esté usando. Puede haber un protocolo específico que seguir para obtener mejores resultados.\n"
-            "(2) Buena práctica en cualquier caso: tenga un dispositivo de grabación separado que grabe continuamente toda la sesión. Esto le ayudará más tarde a desentrañar cosas como la referencia a participantes o la continuidad del tema que persiste a través de grabaciones separadas (idealmente audio + video de cobertura amplia. Puede ser de menor calidad que las grabaciones de clips si es necesario por espacio de almacenamiento y ancho de banda; especialmente el video de menor calidad está bien).\n\n"
-            "En segundo lugar, esto puede ser útil para sesiones de revisión de GPA, especialmente en la Fase 1. Puede tomar una serie de fotos con su cámara, guardarlas en una carpeta, cargar esa carpeta con esta herramienta y luego grabar descripciones de cada foto con esta herramienta. Una pestaña de 'Revisión' para la revisión de sesiones de GPA está planeada para una versión futura."
-        ),
-        "restore_defaults": "Restaurar Configuración Predeterminada",
-        "restore_confirm_title": "Confirmar Restauración",
-        "restore_confirm_message": "Esto borrará todas las configuraciones guardadas, incluida la última carpeta y el idioma. ¿Desea continuar?",
-        "restore_done_title": "Configuración Restaurada",
-        "restore_done_message": "Se restauró la configuración predeterminada.",
     },
     "Afrikaans": {
         "language_name": "Afrikaans",
@@ -442,32 +235,6 @@ LABELS_ALL = {
         "metadata_saved": "Metadata gestoor!",
         "success": "Sukses",
         "wavs_joined": "Alle WAV-lêers suksesvol saamgevoeg tot:",
-        "videos_tab_title": "Video's",
-        "images_tab_title": "Stilstaande Beelde",
-        "image_no_selection": "Geen beeld gekies nie",
-        "image_failed_to_load": "Kon nie laai nie",
-        "selected_image_label": "Gekose Beeld:",
-        "show_filenames": "Wys lêernaam",
-        "zoom_label": "Zoem",
-        "zoom_tip_plus_minus": "Wenk: Gebruik + en - vir zoem",
-        "double_click_tip_image": "Dubbelklik op die beeld vir volskerm",
-        "double_click_tip_video": "Dubbelklik op die video vir volskerm",
-        "show_advisory_startup": "Wys advies by aanvang",
-        "advisory_title": "Advies",
-        "dont_show_again": "Moenie weer wys nie",
-        "ok": "OK",
-        "advisory_message": (
-            "Hierdie hulpmiddel is vir gebruik deur veldlinguiste in twee situasies:\n\n"
-            "Eerstens, vir video-elisitasie-stelle, byvoorbeeld van die Max Planck Institute. 'n Paar beste praktyke hiervoor:\n"
-            "(1) Verkry en lees deeglik die aktiwiteitsriglyne vir die video-elisitasie-stel wat jy gebruik. Daar kan 'n spesifieke protokol wees wat gevolg moet word vir die beste resultate.\n"
-            "(2) Beste praktyk in elk geval: hê 'n aparte opname-toestel wat die volledige sessie deurlopend opneem. Dit sal jou later help om dinge soos deelnemer-verwysing of onderwerp-kontinuïteit wat oor afsonderlike opnames voortduur, uit te pluis (by voorkeur wye-opname klank + video. Dit kan van laer gehalte wees as die clip-opnames indien nodig vir bergingsruimte en bandwydte; veral laer gehalte video is okay).\n\n"
-            "Tweedens kan dit nuttig wees vir GPA-hersieningsessies, veral in Fase 1. Jy kan 'n reeks foto's met jou kamera neem, dit in 'n gids stoor, daardie gids met hierdie hulpmiddel laai, en dan beskrywings van elke foto met hierdie hulpmiddel opneem. 'n 'Review'-oortjie vir GPA-sessie-hersiening word vir 'n toekomstige vrystelling beplan."
-        ),
-        "restore_defaults": "Herstel Verstekinstellings",
-        "restore_confirm_title": "Bevestig Herstel",
-        "restore_confirm_message": "Dit sal alle gestoorde instellings uitvee, insluitend die laaste gids en taal. Wil jy voortgaan?",
-        "restore_done_title": "Instellings Herstel",
-        "restore_done_message": "Verstekinstellings is herstel.",
     },
 }
 
@@ -525,10 +292,6 @@ class ToolTip:
                 self.widget.after_cancel(self._after_id)
             except Exception:
                 pass
-                # Update banner filename and rebuild grid to show/hide labels
-                if self.current_image:
-                    self.image_filename_var.set(self.current_image if self.show_filenames_var.get() else "")
-                self.build_image_grid()
             self._after_id = None
 
     def _show(self, event=None):
@@ -646,12 +409,8 @@ configure_pydub_ffmpeg()
 class VideoAnnotationApp:
     def __init__(self, root):
         self.root = root
-        self.logger = logging.getLogger("videoannotation")
         self.language = "English"
         self.LABELS = LABELS_ALL[self.language]
-        # Upscale caps (can be tuned). Prevents over-blurry fullscreen.
-        self.max_image_upscale = 3.0
-        self.max_video_upscale = 2.5
 
         # Language selection dropdown (shows native names)
         self.language_var = tk.StringVar(value=self.LABELS["language_name"])
@@ -688,11 +447,6 @@ class VideoAnnotationApp:
             wrap_at_sep=True,
             max_width_ratio=0.5,
         )
-        # Reflect persisted folder selection on startup
-        try:
-            self.update_folder_display()
-        except Exception:
-            pass
 
         # Main container
         self.main_frame = tk.Frame(root)
@@ -726,8 +480,6 @@ class VideoAnnotationApp:
         self.join_wavs_button = tk.Button(self.list_frame, text=self.LABELS["join_wavs"], command=self.join_all_wavs, state=tk.DISABLED)
         self.join_wavs_button.pack(fill=tk.X, pady=5)
 
-        # (Removed advisory toggle from main UI)
-
         # Listbox for video files with scrollbar
         self.video_listbox_frame = tk.Frame(self.list_frame)
         self.video_listbox_frame.pack(fill=tk.BOTH, expand=True)
@@ -741,142 +493,16 @@ class VideoAnnotationApp:
         # Metadata editor frame placeholder
         self.metadata_editor_frame = None
 
-        # Right frame: Notebook with Videos and Still Images tabs
-        self.notebook = ttk.Notebook(self.main_frame)
-        self.notebook.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5)
-
-        # Videos tab (reuse existing video UI under this frame)
-        self.videos_tab = tk.Frame(self.notebook)
-        self.notebook.add(self.videos_tab, text=LABELS_ALL.get(self.language, {}).get("videos_tab_title", "Videos"))
-
-        # Images tab (new image UI)
-        self.images_tab = tk.Frame(self.notebook)
-        self.notebook.add(self.images_tab, text=LABELS_ALL.get(self.language, {}).get("images_tab_title", "Still Images"))
-
-        # For backwards compatibility, keep using media_frame for video widgets
-        self.media_frame = tk.Frame(self.videos_tab)
-        self.media_frame.pack(fill=tk.BOTH, expand=True, padx=5)
-
-        # Track images state
-        self.image_files = []
-        self.current_image = None
-        self.image_thumbs = {}
-        # Image banner (thumbnail + filename + audio controls)
-        self.image_banner_frame = tk.Frame(self.images_tab)
-        self.image_banner_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
-        # Double-click tip for images
-        self.double_click_tip_image = tk.Label(self.images_tab, text=self.LABELS.get("double_click_tip_image", "Double-click an image to view it fullscreen"), anchor='w')
-        self.double_click_tip_image.pack(side=tk.TOP, fill=tk.X, padx=10)
-        self.image_thumb_label = tk.Label(self.image_banner_frame)
-        self.image_thumb_label.pack(side=tk.LEFT, padx=6)
-        # Info area: top row for labels, bottom row for the checkbox
-        self.image_info_frame = tk.Frame(self.image_banner_frame)
-        self.image_info_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self.image_info_top_row = tk.Frame(self.image_info_frame)
-        self.image_info_top_row.pack(side=tk.TOP, fill=tk.X)
-        # Selected image label (top row)
-        self.image_selected_label = tk.Label(
-            self.image_info_top_row,
-            text=self.LABELS.get("selected_image_label", "Selected Image:"),
-            anchor='w'
-        )
-        self.image_selected_label.pack(side=tk.LEFT, padx=8)
-        self.image_filename_var = tk.StringVar(value=LABELS_ALL.get(self.language, {}).get("image_no_selection", "No image selected"))
-        self.image_filename_label = tk.Label(self.image_info_top_row, textvariable=self.image_filename_var, anchor='w')
-        self.image_filename_label.pack(side=tk.LEFT, padx=10)
-        # Bottom row: checkbox on its own line
-        self.image_info_bottom_row = tk.Frame(self.image_info_frame)
-        self.image_info_bottom_row.pack(side=tk.TOP, fill=tk.X)
-        self.show_filenames_var = tk.BooleanVar(value=True)
-        self.show_filenames_checkbox = tk.Checkbutton(
-            self.image_info_bottom_row,
-            text=self.LABELS.get("show_filenames", "Show filenames"),
-            variable=self.show_filenames_var,
-            command=self.on_toggle_show_filenames
-        )
-        self.show_filenames_checkbox.pack(side=tk.LEFT, padx=8, pady=(2, 0))
-        # Audio controls for selected image (stay on the right)
-        self.image_controls = tk.Frame(self.image_banner_frame)
-        self.image_controls.pack(side=tk.RIGHT)
-        # Apply saved preference if available (loaded in load_settings earlier)
-        self.show_filenames_var.set(getattr(self, 'show_filenames_pref', True))
-        self.image_play_button = tk.Button(self.image_controls, text=self.LABELS["play_audio"], command=self.play_selected_image_audio, state=tk.DISABLED)
-        self.image_play_button.pack(side=tk.LEFT, padx=5)
-        self.image_stop_button = tk.Button(self.image_controls, text=self.LABELS["stop_audio"], command=self.stop_audio, state=tk.DISABLED)
-        self.image_stop_button.pack(side=tk.LEFT, padx=5)
-        self.image_record_button = tk.Button(self.image_controls, text=self.LABELS["record_audio"], command=self.toggle_image_recording, state=tk.DISABLED)
-        self.image_record_button.pack(side=tk.LEFT, padx=5)
-        # Manual refresh for images grid (helps verify folder sync)
-        self.image_refresh_button = tk.Button(self.image_controls, text="Refresh Images", command=self.refresh_images_only)
-        self.image_refresh_button.pack(side=tk.LEFT, padx=5)
-
-        # Scrollable image grid
-        self.image_canvas = tk.Canvas(self.images_tab, highlightthickness=0)
-        self.image_scrollbar = tk.Scrollbar(self.images_tab, orient=tk.VERTICAL, command=self.image_canvas.yview)
-        self.image_grid_container = tk.Frame(self.image_canvas)
-        self.image_canvas.create_window((0, 0), window=self.image_grid_container, anchor="nw")
-        self.image_canvas.configure(yscrollcommand=self.image_scrollbar.set)
-        self.image_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.image_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-        # Enable trackpad/mousewheel scrolling within the image grid (macOS-friendly)
-        self._mouse_over_image_canvas = False
-        self.image_canvas.bind("<Enter>", self._on_image_canvas_enter)
-        self.image_canvas.bind("<Leave>", self._on_image_canvas_leave)
-
-        # Keep scrollregion in sync with grid size; avoid re-entrant full rebuilds on tab resize
-        self.image_grid_container.bind("<Configure>", lambda e: self.image_canvas.configure(scrollregion=self.image_canvas.bbox("all")))
-        # Select persisted last tab on startup
-        try:
-            if getattr(self, 'last_tab', 'videos') == 'images':
-                self.notebook.select(self.images_tab)
-            else:
-                self.notebook.select(self.videos_tab)
-        except Exception:
-            pass
-        # Single-shot lazy refresh flag
-        self._tab_refresh_pending = False
-        # On startup, lazily load the active tab based on persisted folder
-        try:
-            self.root.after_idle(self.on_tab_changed)
-        except Exception:
-            pass
-
-        # Persist last active tab and update contents on switch
-        self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_changed)
-        # Select last tab if available
-        try:
-            if getattr(self, 'last_tab', 'videos') == 'images':
-                self.notebook.select(self.images_tab)
-            else:
-                self.notebook.select(self.videos_tab)
-        except Exception:
-            pass
+        # Right frame: Video player and audio controls
+        self.media_frame = tk.Frame(self.main_frame)
+        self.media_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5)
 
         # Video player section
-        # Double-click tip for video
-        self.double_click_tip_video = tk.Label(self.media_frame, text=self.LABELS.get("double_click_tip_video", "Double-click the video to view it fullscreen"), anchor='w')
-        self.double_click_tip_video.pack(side=tk.TOP, fill=tk.X)
-        # Container around the video label so we can color the border without overlapping the image
-        self.video_container = tk.Frame(self.media_frame, bd=0, relief=tk.FLAT)
-        # Set a neutral border by default
-        try:
-            self.video_container.configure(highlightthickness=1, highlightbackground="#cccccc", highlightcolor="#cccccc")
-        except Exception:
-            pass
-        self.video_container.pack()
-        # Video label lives inside the container
-        self.video_label = tk.Label(self.video_container, text=self.LABELS["video_listbox_no_video"])
+        self.video_label = tk.Label(self.media_frame, text=self.LABELS["video_listbox_no_video"])
         self.video_label.pack()
-        # Fullscreen on double-click
-        self.video_label.bind("<Double-Button-1>", self.on_video_double_click)
 
         self.video_controls = tk.Frame(self.media_frame)
         self.video_controls.pack(pady=5)
-
-        # Previous/Next navigation buttons
-        self.prev_video_button = tk.Button(self.video_controls, text=self.LABELS.get("prev_video", "|<"), command=self.prev_video, state=tk.DISABLED)
-        self.prev_video_button.pack(side=tk.LEFT, padx=5)
 
         self.play_video_button = tk.Button(self.video_controls, text=self.LABELS["play_video"], command=self.play_video, state=tk.DISABLED)
         self.play_video_button.pack(side=tk.LEFT, padx=5)
@@ -884,20 +510,12 @@ class VideoAnnotationApp:
         self.stop_video_button = tk.Button(self.video_controls, text=self.LABELS["stop_video"], command=self.stop_video, state=tk.DISABLED)
         self.stop_video_button.pack(side=tk.LEFT, padx=5)
 
-        self.next_video_button = tk.Button(self.video_controls, text=self.LABELS.get("next_video", ">|"), command=self.next_video, state=tk.DISABLED)
-        self.next_video_button.pack(side=tk.LEFT, padx=5)
-
         # Audio annotation section
         self.audio_frame = tk.Frame(self.media_frame)
         self.audio_frame.pack(pady=10)
 
         self.audio_label = tk.Label(self.audio_frame, text=self.LABELS["audio_no_annotation"])
         self.audio_label.pack()
-        # Remember default label background for restoring later
-        try:
-            self.audio_label_default_bg = self.audio_label.cget("bg")
-        except Exception:
-            self.audio_label_default_bg = self.root.cget("bg")
 
         self.audio_controls = tk.Frame(self.audio_frame)
         self.audio_controls.pack(pady=5)
@@ -917,663 +535,6 @@ class VideoAnnotationApp:
 
         self.root.title(self.LABELS["app_title"])
 
-        # Show advisory dialog shortly after startup (if enabled)
-        try:
-            if getattr(self, 'show_advisory', True):
-                self.root.after(200, self.show_advisory_dialog)
-        except Exception:
-            pass
-
-        # Footer: Restore Default Settings button (outside tabs)
-        self.footer_frame = tk.Frame(root)
-        self.footer_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=6)
-        self.restore_defaults_button = tk.Button(
-            self.footer_frame,
-            text=self.LABELS.get("restore_defaults", "Restore Default Settings"),
-            command=self.restore_default_settings
-        )
-        self.restore_defaults_button.pack(side=tk.RIGHT)
-
-        # Keyboard navigation for videos
-        try:
-            self.root.bind_all("<Left>", self._on_left_key)
-            self.root.bind_all("<Right>", self._on_right_key)
-        except Exception:
-            pass
-
-    def get_active_tab(self) -> str:
-        try:
-            current = self.notebook.select()
-            if current == str(self.images_tab):
-                return "images"
-        except Exception:
-            pass
-        return "videos"
-
-    def show_advisory_dialog(self):
-        advisory_text = self.LABELS.get("advisory_message", (
-            "This tool is for use by field linguists in one of two situations:\n\n"
-            "First, for video elictation kits, for example from Max Planck Institute. Some best practices for these:\n"
-            "(1) Obtain and thoroughly read the activity directions for the video elicitation set you're using. There may be a specific protocol to follow for best results.\n"
-            "(2) Best practice for these sessions in any case: have a separate recording device continuously recording the full session. This will help you later untangle things like participant reference or topic continuity persisting across separate recordings (ideally wide-pickup audio + video. Can be lower quality than the clip recordings if needed for storage space and bandwidth, especially lower quality video is ok).\n\n"
-            "Secondly, these may be useful for GPA review sessions, especially in Phase 1. You can take a series of photos with your camera, save them in a folder, load that folder with this tool, and then record descriptions of each photo with this tool. A 'Review' tab for GPA session review is planned for a future release."
-        ))
-        # Avoid multiple dialogs
-        if getattr(self, '_advisory_open', False):
-            return
-        self._advisory_open = True
-        try:
-            win = tk.Toplevel(self.root)
-            win.title(self.LABELS.get("advisory_title", "Advisory"))
-            win.transient(self.root)
-            try:
-                win.grab_set()
-            except Exception:
-                pass
-            # Compute a reasonable wrap length
-            screen_w = self.root.winfo_screenwidth()
-            wrap_len = max(400, min(int(screen_w * 0.5), 800))
-            # Content
-            body = tk.Frame(win, padx=12, pady=10)
-            body.pack(fill=tk.BOTH, expand=True)
-            tk.Label(body, text=advisory_text, justify=tk.LEFT, wraplength=wrap_len).pack(anchor='w')
-            # Controls
-            controls = tk.Frame(body)
-            controls.pack(fill=tk.X, pady=(8, 0))
-            dont_show_var = tk.BooleanVar(value=False)
-            tk.Checkbutton(controls, text=self.LABELS.get("dont_show_again", "Don't show again"), variable=dont_show_var).pack(side=tk.LEFT)
-            def close_dialog():
-                try:
-                    if dont_show_var.get():
-                        self.show_advisory = False
-                        self.save_settings()
-                except Exception:
-                    pass
-                self._advisory_open = False
-                try:
-                    win.destroy()
-                except Exception:
-                    pass
-            tk.Button(controls, text=self.LABELS.get("ok", "OK"), command=close_dialog).pack(side=tk.RIGHT)
-            # Position the dialog near center
-            win.update_idletasks()
-            x = self.root.winfo_rootx() + (self.root.winfo_width() - win.winfo_width()) // 2
-            y = self.root.winfo_rooty() + (self.root.winfo_height() - win.winfo_height()) // 3
-            win.geometry(f"+{max(50,x)}+{max(50,y)}")
-        except Exception:
-            self._advisory_open = False
-
-    def restore_default_settings(self):
-        # Confirm restore
-        try:
-            if not messagebox.askyesno(self.LABELS.get("restore_confirm_title", "Confirm Restore"), self.LABELS.get("restore_confirm_message", "This will clear all saved settings, including last folder and language. Proceed?")):
-                return
-        except Exception:
-            return
-        # Remove settings file
-        try:
-            if os.path.exists(self.settings_file):
-                os.remove(self.settings_file)
-        except Exception:
-            pass
-        # Reset in-memory state to defaults
-        try:
-            self.show_advisory = True
-            self.last_tab = 'videos'
-            self.show_filenames_pref = True
-            self.language = 'English'
-            self.LABELS = LABELS_ALL[self.language]
-            self.language_var.set(self.LABELS["language_name"])
-        except Exception:
-            pass
-        # Clear current folder
-        self.folder_path = None
-        try:
-            self.update_folder_display()
-        except Exception:
-            pass
-        # Clear UI selections
-        try:
-            self.video_listbox.delete(0, tk.END)
-        except Exception:
-            pass
-        try:
-            # Rebuild images grid empty
-            for child in list(self.image_grid_container.children.values()):
-                child.destroy()
-        except Exception:
-            pass
-        # Update labels
-        try:
-            self.root.title(self.LABELS["app_title"])
-            self.refresh_ui_texts()
-        except Exception:
-            pass
-        # Notify
-        try:
-            messagebox.showinfo(self.LABELS.get("restore_done_title", "Settings Restored"), self.LABELS.get("restore_done_message", "Default settings restored."))
-        except Exception:
-            pass
-
-    def on_tab_changed(self, event=None):
-        logging.getLogger("videoannotation").debug("Tab changed event: %s", str(event))
-        # Stop any playback when switching tabs
-        self.stop_video()
-        self.stop_audio()
-        # Save last tab selection to settings
-        try:
-            self.last_tab = self.get_active_tab()
-            logging.getLogger("videoannotation").debug("Active tab now: %s", self.last_tab)
-            self.save_settings()
-        except Exception:
-            pass
-        # Unified refresh to keep both tabs in sync
-        def _do_refresh_all():
-            self.refresh_all_media()
-        try:
-            self.root.after_idle(_do_refresh_all)
-        except Exception:
-            _do_refresh_all()
-
-    def refresh_all_media(self):
-        """Refresh both Videos and Images views from the current folder, keeping them in sync.
-        Also manages showing/hiding the video list depending on the active tab.
-        """
-        logging.getLogger("videoannotation").debug("refresh_all_media: folder=%s", getattr(self, 'folder_path', None))
-        active = self.get_active_tab()
-        # Always update both lists to avoid stale content when switching
-        try:
-            self.load_image_files()
-        except Exception:
-            pass
-        try:
-            self.load_video_files()
-        except Exception:
-            pass
-        # Manage the visibility of the video list on the left based on the active tab
-        try:
-            if active == "images":
-                self.video_listbox_frame.pack_forget()
-            else:
-                if hasattr(self, "metadata_editor_frame") and self.metadata_editor_frame:
-                    self.video_listbox_frame.pack(fill=tk.BOTH, expand=True, before=self.metadata_editor_frame)
-                else:
-                    self.video_listbox_frame.pack(fill=tk.BOTH, expand=True)
-        except Exception:
-            pass
-
-    def get_audio_path_for_media(self, name: str, ext: str | None, media_type: str) -> str:
-        # Build the expected audio filename for media
-        folder = self.folder_path or ""
-        base_name, _ = os.path.splitext(name)
-        if media_type == "image":
-            # For images, audio filenames follow: <basename>.<ext>.wav
-            if not ext:
-                ext = os.path.splitext(name)[1].lstrip('.')
-            audio_name = f"{base_name}.{ext}.wav"
-            return os.path.join(folder, audio_name)
-        # For videos, audio filenames follow: <basename>.wav
-        audio_name = f"{base_name}.wav"
-        return os.path.join(folder, audio_name)
-
-    def load_image_files(self):
-        # Populate image list based on supported extensions
-        logging.getLogger("videoannotation").debug("load_image_files called. folder=%s", getattr(self, 'folder_path', None))
-        # Clear any cached thumbnails to avoid stale images
-        try:
-            self.image_thumbs.clear()
-        except Exception:
-            pass
-        self.image_files = []
-        if not self.folder_path:
-            self.update_folder_display()
-            return
-        try:
-            exts = ('.jpg', '.jpeg', '.png', '.tif', '.tiff', '.bmp', '.gif')
-            files = [f for f in os.listdir(self.folder_path) if f.lower().endswith(exts) and not f.startswith('.')]
-            # Consistent simple sort-by-name (case-insensitive)
-            self.image_files = sorted(files, key=lambda s: s.lower())
-            logging.getLogger("videoannotation").debug("Found %d images", len(self.image_files))
-            if self.image_files:
-                logging.getLogger("videoannotation").debug("First few images: %s", ", ".join(self.image_files[:5]))
-            # Build grid view
-            self.build_image_grid()
-            # Reset banner
-            self.current_image = None
-            self.image_filename_var.set(LABELS_ALL.get(self.language, {}).get("image_no_selection", "No image selected"))
-            self.image_play_button.config(state=tk.DISABLED)
-            self.image_stop_button.config(state=tk.DISABLED)
-            self.image_record_button.config(state=tk.DISABLED)
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to load images: {e}")
-
-    def refresh_images_only(self):
-        """Force a rebuild of the images view from the current folder."""
-        self.load_image_files()
-
-    def build_image_grid(self):
-        # Clear existing tiles
-        for child in list(self.image_grid_container.children.values()):
-            child.destroy()
-        if not self.image_files:
-            return
-        # Determine container width
-        container_w = max(self.image_canvas.winfo_width(), 600)
-        # Thumbnail target height
-        target_h = 240
-        row = []
-        # Determine orientation for each image (portrait if h > w)
-        metas = []
-        for fname in self.image_files:
-            path = os.path.join(self.folder_path, fname)
-            try:
-                with Image.open(path) as im:
-                    w, h = im.size
-                metas.append({"name": fname, "path": path, "portrait": (h >= w)})
-            except Exception:
-                metas.append({"name": fname, "path": path, "portrait": False, "error": True})
-        # Build rows according to rule: 3-wide for all-portrait rows; otherwise 2-wide; if two portraits then landscape next -> stop at 2
-        r = 0
-        c = 0
-        i = 0
-        while i < len(metas):
-            # Decide row capacity
-            cap = 3 if all(m.get("portrait", False) for m in metas[i:i+3]) else 2
-            # Special case: first two portraits and third landscape -> cap=2
-            if len(metas) - i >= 3:
-                if metas[i].get("portrait", False) and metas[i+1].get("portrait", False) and not metas[i+2].get("portrait", False):
-                    cap = 2
-            # Place up to cap items
-            for j in range(cap):
-                if i + j >= len(metas):
-                    break
-                meta = metas[i + j]
-                tile_w = int(container_w / cap) - 18
-                # Use highlight border so we can color-code the whole tile
-                tile = tk.Frame(self.image_grid_container, bd=0, relief=tk.FLAT)
-                tile.grid(row=r, column=j, padx=6, pady=6, sticky="nsew")
-                # Thumbnail
-                thumb_lbl = tk.Label(tile)
-                thumb_lbl.pack(fill=tk.BOTH, expand=True)
-                # Recording indicator (visible badge + colored border)
-                try:
-                    ext = os.path.splitext(meta["name"])[1].lstrip('.')
-                    candidate = self.get_audio_path_for_media(meta["name"], ext, "image")
-                    has_audio = os.path.exists(candidate)
-                except Exception:
-                    has_audio = False
-                # Color the tile border: green if audio exists, neutral gray otherwise
-                try:
-                    tile.configure(
-                        highlightthickness=(3 if has_audio else 1),
-                        highlightbackground=("#4CAF50" if has_audio else "#cccccc"),
-                        highlightcolor=("#4CAF50" if has_audio else "#cccccc")
-                    )
-                except Exception:
-                    pass
-                try:
-                    badge = tk.Label(
-                        tile,
-                        text=("✓" if has_audio else "○"),
-                        fg=("white" if has_audio else "#666"),
-                        bg=("#4CAF50" if has_audio else "#ddd"),
-                        font=("Arial", 10, "bold")
-                    )
-                    badge.place(relx=1.0, rely=0.0, x=-4, y=4, anchor="ne")
-                except Exception:
-                    pass
-                # Filename label (conditional)
-                if self.show_filenames_var.get():
-                    tk.Label(tile, text=meta["name"], anchor='w').pack(fill=tk.X)
-                # Load thumbnail lazily into cache bucket
-                try:
-                    with Image.open(meta["path"]) as im:
-                        im.thumbnail((tile_w, target_h))
-                        photo = ImageTk.PhotoImage(im)
-                    # Keep reference
-                    self.image_thumbs[(meta["path"], tile_w, target_h)] = photo
-                    thumb_lbl.configure(image=photo)
-                    thumb_lbl.image = photo
-                except Exception:
-                    thumb_lbl.configure(text=LABELS_ALL.get(self.language, {}).get("image_failed_to_load", "Failed to load"))
-                # Bind selection and double-click
-                def make_handlers(m=meta, frame_ref=tile):
-                    def on_click(_e=None):
-                        self.select_image(m, frame_ref)
-                    def on_dbl(_e=None):
-                        self.on_image_double_click(m)
-                    return on_click, on_dbl
-                click_h, dbl_h = make_handlers()
-                tile.bind("<Button-1>", click_h)
-                thumb_lbl.bind("<Button-1>", click_h)
-                tile.bind("<Double-Button-1>", dbl_h)
-                thumb_lbl.bind("<Double-Button-1>", dbl_h)
-            # Next row
-            i += cap
-            r += 1
-
-    def on_toggle_show_filenames(self):
-        # Update banner filename visibility and rebuild grid to show/hide labels
-        show = self.show_filenames_var.get()
-        if self.current_image:
-            self.image_filename_var.set(self.current_image if show else "")
-        # Keep filename label above checkbox when toggling back on
-        try:
-            if show:
-                self.image_filename_label.pack_forget()
-                self.image_filename_label.pack(in_=self.image_info_top_row, side=tk.LEFT, padx=10)
-            else:
-                self.image_filename_label.pack_forget()
-        except Exception:
-            pass
-        self.build_image_grid()
-
-    # --- Mouse wheel/trackpad support for image grid ---
-    def _on_image_canvas_enter(self, event=None):
-        self._mouse_over_image_canvas = True
-        self._bind_image_canvas_mousewheel()
-
-    def _on_image_canvas_leave(self, event=None):
-        self._mouse_over_image_canvas = False
-        self._unbind_image_canvas_mousewheel()
-
-    def _bind_image_canvas_mousewheel(self):
-        try:
-            if sys.platform == "darwin":
-                self.root.bind_all("<MouseWheel>", self._on_mousewheel_mac)
-            else:
-                self.root.bind_all("<MouseWheel>", self._on_mousewheel)
-                # Linux legacy events
-                self.root.bind_all("<Button-4>", self._on_linux_scroll_up)
-                self.root.bind_all("<Button-5>", self._on_linux_scroll_down)
-        except Exception:
-            pass
-
-    def _unbind_image_canvas_mousewheel(self):
-        try:
-            self.root.unbind_all("<MouseWheel>")
-            self.root.unbind_all("<Button-4>")
-            self.root.unbind_all("<Button-5>")
-        except Exception:
-            pass
-
-    def _on_mousewheel_mac(self, event):
-        if not self._mouse_over_image_canvas:
-            return
-        delta = int(event.delta)
-        if delta == 0:
-            return
-        # macOS delivers small deltas; use units scrolling
-        self.image_canvas.yview_scroll(-delta, "units")
-
-    def _on_mousewheel(self, event):
-        if not self._mouse_over_image_canvas:
-            return
-        steps = -1 * int(event.delta / 120) if event.delta else 0
-        if steps == 0:
-            steps = -1 if event.delta < 0 else 1
-        self.image_canvas.yview_scroll(steps, "units")
-
-    def _on_linux_scroll_up(self, event):
-        if not self._mouse_over_image_canvas:
-            return
-        self.image_canvas.yview_scroll(-1, "units")
-
-    def _on_linux_scroll_down(self, event):
-        if not self._mouse_over_image_canvas:
-            return
-        self.image_canvas.yview_scroll(1, "units")
-
-    def select_image(self, meta: dict, frame_ref: tk.Frame | None = None):
-        self.current_image = meta["name"]
-        # Update banner
-        self.image_filename_var.set(meta["name"] if self.show_filenames_var.get() else "")
-        # Update thumbnail preview in banner
-        try:
-            with Image.open(meta["path"]) as im:
-                im.thumbnail((96, 96))
-                photo = ImageTk.PhotoImage(im)
-            self.image_thumb_label.configure(image=photo)
-            self.image_thumb_label.image = photo
-        except Exception:
-            self.image_thumb_label.configure(image="", text=LABELS_ALL.get(self.language, {}).get("image_failed_to_load", "Failed to load"))
-        # Enable audio buttons
-        self.image_play_button.config(state=tk.NORMAL)
-        self.image_stop_button.config(state=tk.NORMAL)
-        self.image_record_button.config(state=tk.NORMAL)
-        # Highlight selection
-        if frame_ref is not None:
-            for child in self.image_grid_container.children.values():
-                child.configure(bd=3)
-            frame_ref.configure(bd=6)
-
-    def on_image_double_click(self, meta: dict):
-        # Open fullscreen preview that closes on click or Esc, with zoom control and +/- keys
-        win = tk.Toplevel(self.root)
-        win.attributes("-fullscreen", True)
-        canvas = tk.Canvas(win, background="black", highlightthickness=0)
-        control_bar = tk.Frame(win, background="#111")
-        canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        control_bar.pack(side=tk.BOTTOM, fill=tk.X)
-        # Zoom slider bound to global fullscreen_scale
-        scale_var = tk.DoubleVar(value=getattr(self, 'fullscreen_scale', 1.0))
-        zoom_label = tk.Label(control_bar, text=self.LABELS.get("zoom_label", "Zoom"), foreground="#eee", background="#111")
-        zoom_label.pack(side=tk.LEFT, padx=8, pady=6)
-        zoom_tip = tk.Label(control_bar, text=self.LABELS.get("zoom_tip_plus_minus", "Tip: Use + and - keys to zoom"), foreground="#aaa", background="#111")
-        zoom_tip.pack(side=tk.RIGHT, padx=8, pady=6)
-        zoom_slider = tk.Scale(control_bar, from_=0.5, to=getattr(self, 'max_image_upscale', 3.0), orient=tk.HORIZONTAL, resolution=0.1, variable=scale_var)
-        zoom_slider.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8, pady=6)
-        try:
-            with Image.open(meta["path"]) as im_orig:
-                # store a copy for re-rendering
-                im_base = im_orig.copy()
-        except Exception:
-            im_base = None
-        def render_image():
-            canvas.delete("all")
-            if im_base is None:
-                canvas.create_text(20, 20, anchor='nw', fill="white", text=LABELS_ALL.get(self.language, {}).get("image_failed_to_load", "Failed to load"))
-                return
-            screen_w = win.winfo_screenwidth()
-            screen_h = win.winfo_screenheight()
-            w, h = im_base.size
-            fill_scale = max(screen_w / max(w, 1), screen_h / max(h, 1))
-            user_scale = float(scale_var.get())
-            # Apply cap
-            scale = min(fill_scale * user_scale, getattr(self, 'max_image_upscale', 3.0))
-            new_w = max(1, int(w * scale))
-            new_h = max(1, int(h * scale))
-            im2 = im_base.resize((new_w, new_h), Image.LANCZOS)
-            if new_w >= screen_w and new_h >= screen_h:
-                left = (new_w - screen_w) // 2
-                top = (new_h - screen_h) // 2
-                im_fit = im2.crop((left, top, left + screen_w, top + screen_h))
-            else:
-                bg = Image.new('RGB', (screen_w, screen_h), color=(0, 0, 0))
-                off_x = (screen_w - new_w) // 2
-                off_y = (screen_h - new_h) // 2
-                bg.paste(im2, (off_x, off_y))
-                im_fit = bg
-            photo = ImageTk.PhotoImage(im_fit)
-            canvas.create_image(0, 0, image=photo, anchor='nw')
-            canvas.image = photo
-        def close(_e=None):
-            win.destroy()
-        # Close on canvas click only; clicking controls won't close
-        canvas.bind("<Button-1>", close)
-        win.bind("<Escape>", close)
-        def on_scale_change(_v=None):
-            try:
-                self.fullscreen_scale = float(scale_var.get())
-                self.save_settings()
-            except Exception:
-                pass
-            render_image()
-        zoom_slider.configure(command=on_scale_change)
-        # Keyboard +/- to adjust zoom
-        def adjust_zoom(delta):
-            val = float(scale_var.get()) + delta
-            cap = getattr(self, 'max_image_upscale', 3.0)
-            val = max(0.5, min(cap, val))
-            scale_var.set(val)
-            on_scale_change()
-        for ks in ("plus", "equal", "KP_Add"):
-            win.bind(f"<KeyPress-{ks}>", lambda e, d=0.1: adjust_zoom(d))
-        for ks in ("minus", "underscore", "KP_Subtract"):
-            win.bind(f"<KeyPress-{ks}>", lambda e, d=-0.1: adjust_zoom(d))
-        render_image()
-
-    def on_video_double_click(self, event=None):
-        if not self.current_video or not self.folder_path:
-            return
-        # Stop inline playback to avoid conflicts
-        self.stop_video()
-        video_path = os.path.join(self.folder_path, self.current_video)
-        win = tk.Toplevel(self.root)
-        win.attributes("-fullscreen", True)
-        canvas = tk.Canvas(win, background="black", highlightthickness=0)
-        control_bar = tk.Frame(win, background="#111")
-        canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        control_bar.pack(side=tk.BOTTOM, fill=tk.X)
-        # Zoom slider
-        scale_var = tk.DoubleVar(value=getattr(self, 'fullscreen_scale', 1.0))
-        zoom_label = tk.Label(control_bar, text=self.LABELS.get("zoom_label", "Zoom"), foreground="#eee", background="#111")
-        zoom_label.pack(side=tk.LEFT, padx=8, pady=6)
-        zoom_tip = tk.Label(control_bar, text=self.LABELS.get("zoom_tip_plus_minus", "Tip: Use + and - keys to zoom"), foreground="#aaa", background="#111")
-        zoom_tip.pack(side=tk.RIGHT, padx=8, pady=6)
-        zoom_slider = tk.Scale(control_bar, from_=0.5, to=getattr(self, 'max_video_upscale', 2.5), orient=tk.HORIZONTAL, resolution=0.1, variable=scale_var)
-        zoom_slider.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8, pady=6)
-        running = {"val": True}
-        cap = cv2.VideoCapture(video_path)
-        screen_w = win.winfo_screenwidth()
-        screen_h = win.winfo_screenheight()
-        def close(_e=None):
-            running["val"] = False
-            try:
-                cap.release()
-            except Exception:
-                pass
-            win.destroy()
-        # Close on canvas click only; clicking controls won't close
-        canvas.bind("<Button-1>", close)
-        win.bind("<Escape>", close)
-        def on_scale_change(_v=None):
-            try:
-                self.fullscreen_scale = float(scale_var.get())
-                self.save_settings()
-            except Exception:
-                pass
-        zoom_slider.configure(command=on_scale_change)
-        def adjust_zoom(delta):
-            val = float(scale_var.get()) + delta
-            cap = getattr(self, 'max_video_upscale', 2.5)
-            val = max(0.5, min(cap, val))
-            scale_var.set(val)
-            on_scale_change()
-        for ks in ("plus", "equal", "KP_Add"):
-            win.bind(f"<KeyPress-{ks}>", lambda e, d=0.1: adjust_zoom(d))
-        for ks in ("minus", "underscore", "KP_Subtract"):
-            win.bind(f"<KeyPress-{ks}>", lambda e, d=-0.1: adjust_zoom(d))
-        def loop():
-            if not running["val"]:
-                return
-            ret, frame = cap.read()
-            if not ret:
-                # Loop video or close
-                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                ret, frame = cap.read()
-                if not ret:
-                    close()
-                    return
-            h, w = frame.shape[:2]
-            fill_scale = max(screen_w / max(w, 1), screen_h / max(h, 1))
-            user_scale = float(scale_var.get())
-            scale = min(fill_scale * user_scale, getattr(self, 'max_video_upscale', 2.5))
-            new_w = max(1, int(w * scale))
-            new_h = max(1, int(h * scale))
-            frame_resized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
-            # Convert to RGB for Tk
-            frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
-            img = Image.fromarray(frame_rgb)
-            # Crop or letterbox
-            if new_w >= screen_w and new_h >= screen_h:
-                left = (new_w - screen_w) // 2
-                top = (new_h - screen_h) // 2
-                img_fit = img.crop((left, top, left + screen_w, top + screen_h))
-            else:
-                bg = Image.new('RGB', (screen_w, screen_h), color=(0, 0, 0))
-                off_x = (screen_w - new_w) // 2
-                off_y = (screen_h - new_h) // 2
-                bg.paste(img, (off_x, off_y))
-                img_fit = bg
-            photo = ImageTk.PhotoImage(img_fit)
-            canvas.create_image(0, 0, image=photo, anchor='nw')
-            canvas.image = photo
-            # Schedule next frame respecting ~30fps
-            win.after(33, loop)
-        loop()
-
-    def play_selected_image_audio(self):
-        if not self.folder_path or not self.current_image:
-            return
-        name, ext = os.path.splitext(self.current_image)
-        ext = ext.lstrip('.')
-        wav_path = self.get_audio_path_for_media(name, ext, media_type="image")
-        if not os.path.exists(wav_path):
-            messagebox.showwarning(self.LABELS["no_files"], self.LABELS.get("audio_no_annotation", "No audio annotation"))
-            return
-        # Reuse audio playback but targeted to image audio
-        try:
-            segment = AudioSegment.from_wav(wav_path)
-            # Simple synchronous playback via pydub/playback would block; keep existing stream approach if available
-            from pydub.playback import play
-            threading.Thread(target=lambda: play(segment), daemon=True).start()
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to play audio: {e}")
-
-    def toggle_image_recording(self):
-        if not self.folder_path or not self.current_image:
-            return
-        name, ext = os.path.splitext(self.current_image)
-        ext = ext.lstrip('.')
-        wav_path = self.get_audio_path_for_media(name, ext, media_type="image")
-        # Confirm overwrite
-        if os.path.exists(wav_path):
-            if not messagebox.askyesno(self.LABELS.get("overwrite", "Overwrite?"), self.LABELS.get("overwrite_audio", "Audio file already exists. Overwrite?")):
-                return
-        # Delegate to existing recording thread logic if available; else minimal stub
-        try:
-            import pyaudio, wave
-            pa = pyaudio.PyAudio()
-            stream = pa.open(format=pyaudio.paInt16, channels=1, rate=44100, input=True, frames_per_buffer=1024)
-            frames = []
-            self.is_recording = True
-            self.image_record_button.config(text=self.LABELS["stop_recording"]) 
-            def worker():
-                try:
-                    while self.is_recording:
-                        data = stream.read(1024)
-                        frames.append(data)
-                finally:
-                    stream.stop_stream()
-                    stream.close()
-                    pa.terminate()
-                    wf = wave.open(wav_path, 'wb')
-                    wf.setnchannels(1)
-                    wf.setsampwidth(pyaudio.get_sample_size(pyaudio.paInt16))
-                    wf.setframerate(44100)
-                    wf.writeframes(b''.join(frames))
-                    wf.close()
-                    # Restore button label and command after finishing
-                    self.root.after(0, lambda: self.image_record_button.config(text=self.LABELS["record_audio"], command=self.toggle_image_recording))
-            threading.Thread(target=worker, daemon=True).start()
-            # Toggle stop on second press
-            def stop_record(_e=None):
-                self.is_recording = False
-            self.image_record_button.configure(command=stop_record)
-        except Exception as e:
-            messagebox.showerror("Error", f"Recording failed: {e}")
-
     def change_language(self, event=None):
         selected_name = self.language_var.get()
         for key, labels in LABELS_ALL.items():
@@ -1583,11 +544,6 @@ class VideoAnnotationApp:
                 break
         self.root.title(self.LABELS["app_title"])
         self.refresh_ui_texts()
-        # Persist language choice
-        try:
-            self.save_settings()
-        except Exception:
-            pass
 
     def refresh_ui_texts(self):
         self.select_button.config(text=self.LABELS["select_folder"])
@@ -1612,35 +568,6 @@ class VideoAnnotationApp:
         # Update current folder display text in case no folder is selected (localized)
         if not self.folder_path:
             self.update_folder_display()
-        # Update tab titles and image banner controls
-        if hasattr(self, "notebook"):
-            try:
-                self.notebook.tab(self.videos_tab, text=self.LABELS.get("videos_tab_title", "Videos"))
-                self.notebook.tab(self.images_tab, text=self.LABELS.get("images_tab_title", "Still Images"))
-            except Exception:
-                pass
-        if hasattr(self, "image_play_button"):
-            self.image_play_button.config(text=self.LABELS["play_audio"])
-        if hasattr(self, "image_stop_button"):
-            self.image_stop_button.config(text=self.LABELS["stop_audio"])
-        if hasattr(self, "image_record_button"):
-            self.image_record_button.config(text=self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
-        if hasattr(self, "image_filename_var") and not self.current_image:
-            self.image_filename_var.set(LABELS_ALL.get(self.language, {}).get("image_no_selection", "No image selected"))
-        if hasattr(self, "image_selected_label"):
-            self.image_selected_label.config(text=self.LABELS.get("selected_image_label", "Selected Image:"))
-        if hasattr(self, "show_filenames_checkbox"):
-            self.show_filenames_checkbox.config(text=self.LABELS.get("show_filenames", "Show filenames"))
-        if hasattr(self, "double_click_tip_image"):
-            self.double_click_tip_image.config(text=self.LABELS.get("double_click_tip_image", "Double-click an image to view it fullscreen"))
-        if hasattr(self, "double_click_tip_video"):
-            self.double_click_tip_video.config(text=self.LABELS.get("double_click_tip_video", "Double-click the video to view it fullscreen"))
-        if hasattr(self, "restore_defaults_button"):
-            self.restore_defaults_button.config(text=self.LABELS.get("restore_defaults", "Restore Default Settings"))
-        if hasattr(self, "prev_video_button"):
-            self.prev_video_button.config(text=self.LABELS.get("prev_video", "|<"))
-        if hasattr(self, "next_video_button"):
-            self.next_video_button.config(text=self.LABELS.get("next_video", ">|"))
 
     def update_folder_display(self):
         if self.folder_path:
@@ -1657,101 +584,22 @@ class VideoAnnotationApp:
             if os.path.exists(self.settings_file):
                 with open(self.settings_file, 'r') as f:
                     settings = json.load(f)
-                    # Language persistence
-                    lang = settings.get('language')
-                    if lang in LABELS_ALL:
-                        self.language = lang
-                        self.LABELS = LABELS_ALL[self.language]
-                    # Last folder persistence
-                    last_folder = settings.get('last_folder')
-                    try:
-                        if last_folder and os.path.isdir(last_folder):
-                            self.folder_path = last_folder
-                    except Exception:
-                        pass
                     self.ocenaudio_path = settings.get('ocenaudio_path')
-                    self.last_tab = settings.get('last_tab', 'videos')
-                    self.show_filenames_pref = settings.get('show_filenames', True)
-                    self.show_advisory = settings.get('show_advisory', True)
-                    try:
-                        self.fullscreen_scale = float(settings.get('fullscreen_scale', 1.0))
-                    except Exception:
-                        self.fullscreen_scale = 1.0
-                    # Clamp to [0.5, 1.0] for normalized slider
-                    self.fullscreen_scale = max(0.5, min(1.0, self.fullscreen_scale))
-                    # Reflect language choice in dropdown if available
-                    try:
-                        self.language_var.set(LABELS_ALL[self.language]["language_name"])
-                    except Exception:
-                        pass
-            else:
-                self.last_tab = 'videos'
-                self.show_filenames_pref = True
-                self.show_advisory = True
-                self.fullscreen_scale = 1.0
         except Exception as e:
             messagebox.showwarning("Settings Error", f"Failed to load settings: {e}")
 
     def save_settings(self):
         try:
             os.makedirs(os.path.dirname(self.settings_file), exist_ok=True)
-            # Merge with existing settings
-            settings = {}
-            if os.path.exists(self.settings_file):
-                try:
-                    with open(self.settings_file, 'r') as f:
-                        settings = json.load(f)
-                except Exception:
-                    settings = {}
-            settings['ocenaudio_path'] = self.ocenaudio_path
-            settings['last_tab'] = getattr(self, 'last_tab', 'videos')
-            settings['language'] = getattr(self, 'language', 'English')
-            # Persist last folder path if available
-            try:
-                if getattr(self, 'folder_path', None):
-                    settings['last_folder'] = self.folder_path
-                else:
-                    # Keep existing if we don't have a folder set yet
-                    settings['last_folder'] = settings.get('last_folder')
-            except Exception:
-                pass
-            try:
-                settings['show_filenames'] = bool(self.show_filenames_var.get())
-            except Exception:
-                # If not yet created
-                settings['show_filenames'] = settings.get('show_filenames', True)
-            settings['show_advisory'] = bool(getattr(self, 'show_advisory', True))
-            settings['fullscreen_scale'] = float(getattr(self, 'fullscreen_scale', 1.0))
             with open(self.settings_file, 'w') as f:
-                json.dump(settings, f)
+                json.dump({'ocenaudio_path': self.ocenaudio_path}, f)
         except Exception as e:
             messagebox.showwarning("Settings Error", f"Failed to save settings: {e}")
 
     def select_folder(self):
-        logging.getLogger("videoannotation").debug("select_folder invoked. start_dir=%s", getattr(self, 'folder_path', None))
-        # Start the dialog at the most recently selected folder when possible
-        start_dir = None
-        try:
-            start_dir = self.folder_path if self.folder_path and os.path.isdir(self.folder_path) else None
-        except Exception:
-            start_dir = None
-        try:
-            if start_dir:
-                self.folder_path = filedialog.askdirectory(title="Select Folder with Video Files", initialdir=start_dir)
-            else:
-                self.folder_path = filedialog.askdirectory(title="Select Folder with Video Files")
-        except Exception:
-            self.folder_path = filedialog.askdirectory(title="Select Folder with Video Files")
-        logging.getLogger("videoannotation").debug("select_folder result: %s", self.folder_path)
+        self.folder_path = filedialog.askdirectory(title="Select Folder with Video Files")
         if self.folder_path:
             self.update_folder_display()
-            # Reset image banner selection and clear cached thumbnails
-            try:
-                self.current_image = None
-                self.image_filename_var.set(LABELS_ALL.get(self.language, {}).get("image_no_selection", "No image selected"))
-                self.image_thumbs.clear()
-            except Exception:
-                pass
             # On Windows, delete all files starting with a period
             if sys.platform == "win32":
                 hidden_files = [f for f in os.listdir(self.folder_path) if f.startswith('.')]
@@ -1763,21 +611,8 @@ class VideoAnnotationApp:
                         errors.append(f"Delete {f}: {e}")
                 if errors:
                     messagebox.showwarning("Cleanup Errors", "Some hidden files could not be deleted:\n" + "\n".join(errors))
-            # Persist selected folder immediately
-            try:
-                self.save_settings()
-            except Exception:
-                pass
-            # Refresh both tabs immediately so they stay in sync
-            try:
-                self.root.after_idle(self.refresh_all_media)
-            except Exception:
-                self.refresh_all_media()
-            # Persist selected folder
-            try:
-                self.save_settings()
-            except Exception:
-                pass
+            self.load_video_files()
+            self.open_metadata_editor()
             self.export_wavs_button.config(state=tk.NORMAL)
             self.clear_wavs_button.config(state=tk.NORMAL)
             self.import_wavs_button.config(state=tk.NORMAL)
@@ -1876,17 +711,12 @@ class VideoAnnotationApp:
         self.open_metadata_editor()
 
     def load_video_files(self):
-        logging.getLogger("videoannotation").debug("load_video_files called. folder=%s", getattr(self, 'folder_path', None))
         self.video_listbox.delete(0, tk.END)
         self.video_files = []
         extensions = ('.mpg', '.mpeg', '.mp4', '.avi', '.mkv', '.mov')
         
         if not self.folder_path:
-            try:
-                self.video_label.config(text=self.LABELS["no_folder_selected"], image='')
-            except Exception:
-                pass
-            self.update_media_controls()
+            messagebox.showinfo(self.LABELS["no_folder_selected"], self.LABELS["no_folder_selected"])
             return
 
         try:
@@ -1895,20 +725,12 @@ class VideoAnnotationApp:
                 if os.path.isfile(full_path) and filename.lower().endswith(extensions):
                     self.video_files.append(full_path)
 
-            # Consistent simple sort-by-name on base filename (case-insensitive)
-            self.video_files.sort(key=lambda p: os.path.basename(p).lower())
-            logging.getLogger("videoannotation").debug("Found %d videos", len(self.video_files))
+            self.video_files.sort()
             for video_path in self.video_files:
-                base = os.path.basename(video_path)
-                wav_path = os.path.join(self.folder_path, os.path.splitext(base)[0] + '.wav')
-                marker = "[✓] " if os.path.exists(wav_path) else "[ ] "
-                self.video_listbox.insert(tk.END, marker + base)
+                self.video_listbox.insert(tk.END, os.path.basename(video_path))
             
             if not self.video_files:
-                try:
-                    self.video_label.config(text=f"{self.LABELS['no_videos_found']} {self.folder_path}", image='')
-                except Exception:
-                    pass
+                messagebox.showinfo(self.LABELS["no_videos_found"], f"{self.LABELS['no_videos_found']} {self.folder_path}")
 
         except PermissionError:
             messagebox.showerror("Permission Denied", f"You do not have permission to access the folder: {self.folder_path}")
@@ -1940,15 +762,7 @@ class VideoAnnotationApp:
             self.metadata_editor_frame.destroy()
 
         self.metadata_editor_frame = tk.Frame(self.list_frame)
-        # Ensure the editor sits below the video list pane when (re)shown.
-        # If the video list is hidden or not packed, fall back to a normal pack.
-        try:
-            if hasattr(self, "video_listbox_frame") and self.video_listbox_frame and self.video_listbox_frame.winfo_manager() == 'pack' and self.video_listbox_frame.winfo_ismapped():
-                self.metadata_editor_frame.pack(pady=10, fill=tk.BOTH, expand=True, after=self.video_listbox_frame)
-            else:
-                self.metadata_editor_frame.pack(pady=10, fill=tk.BOTH, expand=True)
-        except Exception:
-            self.metadata_editor_frame.pack(pady=10, fill=tk.BOTH, expand=True)
+        self.metadata_editor_frame.pack(pady=10, fill=tk.BOTH, expand=True)
 
         tk.Label(self.metadata_editor_frame, text=self.LABELS["edit_metadata"], font=("Arial", 12, "bold")).pack()
         self.metadata_text = tk.Text(self.metadata_editor_frame, width=40, height=10)
@@ -1966,28 +780,20 @@ class VideoAnnotationApp:
         messagebox.showinfo(self.LABELS["saved"], self.LABELS["metadata_saved"])
 
     def on_video_select(self, event):
-        logging.getLogger("videoannotation").debug("on_video_select: event=%s", str(event))
         selection = self.video_listbox.curselection()
         if not selection:
             return
-        selected_text = self.video_listbox.get(selection[0])
-        if selected_text.startswith("[✓] ") or selected_text.startswith("[ ] "):
-            self.current_video = selected_text[4:]
-        else:
-            self.current_video = selected_text
-        logging.getLogger("videoannotation").debug("Selected video: %s", self.current_video)
+        self.current_video = self.video_listbox.get(selection[0])
         self.update_media_controls()
         self.show_first_frame()
 
     def show_first_frame(self):
-        logging.getLogger("videoannotation").debug("show_first_frame: current=%s", getattr(self, 'current_video', None))
         if not self.current_video:
             self.video_label.config(image='', text="No video selected")
             return
         video_path = os.path.join(self.folder_path, self.current_video)
         cap = cv2.VideoCapture(video_path)
         ret, frame = cap.read()
-        logging.getLogger("videoannotation").debug("First frame read: %s", ret)
         if ret:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame = cv2.resize(frame, (640, 480))
@@ -2002,104 +808,20 @@ class VideoAnnotationApp:
             self.video_label.config(image=imgtk, text="")
         cap.release()
 
-    def prev_video(self):
-        try:
-            if not self.video_files:
-                return
-            sel = self.video_listbox.curselection()
-            # Determine current index
-            if sel:
-                idx = sel[0]
-            else:
-                # Find by current_video
-                idx = 0
-                for i in range(self.video_listbox.size()):
-                    txt = self.video_listbox.get(i)
-                    name = txt[4:] if txt.startswith("[✓] ") or txt.startswith("[ ] ") else txt
-                    if name == self.current_video:
-                        idx = i
-                        break
-            new_idx = max(0, idx - 1)
-            self.video_listbox.selection_clear(0, tk.END)
-            self.video_listbox.selection_set(new_idx)
-            self.video_listbox.activate(new_idx)
-            self.on_video_select(None)
-        except Exception:
-            pass
-
-    def next_video(self):
-        try:
-            if not self.video_files:
-                return
-            sel = self.video_listbox.curselection()
-            if sel:
-                idx = sel[0]
-            else:
-                idx = 0
-                for i in range(self.video_listbox.size()):
-                    txt = self.video_listbox.get(i)
-                    name = txt[4:] if txt.startswith("[✓] ") or txt.startswith("[ ] ") else txt
-                    if name == self.current_video:
-                        idx = i
-                        break
-            new_idx = min(self.video_listbox.size() - 1, (idx + 1))
-            self.video_listbox.selection_clear(0, tk.END)
-            self.video_listbox.selection_set(new_idx)
-            self.video_listbox.activate(new_idx)
-            self.on_video_select(None)
-        except Exception:
-            pass
-
-    def _on_left_key(self, event=None):
-        if self.get_active_tab() == "videos":
-            self.prev_video()
-
-    def _on_right_key(self, event=None):
-        if self.get_active_tab() == "videos":
-            self.next_video()
-
     def update_media_controls(self):
         if self.current_video:
             self.play_video_button.config(state=tk.NORMAL)
             self.stop_video_button.config(state=tk.NORMAL)
             self.record_button.config(state=tk.NORMAL, text=self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
-            try:
-                # Enable prev/next when a video is selected
-                self.prev_video_button.config(state=tk.NORMAL)
-                self.next_video_button.config(state=tk.NORMAL)
-            except Exception:
-                pass
-            wav_path = self.get_audio_path_for_media(self.current_video, None, media_type="video")
+            wav_path = os.path.join(self.folder_path, os.path.splitext(self.current_video)[0] + '.wav')
             if os.path.exists(wav_path):
                 self.audio_label.config(text=f"{self.LABELS['audio_label_prefix']}{os.path.splitext(self.current_video)[0]}.wav")
                 self.play_audio_button.config(state=tk.NORMAL)
                 self.stop_audio_button.config(state=tk.NORMAL)
-                # Highlight audio label to make it stand out
-                try:
-                    self.audio_label.config(bg="#d9fdd3", font=("Arial", 10, "bold"))
-                except Exception:
-                    pass
-                # Highlight the video container border (green) to indicate a recording exists
-                try:
-                    if hasattr(self, 'video_container') and self.video_container:
-                        self.video_container.configure(highlightthickness=3, highlightbackground="#4CAF50", highlightcolor="#4CAF50")
-                except Exception:
-                    pass
             else:
                 self.audio_label.config(text=self.LABELS["audio_no_annotation"])
                 self.play_audio_button.config(state=tk.DISABLED)
                 self.stop_audio_button.config(state=tk.DISABLED)
-                # Restore audio label styling
-                try:
-                    self.audio_label.config(bg=self.audio_label_default_bg)
-                except Exception:
-                    pass
-                # Restore neutral video container border
-                try:
-                    if hasattr(self, 'video_container') and self.video_container:
-                        self.video_container.configure(highlightthickness=1, highlightbackground="#cccccc", highlightcolor="#cccccc")
-                except Exception:
-                    pass
         else:
             self.video_label.config(text=self.LABELS["video_listbox_no_video"])
             self.play_video_button.config(state=tk.DISABLED)
@@ -2108,42 +830,13 @@ class VideoAnnotationApp:
             self.play_audio_button.config(state=tk.DISABLED)
             self.stop_audio_button.config(state=tk.DISABLED)
             self.record_button.config(state=tk.DISABLED, text=self.LABELS["record_audio"])
-            try:
-                self.prev_video_button.config(state=tk.DISABLED)
-                self.next_video_button.config(state=tk.DISABLED)
-            except Exception:
-                pass
-            # When no video is selected, keep the border neutral
-            try:
-                if hasattr(self, 'video_container') and self.video_container:
-                    self.video_container.configure(highlightthickness=1, highlightbackground="#cccccc", highlightcolor="#cccccc")
-            except Exception:
-                pass
 
     def open_in_ocenaudio(self):
         if not self.folder_path:
             messagebox.showerror("Error", "No folder selected.")
             return
 
-        # Build list based on active tab and visible media order
-        wav_files = []
-        try:
-            active = self.get_active_tab()
-        except Exception:
-            active = "videos"
-        if active == "images" and getattr(self, "image_files", None):
-            for img in self.image_files:
-                base, ext = os.path.splitext(img)
-                ext = ext.lstrip('.')
-                candidate = f"{base}.{ext}.wav"
-                if os.path.exists(os.path.join(self.folder_path, candidate)):
-                    wav_files.append(candidate)
-        else:
-            for vid in getattr(self, "video_files", []):
-                base, _ = os.path.splitext(vid)
-                candidate = f"{base}.wav"
-                if os.path.exists(os.path.join(self.folder_path, candidate)):
-                    wav_files.append(candidate)
+        wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
         if not wav_files:
             messagebox.showinfo("No Files", "No WAV files found in the current folder to open.")
             return
@@ -2300,18 +993,11 @@ class VideoAnnotationApp:
         self.open_metadata_editor()
 
     def stop_video(self):
-        logging.getLogger("videoannotation").debug("stop_video called")
         self.playing_video = False
         if self.cap:
             self.cap.release()
             self.cap = None
-        # Do not attempt to redraw a frame here; switching tabs or folders may change
-        # the current selection. Leave redraw to the subsequent load/update logic.
-        try:
-            self.current_video = None
-            self.update_media_controls()
-        except Exception:
-            pass
+        self.show_first_frame()
 
     def play_audio(self):
         if not self.current_video:
@@ -2412,25 +1098,7 @@ class VideoAnnotationApp:
             messagebox.showerror("Error", "No folder selected.")
             return
 
-        # Build list based on active tab and visible media order
-        wav_files = []
-        try:
-            active = self.get_active_tab()
-        except Exception:
-            active = "videos"
-        if active == "images" and getattr(self, "image_files", None):
-            for img in self.image_files:
-                base, ext = os.path.splitext(img)
-                ext = ext.lstrip('.')
-                candidate = f"{base}.{ext}.wav"
-                if os.path.exists(os.path.join(self.folder_path, candidate)):
-                    wav_files.append(candidate)
-        else:
-            for vid in getattr(self, "video_files", []):
-                base, _ = os.path.splitext(vid)
-                candidate = f"{base}.wav"
-                if os.path.exists(os.path.join(self.folder_path, candidate)):
-                    wav_files.append(candidate)
+        wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
         if not wav_files:
             messagebox.showinfo("No Files", "No WAV files found in the current folder.")
             return
@@ -2493,34 +1161,7 @@ class VideoAnnotationApp:
         )
 
 if __name__ == "__main__":
-    # Parse debug CLI flags
-    parser = argparse.ArgumentParser(description="Video Annotation Tool")
-    parser.add_argument("--debug", action="store_true", help="Enable verbose debug logging")
-    parser.add_argument("--log-file", dest="log_file", default=None, help="Write logs and crash traces to file")
-    args = parser.parse_args()
-
-    _setup_logging_and_debug(debug=args.debug, log_file=args.log_file)
-
     root = tk.Tk()
-
-    # Hook Tk callback exceptions into logger
-    def _tk_exc_hook(exc, val, tb):
-        logging.getLogger("videoannotation").error(
-            "Tk callback exception: %s: %s\n%s", getattr(exc, "__name__", str(exc)), val, "".join(traceback.format_tb(tb))
-        )
-    try:
-        root.report_callback_exception = _tk_exc_hook
-    except Exception:
-        pass
-
-    # On Windows, show the Tk console in debug for Tcl warnings
-    if args.debug and sys.platform == "win32":
-        try:
-            root.tk.call('console', 'show')
-        except Exception:
-            pass
-
     app = VideoAnnotationApp(root)
     root.geometry("1400x800")
-    logging.getLogger("videoannotation").info("Application started. Debug=%s", args.debug)
     root.mainloop()
