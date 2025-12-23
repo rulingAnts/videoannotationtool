@@ -54,6 +54,7 @@ LABELS_ALL = {
         "image_no_selection": "No image selected",
         "image_failed_to_load": "Failed to load",
         "selected_image_label": "Selected Image:",
+        "show_filenames": "Show filenames",
     },
     "Bahasa Indonesia": {
         "language_name": "Bahasa Indonesia",
@@ -90,6 +91,7 @@ LABELS_ALL = {
         "image_no_selection": "Tidak ada gambar yang dipilih",
         "image_failed_to_load": "Gagal memuat",
         "selected_image_label": "Gambar yang Dipilih:",
+        "show_filenames": "Tampilkan nama berkas",
     },
     "한국어": {
         "language_name": "한국어",
@@ -126,6 +128,7 @@ LABELS_ALL = {
         "image_no_selection": "선택된 이미지 없음",
         "image_failed_to_load": "불러오기 실패",
         "selected_image_label": "선택된 이미지:",
+        "show_filenames": "파일 이름 표시",
     },
     "Nederlands": {
         "language_name": "Nederlands",
@@ -162,6 +165,7 @@ LABELS_ALL = {
         "image_no_selection": "Geen afbeelding geselecteerd",
         "image_failed_to_load": "Laden mislukt",
         "selected_image_label": "Geselecteerde Afbeelding:",
+        "show_filenames": "Bestandsnamen tonen",
     },
     "Português (Brasil)": {
         "language_name": "Português (Brasil)",
@@ -198,6 +202,7 @@ LABELS_ALL = {
         "image_no_selection": "Nenhuma imagem selecionada",
         "image_failed_to_load": "Falha ao carregar",
         "selected_image_label": "Imagem Selecionada:",
+        "show_filenames": "Mostrar nomes de arquivos",
     },
     "Español (Latinoamérica)": {
         "language_name": "Español (Latinoamérica)",
@@ -234,6 +239,7 @@ LABELS_ALL = {
         "image_no_selection": "No se seleccionó ninguna imagen",
         "image_failed_to_load": "Error al cargar",
         "selected_image_label": "Imagen seleccionada:",
+        "show_filenames": "Mostrar nombres de archivo",
     },
     "Afrikaans": {
         "language_name": "Afrikaans",
@@ -270,6 +276,7 @@ LABELS_ALL = {
         "image_no_selection": "Geen beeld gekies nie",
         "image_failed_to_load": "Kon nie laai nie",
         "selected_image_label": "Gekose Beeld:",
+        "show_filenames": "Wys lêernaam",
     },
 }
 
@@ -327,6 +334,10 @@ class ToolTip:
                 self.widget.after_cancel(self._after_id)
             except Exception:
                 pass
+                # Update banner filename and rebuild grid to show/hide labels
+                if self.current_image:
+                    self.image_filename_var.set(self.current_image if self.show_filenames_var.get() else "")
+                self.build_image_grid()
             self._after_id = None
 
     def _show(self, event=None):
@@ -446,6 +457,9 @@ class VideoAnnotationApp:
         self.root = root
         self.language = "English"
         self.LABELS = LABELS_ALL[self.language]
+        # Upscale caps (can be tuned). Prevents over-blurry fullscreen.
+        self.max_image_upscale = 3.0
+        self.max_video_upscale = 2.5
 
         # Language selection dropdown (shows native names)
         self.language_var = tk.StringVar(value=self.LABELS["language_name"])
@@ -566,6 +580,17 @@ class VideoAnnotationApp:
         # Audio controls for selected image
         self.image_controls = tk.Frame(self.image_banner_frame)
         self.image_controls.pack(side=tk.RIGHT)
+        # Checkbox to show/hide filenames in grid and banner
+        self.show_filenames_var = tk.BooleanVar(value=True)
+        self.show_filenames_checkbox = tk.Checkbutton(
+            self.image_banner_frame,
+            text=self.LABELS.get("show_filenames", "Show filenames"),
+            variable=self.show_filenames_var,
+            command=self.on_toggle_show_filenames
+        )
+        self.show_filenames_checkbox.pack(side=tk.RIGHT, padx=8)
+        # Apply saved preference if available (loaded in load_settings earlier)
+        self.show_filenames_var.set(getattr(self, 'show_filenames_pref', True))
         self.image_play_button = tk.Button(self.image_controls, text=self.LABELS["play_audio"], command=self.play_selected_image_audio, state=tk.DISABLED)
         self.image_play_button.pack(side=tk.LEFT, padx=5)
         self.image_stop_button = tk.Button(self.image_controls, text=self.LABELS["stop_audio"], command=self.stop_audio, state=tk.DISABLED)
@@ -600,6 +625,8 @@ class VideoAnnotationApp:
         # Video player section
         self.video_label = tk.Label(self.media_frame, text=self.LABELS["video_listbox_no_video"])
         self.video_label.pack()
+        # Fullscreen on double-click
+        self.video_label.bind("<Double-Button-1>", self.on_video_double_click)
 
         self.video_controls = tk.Frame(self.media_frame)
         self.video_controls.pack(pady=5)
@@ -657,8 +684,18 @@ class VideoAnnotationApp:
         # Populate media for the active tab
         if self.get_active_tab() == "images":
             self.load_image_files()
+            # Hide video list when on images tab
+            try:
+                self.video_listbox_frame.pack_forget()
+            except Exception:
+                pass
         else:
             self.load_video_files()
+            # Show video list when on videos tab
+            try:
+                self.video_listbox_frame.pack(fill=tk.BOTH, expand=True)
+            except Exception:
+                pass
 
     def get_audio_path_for_media(self, name: str, ext: str | None, media_type: str) -> str:
         base = os.path.join(self.folder_path or "", name)
@@ -731,8 +768,9 @@ class VideoAnnotationApp:
                 # Thumbnail
                 thumb_lbl = tk.Label(tile)
                 thumb_lbl.pack(fill=tk.BOTH, expand=True)
-                # Filename label
-                tk.Label(tile, text=meta["name"], anchor='w').pack(fill=tk.X)
+                # Filename label (conditional)
+                if self.show_filenames_var.get():
+                    tk.Label(tile, text=meta["name"], anchor='w').pack(fill=tk.X)
                 # Load thumbnail lazily into cache bucket
                 try:
                     with Image.open(meta["path"]) as im:
@@ -760,10 +798,16 @@ class VideoAnnotationApp:
             i += cap
             r += 1
 
+    def on_toggle_show_filenames(self):
+        # Update banner filename and rebuild grid to show/hide labels
+        if self.current_image:
+            self.image_filename_var.set(self.current_image if self.show_filenames_var.get() else "")
+        self.build_image_grid()
+
     def select_image(self, meta: dict, frame_ref: tk.Frame | None = None):
         self.current_image = meta["name"]
         # Update banner
-        self.image_filename_var.set(meta["name"])
+        self.image_filename_var.set(meta["name"] if self.show_filenames_var.get() else "")
         # Update thumbnail preview in banner
         try:
             with Image.open(meta["path"]) as im:
@@ -791,11 +835,29 @@ class VideoAnnotationApp:
         canvas.pack(fill=tk.BOTH, expand=True)
         try:
             with Image.open(meta["path"]) as im:
+                # Compute upscale to fill screen within cap
                 screen_w = win.winfo_screenwidth()
                 screen_h = win.winfo_screenheight()
-                im.thumbnail((screen_w, screen_h))
-                photo = ImageTk.PhotoImage(im)
-            img_id = canvas.create_image(screen_w//2, screen_h//2, image=photo)
+                w, h = im.size
+                # Desired scale to fill
+                fill_scale = max(screen_w / max(w, 1), screen_h / max(h, 1))
+                scale = min(fill_scale, getattr(self, 'max_image_upscale', 3.0))
+                new_w = int(w * scale)
+                new_h = int(h * scale)
+                im2 = im.resize((max(1, new_w), max(1, new_h)), Image.LANCZOS)
+                # If larger than screen, crop to center; else letterbox onto black background
+                if new_w >= screen_w and new_h >= screen_h:
+                    left = (new_w - screen_w) // 2
+                    top = (new_h - screen_h) // 2
+                    im_fit = im2.crop((left, top, left + screen_w, top + screen_h))
+                else:
+                    bg = Image.new('RGB', (screen_w, screen_h), color=(0, 0, 0))
+                    off_x = (screen_w - new_w) // 2
+                    off_y = (screen_h - new_h) // 2
+                    bg.paste(im2, (off_x, off_y))
+                    im_fit = bg
+                photo = ImageTk.PhotoImage(im_fit)
+            canvas.create_image(0, 0, image=photo, anchor='nw')
             canvas.image = photo
         except Exception:
             canvas.create_text(20, 20, anchor='nw', fill="white", text=LABELS_ALL.get(self.language, {}).get("image_failed_to_load", "Failed to load"))
@@ -803,6 +865,67 @@ class VideoAnnotationApp:
             win.destroy()
         win.bind("<Button-1>", close)
         win.bind("<Escape>", close)
+
+    def on_video_double_click(self, event=None):
+        if not self.current_video or not self.folder_path:
+            return
+        # Stop inline playback to avoid conflicts
+        self.stop_video()
+        video_path = os.path.join(self.folder_path, self.current_video)
+        win = tk.Toplevel(self.root)
+        win.attributes("-fullscreen", True)
+        canvas = tk.Canvas(win, background="black", highlightthickness=0)
+        canvas.pack(fill=tk.BOTH, expand=True)
+        running = {"val": True}
+        cap = cv2.VideoCapture(video_path)
+        screen_w = win.winfo_screenwidth()
+        screen_h = win.winfo_screenheight()
+        def close(_e=None):
+            running["val"] = False
+            try:
+                cap.release()
+            except Exception:
+                pass
+            win.destroy()
+        win.bind("<Button-1>", close)
+        win.bind("<Escape>", close)
+        def loop():
+            if not running["val"]:
+                return
+            ret, frame = cap.read()
+            if not ret:
+                # Loop video or close
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                ret, frame = cap.read()
+                if not ret:
+                    close()
+                    return
+            h, w = frame.shape[:2]
+            fill_scale = max(screen_w / max(w, 1), screen_h / max(h, 1))
+            scale = min(fill_scale, getattr(self, 'max_video_upscale', 2.5))
+            new_w = max(1, int(w * scale))
+            new_h = max(1, int(h * scale))
+            frame_resized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
+            # Convert to RGB for Tk
+            frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(frame_rgb)
+            # Crop or letterbox
+            if new_w >= screen_w and new_h >= screen_h:
+                left = (new_w - screen_w) // 2
+                top = (new_h - screen_h) // 2
+                img_fit = img.crop((left, top, left + screen_w, top + screen_h))
+            else:
+                bg = Image.new('RGB', (screen_w, screen_h), color=(0, 0, 0))
+                off_x = (screen_w - new_w) // 2
+                off_y = (screen_h - new_h) // 2
+                bg.paste(img, (off_x, off_y))
+                img_fit = bg
+            photo = ImageTk.PhotoImage(img_fit)
+            canvas.create_image(0, 0, image=photo, anchor='nw')
+            canvas.image = photo
+            # Schedule next frame respecting ~30fps
+            win.after(33, loop)
+        loop()
 
     def play_selected_image_audio(self):
         if not self.folder_path or not self.current_image:
@@ -915,6 +1038,8 @@ class VideoAnnotationApp:
             self.image_filename_var.set(LABELS_ALL.get(self.language, {}).get("image_no_selection", "No image selected"))
         if hasattr(self, "image_selected_label"):
             self.image_selected_label.config(text=self.LABELS.get("selected_image_label", "Selected Image:"))
+        if hasattr(self, "show_filenames_checkbox"):
+            self.show_filenames_checkbox.config(text=self.LABELS.get("show_filenames", "Show filenames"))
 
     def update_folder_display(self):
         if self.folder_path:
@@ -933,8 +1058,10 @@ class VideoAnnotationApp:
                     settings = json.load(f)
                     self.ocenaudio_path = settings.get('ocenaudio_path')
                     self.last_tab = settings.get('last_tab', 'videos')
+                    self.show_filenames_pref = settings.get('show_filenames', True)
             else:
                 self.last_tab = 'videos'
+                self.show_filenames_pref = True
         except Exception as e:
             messagebox.showwarning("Settings Error", f"Failed to load settings: {e}")
 
@@ -951,6 +1078,11 @@ class VideoAnnotationApp:
                     settings = {}
             settings['ocenaudio_path'] = self.ocenaudio_path
             settings['last_tab'] = getattr(self, 'last_tab', 'videos')
+            try:
+                settings['show_filenames'] = bool(self.show_filenames_var.get())
+            except Exception:
+                # If not yet created
+                settings['show_filenames'] = settings.get('show_filenames', True)
             with open(self.settings_file, 'w') as f:
                 json.dump(settings, f)
         except Exception as e:
