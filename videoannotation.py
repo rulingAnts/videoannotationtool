@@ -70,6 +70,11 @@ LABELS_ALL = {
             "(2) Best practice for these sessions in any case: have a separate recording device continuously recording the full session. This will help you later untangle things like participant reference or topic continuity persisting across separate recordings (ideally wide-pickup audio + video. Can be lower quality than the clip recordings if needed for storage space and bandwidth, especially lower quality video is ok).\n\n"
             "Secondly, these may be useful for GPA review sessions, especially in Phase 1. You can take a series of photos with your camera, save them in a folder, load that folder with this tool, and then record descriptions of each photo with this tool. A 'Review' tab for GPA session review is planned for a future release."
         ),
+        "restore_defaults": "Restore Default Settings",
+        "restore_confirm_title": "Confirm Restore",
+        "restore_confirm_message": "This will clear all saved settings, including last folder and language. Proceed?",
+        "restore_done_title": "Settings Restored",
+        "restore_done_message": "Default settings restored.",
     },
     "Bahasa Indonesia": {
         "language_name": "Bahasa Indonesia",
@@ -122,6 +127,11 @@ LABELS_ALL = {
             "(2) Praktik terbaik dalam sesi apa pun: miliki perangkat perekam terpisah yang terus merekam seluruh sesi. Ini akan membantu Anda nantinya mengurai hal-hal seperti rujukan partisipan atau kesinambungan topik yang berlanjut di antara rekaman terpisah (idealnya audio + video dengan cakupan luas. Boleh berkualitas lebih rendah daripada rekaman klip jika diperlukan untuk ruang penyimpanan dan bandwidth, khususnya video berkualitas lebih rendah tidak masalah).\n\n"
             "Selain itu, alat ini dapat berguna untuk sesi peninjauan GPA, terutama pada Fase 1. Anda dapat mengambil serangkaian foto dengan kamera, menyimpannya dalam sebuah folder, memuat folder itu dengan alat ini, lalu merekam deskripsi setiap foto dengan alat ini. Tab 'Review' untuk peninjauan sesi GPA direncanakan untuk rilis di masa mendatang."
         ),
+        "restore_defaults": "Pulihkan Pengaturan Bawaan",
+        "restore_confirm_title": "Konfirmasi Pemulihan",
+        "restore_confirm_message": "Ini akan menghapus semua pengaturan yang disimpan, termasuk folder terakhir dan bahasa. Lanjutkan?",
+        "restore_done_title": "Pengaturan Dipulihkan",
+        "restore_done_message": "Pengaturan bawaan telah dipulihkan.",
     },
     "한국어": {
         "language_name": "한국어",
@@ -174,6 +184,11 @@ LABELS_ALL = {
             "(2) 어떤 경우에도 모범 사례: 별도의 녹음 장치를 사용하여 전체 세션을 지속적으로 녹음하십시오. 이는 분리된 녹음들 사이에서 참가자 지시나 주제 연속성 등을 나중에 구분하는 데 도움이 됩니다(이상적으로는 광범위 포착 오디오 + 비디오. 저장 공간과 대역폭이 필요하다면 클립 녹음보다 낮은 품질이어도 괜찮으며, 특히 비디오는 낮은 품질이어도 무방합니다).\n\n"
             "둘째, 특히 1단계에서 GPA 리뷰 세션에 유용할 수 있습니다. 카메라로 일련의 사진을 찍어 폴더에 저장하고, 이 도구로 그 폴더를 불러온 다음 각 사진에 대한 설명을 이 도구로 녹음할 수 있습니다. GPA 세션 리뷰를 위한 'Review' 탭은 향후 릴리스에서 제공될 예정입니다."
         ),
+        "restore_defaults": "기본 설정 복원",
+        "restore_confirm_title": "복원 확인",
+        "restore_confirm_message": "저장된 모든 설정(마지막 폴더 및 언어 포함)을 삭제합니다. 진행하시겠습니까?",
+        "restore_done_title": "설정 복원됨",
+        "restore_done_message": "기본 설정이 복원되었습니다.",
     },
     "Nederlands": {
         "language_name": "Nederlands",
@@ -226,6 +241,11 @@ LABELS_ALL = {
             "(2) Best practice in elk geval: gebruik een apart opnameapparaat dat de volledige sessie continu opneemt. Dit helpt later bij het ontwarren van zaken zoals verwijzing naar deelnemers of onderwerpcontinuïteit die voortduurt over afzonderlijke opnamen (bij voorkeur audio + video met brede opname. Dit mag van lagere kwaliteit zijn dan de clipopnamen indien nodig voor opslagruimte en bandbreedte; vooral video van lagere kwaliteit is oké).\n\n"
             "Ten tweede kunnen deze nuttig zijn voor GPA-reviewsessies, vooral in Fase 1. U kunt een reeks foto’s met uw camera maken, ze in een map opslaan, die map met deze tool laden en vervolgens beschrijvingen van elke foto met deze tool opnemen. Een 'Review'-tab voor GPA-sessieherziening is gepland voor een toekomstige release."
         ),
+        "restore_defaults": "Standaardinstellingen herstellen",
+        "restore_confirm_title": "Herstel bevestigen",
+        "restore_confirm_message": "Dit verwijdert alle opgeslagen instellingen, inclusief laatste map en taal. Doorgaan?",
+        "restore_done_title": "Instellingen hersteld",
+        "restore_done_message": "Standaardinstellingen hersteld.",
     },
     "Português (Brasil)": {
         "language_name": "Português (Brasil)",
@@ -278,6 +298,11 @@ LABELS_ALL = {
             "(2) Prática recomendada em qualquer sessão: tenha um dispositivo de gravação separado gravando continuamente toda a sessão. Isso ajudará você posteriormente a esclarecer coisas como referência de participantes ou continuidade de tópico que persiste em gravações separadas (idealmente áudio + vídeo de captura ampla. Pode ser de qualidade inferior às gravações de clipes, se necessário, por espaço de armazenamento e largura de banda; especialmente vídeo de qualidade inferior está ok).\n\n"
             "Em segundo lugar, isso pode ser útil para sessões de revisão do GPA, especialmente na Fase 1. Você pode tirar uma série de fotos com sua câmera, salvá-las em uma pasta, carregar essa pasta com esta ferramenta e então gravar descrições de cada foto com esta ferramenta. Uma guia 'Revisão' para revisão de sessões GPA está planejada para uma versão futura."
         ),
+        "restore_defaults": "Restaurar Configurações Padrão",
+        "restore_confirm_title": "Confirmar Restauração",
+        "restore_confirm_message": "Isso limpará todas as configurações salvas, incluindo a última pasta e idioma. Deseja continuar?",
+        "restore_done_title": "Configurações Restauradas",
+        "restore_done_message": "Configurações padrão restauradas.",
     },
     "Español (Latinoamérica)": {
         "language_name": "Español (Latinoamérica)",
@@ -330,6 +355,11 @@ LABELS_ALL = {
             "(2) Buena práctica en cualquier caso: tenga un dispositivo de grabación separado que grabe continuamente toda la sesión. Esto le ayudará más tarde a desentrañar cosas como la referencia a participantes o la continuidad del tema que persiste a través de grabaciones separadas (idealmente audio + video de cobertura amplia. Puede ser de menor calidad que las grabaciones de clips si es necesario por espacio de almacenamiento y ancho de banda; especialmente el video de menor calidad está bien).\n\n"
             "En segundo lugar, esto puede ser útil para sesiones de revisión de GPA, especialmente en la Fase 1. Puede tomar una serie de fotos con su cámara, guardarlas en una carpeta, cargar esa carpeta con esta herramienta y luego grabar descripciones de cada foto con esta herramienta. Una pestaña de 'Revisión' para la revisión de sesiones de GPA está planeada para una versión futura."
         ),
+        "restore_defaults": "Restaurar Configuración Predeterminada",
+        "restore_confirm_title": "Confirmar Restauración",
+        "restore_confirm_message": "Esto borrará todas las configuraciones guardadas, incluida la última carpeta y el idioma. ¿Desea continuar?",
+        "restore_done_title": "Configuración Restaurada",
+        "restore_done_message": "Se restauró la configuración predeterminada.",
     },
     "Afrikaans": {
         "language_name": "Afrikaans",
@@ -382,6 +412,11 @@ LABELS_ALL = {
             "(2) Beste praktyk in elk geval: hê 'n aparte opname-toestel wat die volledige sessie deurlopend opneem. Dit sal jou later help om dinge soos deelnemer-verwysing of onderwerp-kontinuïteit wat oor afsonderlike opnames voortduur, uit te pluis (by voorkeur wye-opname klank + video. Dit kan van laer gehalte wees as die clip-opnames indien nodig vir bergingsruimte en bandwydte; veral laer gehalte video is okay).\n\n"
             "Tweedens kan dit nuttig wees vir GPA-hersieningsessies, veral in Fase 1. Jy kan 'n reeks foto's met jou kamera neem, dit in 'n gids stoor, daardie gids met hierdie hulpmiddel laai, en dan beskrywings van elke foto met hierdie hulpmiddel opneem. 'n 'Review'-oortjie vir GPA-sessie-hersiening word vir 'n toekomstige vrystelling beplan."
         ),
+        "restore_defaults": "Herstel Verstekinstellings",
+        "restore_confirm_title": "Bevestig Herstel",
+        "restore_confirm_message": "Dit sal alle gestoorde instellings uitvee, insluitend die laaste gids en taal. Wil jy voortgaan?",
+        "restore_done_title": "Instellings Herstel",
+        "restore_done_message": "Verstekinstellings is herstel.",
     },
 }
 
@@ -634,18 +669,7 @@ class VideoAnnotationApp:
         self.join_wavs_button = tk.Button(self.list_frame, text=self.LABELS["join_wavs"], command=self.join_all_wavs, state=tk.DISABLED)
         self.join_wavs_button.pack(fill=tk.X, pady=5)
 
-        # Settings: Show advisory on startup toggle
-        try:
-            self.advisory_var = tk.BooleanVar(value=getattr(self, 'show_advisory', True))
-            self.advisory_checkbox = tk.Checkbutton(
-                self.list_frame,
-                text=self.LABELS.get("show_advisory_startup", "Show advisory on startup"),
-                variable=self.advisory_var,
-                command=self.on_toggle_advisory
-            )
-            self.advisory_checkbox.pack(fill=tk.X, pady=5)
-        except Exception:
-            pass
+        # (Removed advisory toggle from main UI)
 
         # Listbox for video files with scrollbar
         self.video_listbox_frame = tk.Frame(self.list_frame)
@@ -767,11 +791,18 @@ class VideoAnnotationApp:
         self.video_controls = tk.Frame(self.media_frame)
         self.video_controls.pack(pady=5)
 
+        # Previous/Next navigation buttons
+        self.prev_video_button = tk.Button(self.video_controls, text=self.LABELS.get("prev_video", "|<"), command=self.prev_video, state=tk.DISABLED)
+        self.prev_video_button.pack(side=tk.LEFT, padx=5)
+
         self.play_video_button = tk.Button(self.video_controls, text=self.LABELS["play_video"], command=self.play_video, state=tk.DISABLED)
         self.play_video_button.pack(side=tk.LEFT, padx=5)
 
         self.stop_video_button = tk.Button(self.video_controls, text=self.LABELS["stop_video"], command=self.stop_video, state=tk.DISABLED)
         self.stop_video_button.pack(side=tk.LEFT, padx=5)
+
+        self.next_video_button = tk.Button(self.video_controls, text=self.LABELS.get("next_video", ">|"), command=self.next_video, state=tk.DISABLED)
+        self.next_video_button.pack(side=tk.LEFT, padx=5)
 
         # Audio annotation section
         self.audio_frame = tk.Frame(self.media_frame)
@@ -779,6 +810,11 @@ class VideoAnnotationApp:
 
         self.audio_label = tk.Label(self.audio_frame, text=self.LABELS["audio_no_annotation"])
         self.audio_label.pack()
+        # Remember default label background for restoring later
+        try:
+            self.audio_label_default_bg = self.audio_label.cget("bg")
+        except Exception:
+            self.audio_label_default_bg = self.root.cget("bg")
 
         self.audio_controls = tk.Frame(self.audio_frame)
         self.audio_controls.pack(pady=5)
@@ -802,6 +838,23 @@ class VideoAnnotationApp:
         try:
             if getattr(self, 'show_advisory', True):
                 self.root.after(200, self.show_advisory_dialog)
+        except Exception:
+            pass
+
+        # Footer: Restore Default Settings button (outside tabs)
+        self.footer_frame = tk.Frame(root)
+        self.footer_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=6)
+        self.restore_defaults_button = tk.Button(
+            self.footer_frame,
+            text=self.LABELS.get("restore_defaults", "Restore Default Settings"),
+            command=self.restore_default_settings
+        )
+        self.restore_defaults_button.pack(side=tk.RIGHT)
+
+        # Keyboard navigation for videos
+        try:
+            self.root.bind_all("<Left>", self._on_left_key)
+            self.root.bind_all("<Right>", self._on_right_key)
         except Exception:
             pass
 
@@ -867,10 +920,55 @@ class VideoAnnotationApp:
         except Exception:
             self._advisory_open = False
 
-    def on_toggle_advisory(self):
+    def restore_default_settings(self):
+        # Confirm restore
         try:
-            self.show_advisory = bool(self.advisory_var.get())
-            self.save_settings()
+            if not messagebox.askyesno(self.LABELS.get("restore_confirm_title", "Confirm Restore"), self.LABELS.get("restore_confirm_message", "This will clear all saved settings, including last folder and language. Proceed?")):
+                return
+        except Exception:
+            return
+        # Remove settings file
+        try:
+            if os.path.exists(self.settings_file):
+                os.remove(self.settings_file)
+        except Exception:
+            pass
+        # Reset in-memory state to defaults
+        try:
+            self.show_advisory = True
+            self.last_tab = 'videos'
+            self.show_filenames_pref = True
+            self.language = 'English'
+            self.LABELS = LABELS_ALL[self.language]
+            self.language_var.set(self.LABELS["language_name"])
+        except Exception:
+            pass
+        # Clear current folder
+        self.folder_path = None
+        try:
+            self.update_folder_display()
+        except Exception:
+            pass
+        # Clear UI selections
+        try:
+            self.video_listbox.delete(0, tk.END)
+        except Exception:
+            pass
+        try:
+            # Rebuild images grid empty
+            for child in list(self.image_grid_container.children.values()):
+                child.destroy()
+        except Exception:
+            pass
+        # Update labels
+        try:
+            self.root.title(self.LABELS["app_title"])
+            self.refresh_ui_texts()
+        except Exception:
+            pass
+        # Notify
+        try:
+            messagebox.showinfo(self.LABELS.get("restore_done_title", "Settings Restored"), self.LABELS.get("restore_done_message", "Default settings restored."))
         except Exception:
             pass
 
@@ -907,11 +1005,18 @@ class VideoAnnotationApp:
                 pass
 
     def get_audio_path_for_media(self, name: str, ext: str | None, media_type: str) -> str:
-        base = os.path.join(self.folder_path or "", name)
-        if media_type == "image" and ext:
-            return base + f".{ext}.wav"
-        # videos use plain basename.wav
-        return base + ".wav"
+        # Build the expected audio filename for media
+        folder = self.folder_path or ""
+        base_name, _ = os.path.splitext(name)
+        if media_type == "image":
+            # For images, audio filenames follow: <basename>.<ext>.wav
+            if not ext:
+                ext = os.path.splitext(name)[1].lstrip('.')
+            audio_name = f"{base_name}.{ext}.wav"
+            return os.path.join(folder, audio_name)
+        # For videos, audio filenames follow: <basename>.wav
+        audio_name = f"{base_name}.wav"
+        return os.path.join(folder, audio_name)
 
     def load_image_files(self):
         # Populate image list based on supported extensions
@@ -977,6 +1082,29 @@ class VideoAnnotationApp:
                 # Thumbnail
                 thumb_lbl = tk.Label(tile)
                 thumb_lbl.pack(fill=tk.BOTH, expand=True)
+                # Recording indicator (visible badge + bottom bar)
+                try:
+                    ext = os.path.splitext(meta["name"])[1].lstrip('.')
+                    candidate = self.get_audio_path_for_media(meta["name"], ext, "image")
+                    has_audio = os.path.exists(candidate)
+                except Exception:
+                    has_audio = False
+                try:
+                    badge = tk.Label(
+                        tile,
+                        text=("✓" if has_audio else "○"),
+                        fg=("white" if has_audio else "#666"),
+                        bg=("#4CAF50" if has_audio else "#ddd"),
+                        font=("Arial", 10, "bold")
+                    )
+                    badge.place(relx=1.0, rely=0.0, x=-4, y=4, anchor="ne")
+                except Exception:
+                    pass
+                try:
+                    bar = tk.Frame(tile, height=4, bg=("#4CAF50" if has_audio else "#ddd"))
+                    bar.pack(side=tk.BOTTOM, fill=tk.X)
+                except Exception:
+                    pass
                 # Filename label (conditional)
                 if self.show_filenames_var.get():
                     tk.Label(tile, text=meta["name"], anchor='w').pack(fill=tk.X)
@@ -1390,11 +1518,12 @@ class VideoAnnotationApp:
             self.double_click_tip_image.config(text=self.LABELS.get("double_click_tip_image", "Double-click an image to view it fullscreen"))
         if hasattr(self, "double_click_tip_video"):
             self.double_click_tip_video.config(text=self.LABELS.get("double_click_tip_video", "Double-click the video to view it fullscreen"))
-        if hasattr(self, "advisory_checkbox"):
-            try:
-                self.advisory_checkbox.config(text=self.LABELS.get("show_advisory_startup", "Show advisory on startup"))
-            except Exception:
-                pass
+        if hasattr(self, "restore_defaults_button"):
+            self.restore_defaults_button.config(text=self.LABELS.get("restore_defaults", "Restore Default Settings"))
+        if hasattr(self, "prev_video_button"):
+            self.prev_video_button.config(text=self.LABELS.get("prev_video", "|<"))
+        if hasattr(self, "next_video_button"):
+            self.next_video_button.config(text=self.LABELS.get("next_video", ">|"))
 
     def update_folder_display(self):
         if self.folder_path:
@@ -1633,7 +1762,10 @@ class VideoAnnotationApp:
 
             self.video_files.sort()
             for video_path in self.video_files:
-                self.video_listbox.insert(tk.END, os.path.basename(video_path))
+                base = os.path.basename(video_path)
+                wav_path = os.path.join(self.folder_path, os.path.splitext(base)[0] + '.wav')
+                marker = "[✓] " if os.path.exists(wav_path) else "[ ] "
+                self.video_listbox.insert(tk.END, marker + base)
             
             if not self.video_files:
                 messagebox.showinfo(self.LABELS["no_videos_found"], f"{self.LABELS['no_videos_found']} {self.folder_path}")
@@ -1690,7 +1822,11 @@ class VideoAnnotationApp:
         selection = self.video_listbox.curselection()
         if not selection:
             return
-        self.current_video = self.video_listbox.get(selection[0])
+        selected_text = self.video_listbox.get(selection[0])
+        if selected_text.startswith("[✓] ") or selected_text.startswith("[ ] "):
+            self.current_video = selected_text[4:]
+        else:
+            self.current_video = selected_text
         self.update_media_controls()
         self.show_first_frame()
 
@@ -1715,20 +1851,92 @@ class VideoAnnotationApp:
             self.video_label.config(image=imgtk, text="")
         cap.release()
 
+    def prev_video(self):
+        try:
+            if not self.video_files:
+                return
+            sel = self.video_listbox.curselection()
+            # Determine current index
+            if sel:
+                idx = sel[0]
+            else:
+                # Find by current_video
+                idx = 0
+                for i in range(self.video_listbox.size()):
+                    txt = self.video_listbox.get(i)
+                    name = txt[4:] if txt.startswith("[✓] ") or txt.startswith("[ ] ") else txt
+                    if name == self.current_video:
+                        idx = i
+                        break
+            new_idx = max(0, idx - 1)
+            self.video_listbox.selection_clear(0, tk.END)
+            self.video_listbox.selection_set(new_idx)
+            self.video_listbox.activate(new_idx)
+            self.on_video_select(None)
+        except Exception:
+            pass
+
+    def next_video(self):
+        try:
+            if not self.video_files:
+                return
+            sel = self.video_listbox.curselection()
+            if sel:
+                idx = sel[0]
+            else:
+                idx = 0
+                for i in range(self.video_listbox.size()):
+                    txt = self.video_listbox.get(i)
+                    name = txt[4:] if txt.startswith("[✓] ") or txt.startswith("[ ] ") else txt
+                    if name == self.current_video:
+                        idx = i
+                        break
+            new_idx = min(self.video_listbox.size() - 1, (idx + 1))
+            self.video_listbox.selection_clear(0, tk.END)
+            self.video_listbox.selection_set(new_idx)
+            self.video_listbox.activate(new_idx)
+            self.on_video_select(None)
+        except Exception:
+            pass
+
+    def _on_left_key(self, event=None):
+        if self.get_active_tab() == "videos":
+            self.prev_video()
+
+    def _on_right_key(self, event=None):
+        if self.get_active_tab() == "videos":
+            self.next_video()
+
     def update_media_controls(self):
         if self.current_video:
             self.play_video_button.config(state=tk.NORMAL)
             self.stop_video_button.config(state=tk.NORMAL)
             self.record_button.config(state=tk.NORMAL, text=self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
+            try:
+                # Enable prev/next when a video is selected
+                self.prev_video_button.config(state=tk.NORMAL)
+                self.next_video_button.config(state=tk.NORMAL)
+            except Exception:
+                pass
             wav_path = os.path.join(self.folder_path, os.path.splitext(self.current_video)[0] + '.wav')
             if os.path.exists(wav_path):
                 self.audio_label.config(text=f"{self.LABELS['audio_label_prefix']}{os.path.splitext(self.current_video)[0]}.wav")
                 self.play_audio_button.config(state=tk.NORMAL)
                 self.stop_audio_button.config(state=tk.NORMAL)
+                # Highlight audio label to make it stand out
+                try:
+                    self.audio_label.config(bg="#d9fdd3", font=("Arial", 10, "bold"))
+                except Exception:
+                    pass
             else:
                 self.audio_label.config(text=self.LABELS["audio_no_annotation"])
                 self.play_audio_button.config(state=tk.DISABLED)
                 self.stop_audio_button.config(state=tk.DISABLED)
+                # Restore audio label styling
+                try:
+                    self.audio_label.config(bg=self.audio_label_default_bg)
+                except Exception:
+                    pass
         else:
             self.video_label.config(text=self.LABELS["video_listbox_no_video"])
             self.play_video_button.config(state=tk.DISABLED)
@@ -1737,6 +1945,11 @@ class VideoAnnotationApp:
             self.play_audio_button.config(state=tk.DISABLED)
             self.stop_audio_button.config(state=tk.DISABLED)
             self.record_button.config(state=tk.DISABLED, text=self.LABELS["record_audio"])
+            try:
+                self.prev_video_button.config(state=tk.DISABLED)
+                self.next_video_button.config(state=tk.DISABLED)
+            except Exception:
+                pass
 
     def open_in_ocenaudio(self):
         if not self.folder_path:
