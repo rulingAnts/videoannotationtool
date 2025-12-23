@@ -611,17 +611,15 @@ class VideoAnnotationApp:
         # Audio controls for selected image
         self.image_controls = tk.Frame(self.image_banner_frame)
         self.image_controls.pack(side=tk.RIGHT)
-        # Checkbox to show/hide filenames in grid and banner (separate line under filename)
+        # Checkbox to show/hide filenames in grid and banner
         self.show_filenames_var = tk.BooleanVar(value=True)
-        self.image_banner_bottom = tk.Frame(self.images_tab)
-        self.image_banner_bottom.pack(side=tk.TOP, fill=tk.X, padx=10)
         self.show_filenames_checkbox = tk.Checkbutton(
-            self.image_banner_bottom,
+            self.image_banner_frame,
             text=self.LABELS.get("show_filenames", "Show filenames"),
             variable=self.show_filenames_var,
             command=self.on_toggle_show_filenames
         )
-        self.show_filenames_checkbox.pack(side=tk.LEFT, padx=2, pady=2)
+        self.show_filenames_checkbox.pack(side=tk.RIGHT, padx=8)
         # Apply saved preference if available (loaded in load_settings earlier)
         self.show_filenames_var.set(getattr(self, 'show_filenames_pref', True))
         self.image_play_button = tk.Button(self.image_controls, text=self.LABELS["play_audio"], command=self.play_selected_image_audio, state=tk.DISABLED)
@@ -725,23 +723,11 @@ class VideoAnnotationApp:
                 self.video_listbox_frame.pack_forget()
             except Exception:
                 pass
-            # Bind trackpad/mousewheel scrolling to image grid
-            try:
-                self._bind_image_mousewheel()
-            except Exception:
-                pass
         else:
             self.load_video_files()
             # Show video list when on videos tab
             try:
-                if hasattr(self, "metadata_editor_frame") and self.metadata_editor_frame:
-                    self.video_listbox_frame.pack(before=self.metadata_editor_frame, fill=tk.BOTH, expand=True)
-                else:
-                    self.video_listbox_frame.pack(fill=tk.BOTH, expand=True)
-            except Exception:
-                pass
-            try:
-                self._unbind_image_mousewheel()
+                self.video_listbox_frame.pack(fill=tk.BOTH, expand=True)
             except Exception:
                 pass
 
@@ -851,33 +837,6 @@ class VideoAnnotationApp:
         if self.current_image:
             self.image_filename_var.set(self.current_image if self.show_filenames_var.get() else "")
         self.build_image_grid()
-
-    def _on_image_mousewheel(self, event):
-        # Mac trackpad emits different delta units
-        try:
-            if sys.platform == 'darwin':
-                self.image_canvas.yview_scroll(-1 * int(event.delta), 'units')
-            else:
-                self.image_canvas.yview_scroll(-1 * int(event.delta / 120), 'units')
-        except Exception:
-            pass
-
-    def _bind_image_mousewheel(self):
-        try:
-            self.image_canvas.bind_all('<MouseWheel>', self._on_image_mousewheel)
-            # Linux wheel events
-            self.image_canvas.bind('<Button-4>', lambda e: self.image_canvas.yview_scroll(-1, 'units'))
-            self.image_canvas.bind('<Button-5>', lambda e: self.image_canvas.yview_scroll(1, 'units'))
-        except Exception:
-            pass
-
-    def _unbind_image_mousewheel(self):
-        try:
-            self.image_canvas.unbind_all('<MouseWheel>')
-            self.image_canvas.unbind('<Button-4>')
-            self.image_canvas.unbind('<Button-5>')
-        except Exception:
-            pass
 
     def select_image(self, meta: dict, frame_ref: tk.Frame | None = None):
         self.current_image = meta["name"]
@@ -1210,34 +1169,6 @@ class VideoAnnotationApp:
                         self.fullscreen_scale = 1.0
                     # Clamp to [0.5, 1.0] for normalized slider
                     self.fullscreen_scale = max(0.5, min(1.0, self.fullscreen_scale))
-                    # Persisted language and last folder
-                    lang = settings.get('language')
-                    if lang in LABELS_ALL:
-                        self.language = lang
-                        self.LABELS = LABELS_ALL[self.language]
-                        try:
-                            self.language_var.set(self.LABELS['language_name'])
-                        except Exception:
-                            pass
-                    last_folder = settings.get('last_folder')
-                    if last_folder and os.path.isdir(last_folder):
-                        self.folder_path = last_folder
-                        self.update_folder_display()
-                        # Preload media for active tab
-                        if self.get_active_tab() == 'images':
-                            self.load_image_files()
-                        else:
-                            self.load_video_files()
-                        # Prepare metadata editor and enable actions
-                        try:
-                            self.open_metadata_editor()
-                            self.export_wavs_button.config(state=tk.NORMAL)
-                            self.clear_wavs_button.config(state=tk.NORMAL)
-                            self.import_wavs_button.config(state=tk.NORMAL)
-                            self.join_wavs_button.config(state=tk.NORMAL)
-                            self.open_ocenaudio_button.config(state=tk.NORMAL)
-                        except Exception:
-                            pass
             else:
                 self.last_tab = 'videos'
                 self.show_filenames_pref = True
@@ -1264,9 +1195,6 @@ class VideoAnnotationApp:
                 # If not yet created
                 settings['show_filenames'] = settings.get('show_filenames', True)
             settings['fullscreen_scale'] = float(getattr(self, 'fullscreen_scale', 1.0))
-            settings['language'] = getattr(self, 'language', 'English')
-            if getattr(self, 'folder_path', None):
-                settings['last_folder'] = self.folder_path
             with open(self.settings_file, 'w') as f:
                 json.dump(settings, f)
         except Exception as e:
@@ -1276,11 +1204,6 @@ class VideoAnnotationApp:
         self.folder_path = filedialog.askdirectory(title="Select Folder with Video Files")
         if self.folder_path:
             self.update_folder_display()
-            # Persist selected folder
-            try:
-                self.save_settings()
-            except Exception:
-                pass
             # On Windows, delete all files starting with a period
             if sys.platform == "win32":
                 hidden_files = [f for f in os.listdir(self.folder_path) if f.startswith('.')]
