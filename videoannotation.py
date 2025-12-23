@@ -893,7 +893,9 @@ class VideoAnnotationApp:
             except Exception:
                 pass
         else:
-            self.load_video_files()
+            # Only load videos if a folder is set to avoid startup dialog
+            if self.folder_path:
+                self.load_video_files()
             # Show video list when on videos tab
             try:
                 # Ensure the video list appears above the metadata editor
@@ -1414,6 +1416,13 @@ class VideoAnnotationApp:
                     if lang in LABELS_ALL:
                         self.language = lang
                         self.LABELS = LABELS_ALL[self.language]
+                    # Last folder persistence
+                    last_folder = settings.get('last_folder')
+                    try:
+                        if last_folder and os.path.isdir(last_folder):
+                            self.folder_path = last_folder
+                    except Exception:
+                        pass
                     self.ocenaudio_path = settings.get('ocenaudio_path')
                     self.last_tab = settings.get('last_tab', 'videos')
                     self.show_filenames_pref = settings.get('show_filenames', True)
@@ -1451,6 +1460,15 @@ class VideoAnnotationApp:
             settings['ocenaudio_path'] = self.ocenaudio_path
             settings['last_tab'] = getattr(self, 'last_tab', 'videos')
             settings['language'] = getattr(self, 'language', 'English')
+            # Persist last folder path if available
+            try:
+                if getattr(self, 'folder_path', None):
+                    settings['last_folder'] = self.folder_path
+                else:
+                    # Keep existing if we don't have a folder set yet
+                    settings['last_folder'] = settings.get('last_folder')
+            except Exception:
+                pass
             try:
                 settings['show_filenames'] = bool(self.show_filenames_var.get())
             except Exception:
@@ -1464,7 +1482,19 @@ class VideoAnnotationApp:
             messagebox.showwarning("Settings Error", f"Failed to save settings: {e}")
 
     def select_folder(self):
-        self.folder_path = filedialog.askdirectory(title="Select Folder with Video Files")
+        # Start the dialog at the most recently selected folder when possible
+        start_dir = None
+        try:
+            start_dir = self.folder_path if self.folder_path and os.path.isdir(self.folder_path) else None
+        except Exception:
+            start_dir = None
+        try:
+            if start_dir:
+                self.folder_path = filedialog.askdirectory(title="Select Folder with Video Files", initialdir=start_dir)
+            else:
+                self.folder_path = filedialog.askdirectory(title="Select Folder with Video Files")
+        except Exception:
+            self.folder_path = filedialog.askdirectory(title="Select Folder with Video Files")
         if self.folder_path:
             self.update_folder_display()
             # On Windows, delete all files starting with a period
@@ -1484,6 +1514,11 @@ class VideoAnnotationApp:
             else:
                 self.load_video_files()
             self.open_metadata_editor()
+            # Persist selected folder
+            try:
+                self.save_settings()
+            except Exception:
+                pass
             self.export_wavs_button.config(state=tk.NORMAL)
             self.clear_wavs_button.config(state=tk.NORMAL)
             self.import_wavs_button.config(state=tk.NORMAL)
