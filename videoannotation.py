@@ -1522,8 +1522,10 @@ class VideoAnnotationApp(QMainWindow):
         if fps is None:
             fps = 0.0
         # Validate FPS and compute interval in ms, with sensible clamps
-        if isinstance(fps, (float, int)) and not math.isnan(float(fps)) and float(fps) > 0.0 and not math.isinf(float(fps)):
-            interval_ms = int(round(1000.0 / float(fps)))
+        fps_val = float(fps)
+        fps_valid = isinstance(fps, (float, int)) and not math.isnan(fps_val) and fps_val > 0.0 and not math.isinf(fps_val)
+        if fps_valid:
+            interval_ms = int(round(1000.0 / fps_val))
         else:
             interval_ms = 33  # Fallback to ~30 FPS
         interval_ms = max(5, min(1000, interval_ms))
@@ -1548,9 +1550,13 @@ class VideoAnnotationApp(QMainWindow):
 
         try:
             logging.info(
-                f"Playing '{os.path.basename(video_path)}' at {float(fps):.2f} FPS, timer interval {interval_ms} ms, "
+                f"Playing '{os.path.basename(video_path)}' at {fps_val:.2f} FPS, timer interval {interval_ms} ms, "
                 f"resolution {width}x{height}, codec {codec or fourcc_val}"
             )
+            if not fps_valid:
+                logging.info(
+                    f"FPS invalid or unavailable for '{os.path.basename(video_path)}'; using fallback interval {interval_ms} ms"
+                )
         except Exception:
             pass
         self.video_timer.start(interval_ms)
