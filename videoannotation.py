@@ -16,6 +16,57 @@ from pydub import AudioSegment
 import subprocess
 import sys
 import json
+import argparse
+import logging
+import faulthandler
+import traceback
+
+# Global file handle to keep faulthandler output alive when logging to a file
+_DEBUG_FILE_HANDLE = None
+
+def _setup_logging_and_debug(debug: bool = False, log_file: str | None = None):
+    global _DEBUG_FILE_HANDLE
+    # Reset root logger handlers to avoid duplicate logs on re-run
+    root_logger = logging.getLogger()
+    for h in list(root_logger.handlers):
+        root_logger.removeHandler(h)
+    level = logging.DEBUG if debug else logging.INFO
+    fmt = "%(asctime)s.%(msecs)03d %(levelname)s [%(threadName)s] %(name)s: %(message)s"
+    datefmt = "%H:%M:%S"
+    # Console handler
+    console = logging.StreamHandler()
+    console.setLevel(level)
+    console.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
+    root_logger.addHandler(console)
+    root_logger.setLevel(level)
+    # Optional file handler that shares the same file with faulthandler
+    if log_file:
+        try:
+            _DEBUG_FILE_HANDLE = open(log_file, "a", buffering=1)
+            file_handler = logging.StreamHandler(_DEBUG_FILE_HANDLE)
+            file_handler.setLevel(level)
+            file_handler.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
+            root_logger.addHandler(file_handler)
+            try:
+                faulthandler.enable(_DEBUG_FILE_HANDLE)
+            except Exception:
+                # Fall back to stderr
+                try:
+                    faulthandler.enable()
+                except Exception:
+                    pass
+        except Exception:
+            # Fall back to default faulthandler
+            try:
+                faulthandler.enable()
+            except Exception:
+                pass
+    else:
+        try:
+            faulthandler.enable()
+        except Exception:
+            pass
+    logging.getLogger("videoannotation").debug("Logging initialized. debug=%s, log_file=%s", debug, log_file)
 
 # UI labels for easy translation, with language names in their own language
 LABELS_ALL = {
@@ -595,6 +646,7 @@ configure_pydub_ffmpeg()
 class VideoAnnotationApp:
     def __init__(self, root):
         self.root = root
+        self.logger = logging.getLogger("videoannotation")
         self.language = "English"
         self.LABELS = LABELS_ALL[self.language]
         # Upscale caps (can be tuned). Prevents over-blurry fullscreen.
@@ -636,6 +688,11 @@ class VideoAnnotationApp:
             wrap_at_sep=True,
             max_width_ratio=0.5,
         )
+        # Reflect persisted folder selection on startup
+        try:
+            self.update_folder_display()
+        except Exception:
+            pass
 
         # Main container
         self.main_frame = tk.Frame(root)
@@ -764,9 +821,23 @@ class VideoAnnotationApp:
         self.image_canvas.bind("<Enter>", self._on_image_canvas_enter)
         self.image_canvas.bind("<Leave>", self._on_image_canvas_leave)
 
-        # Reflow grid on size changes
+        # Keep scrollregion in sync with grid size; avoid re-entrant full rebuilds on tab resize
         self.image_grid_container.bind("<Configure>", lambda e: self.image_canvas.configure(scrollregion=self.image_canvas.bbox("all")))
-        self.images_tab.bind("<Configure>", lambda e: self.build_image_grid())
+        # Select persisted last tab on startup
+        try:
+            if getattr(self, 'last_tab', 'videos') == 'images':
+                self.notebook.select(self.images_tab)
+            else:
+                self.notebook.select(self.videos_tab)
+        except Exception:
+            pass
+        # Single-shot lazy refresh flag
+        self._tab_refresh_pending = False
+        # On startup, lazily load the active tab based on persisted folder
+        try:
+            self.root.after_idle(self.on_tab_changed)
+        except Exception:
+            pass
 
         # Persist last active tab and update contents on switch
         self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_changed)
@@ -982,36 +1053,51 @@ class VideoAnnotationApp:
             pass
 
     def on_tab_changed(self, event=None):
+        logging.getLogger("videoannotation").debug("Tab changed event: %s", str(event))
         # Stop any playback when switching tabs
         self.stop_video()
         self.stop_audio()
         # Save last tab selection to settings
         try:
             self.last_tab = self.get_active_tab()
+            logging.getLogger("videoannotation").debug("Active tab now: %s", self.last_tab)
             self.save_settings()
         except Exception:
             pass
-        # Populate media for the active tab
-        if self.get_active_tab() == "images":
-            self.load_image_files()
-            # Hide video list when on images tab
+        # Avoid re-entrant heavy UI updates by scheduling a single lazy refresh
+        if getattr(self, '_tab_refresh_pending', False):
+            logging.getLogger("videoannotation").debug("Tab refresh already pending; skipping schedule")
+            return
+        self._tab_refresh_pending = True
+        def _do_refresh():
             try:
-                self.video_listbox_frame.pack_forget()
-            except Exception:
-                pass
-        else:
-            # Only load videos if a folder is set to avoid startup dialog
-            if self.folder_path:
-                self.load_video_files()
-            # Show video list when on videos tab
-            try:
-                # Ensure the video list appears above the metadata editor
-                if hasattr(self, "metadata_editor_frame") and self.metadata_editor_frame:
-                    self.video_listbox_frame.pack(fill=tk.BOTH, expand=True, before=self.metadata_editor_frame)
+                active = self.get_active_tab()
+                logging.getLogger("videoannotation").debug("Executing deferred refresh for tab: %s", active)
+                if active == "images":
+                    self.load_image_files()
+                    # Hide video list when on images tab
+                    try:
+                        self.video_listbox_frame.pack_forget()
+                    except Exception:
+                        pass
                 else:
-                    self.video_listbox_frame.pack(fill=tk.BOTH, expand=True)
-            except Exception:
-                pass
+                    # Always attempt to load videos; the loader itself will show a friendly
+                    # message and return if no folder is selected. This avoids stale lists.
+                    self.load_video_files()
+                    # Show video list when on videos tab
+                    try:
+                        if hasattr(self, "metadata_editor_frame") and self.metadata_editor_frame:
+                            self.video_listbox_frame.pack(fill=tk.BOTH, expand=True, before=self.metadata_editor_frame)
+                        else:
+                            self.video_listbox_frame.pack(fill=tk.BOTH, expand=True)
+                    except Exception:
+                        pass
+            finally:
+                self._tab_refresh_pending = False
+        try:
+            self.root.after_idle(_do_refresh)
+        except Exception:
+            _do_refresh()
 
     def get_audio_path_for_media(self, name: str, ext: str | None, media_type: str) -> str:
         # Build the expected audio filename for media
@@ -1029,6 +1115,7 @@ class VideoAnnotationApp:
 
     def load_image_files(self):
         # Populate image list based on supported extensions
+        logging.getLogger("videoannotation").debug("load_image_files called. folder=%s", getattr(self, 'folder_path', None))
         self.image_files = []
         if not self.folder_path:
             self.update_folder_display()
@@ -1036,7 +1123,9 @@ class VideoAnnotationApp:
         try:
             exts = ('.jpg', '.jpeg', '.png', '.tif', '.tiff', '.bmp', '.gif')
             files = [f for f in os.listdir(self.folder_path) if f.lower().endswith(exts) and not f.startswith('.')]
-            self.image_files = sorted(files)
+            # Consistent simple sort-by-name (case-insensitive)
+            self.image_files = sorted(files, key=lambda s: s.lower())
+            logging.getLogger("videoannotation").debug("Found %d images", len(self.image_files))
             # Build grid view
             self.build_image_grid()
             # Reset banner
@@ -1625,6 +1714,7 @@ class VideoAnnotationApp:
             messagebox.showwarning("Settings Error", f"Failed to save settings: {e}")
 
     def select_folder(self):
+        logging.getLogger("videoannotation").debug("select_folder invoked. start_dir=%s", getattr(self, 'folder_path', None))
         # Start the dialog at the most recently selected folder when possible
         start_dir = None
         try:
@@ -1638,6 +1728,7 @@ class VideoAnnotationApp:
                 self.folder_path = filedialog.askdirectory(title="Select Folder with Video Files")
         except Exception:
             self.folder_path = filedialog.askdirectory(title="Select Folder with Video Files")
+        logging.getLogger("videoannotation").debug("select_folder result: %s", self.folder_path)
         if self.folder_path:
             self.update_folder_display()
             # On Windows, delete all files starting with a period
@@ -1651,12 +1742,16 @@ class VideoAnnotationApp:
                         errors.append(f"Delete {f}: {e}")
                 if errors:
                     messagebox.showwarning("Cleanup Errors", "Some hidden files could not be deleted:\n" + "\n".join(errors))
-            # Load media based on active tab
-            if self.get_active_tab() == 'images':
-                self.load_image_files()
-            else:
-                self.load_video_files()
-            self.open_metadata_editor()
+            # Persist selected folder immediately
+            try:
+                self.save_settings()
+            except Exception:
+                pass
+            # Trigger a lazy tab refresh based on the active tab; avoid direct loads here
+            try:
+                self.root.after_idle(self.on_tab_changed)
+            except Exception:
+                pass
             # Persist selected folder
             try:
                 self.save_settings()
@@ -1760,12 +1855,17 @@ class VideoAnnotationApp:
         self.open_metadata_editor()
 
     def load_video_files(self):
+        logging.getLogger("videoannotation").debug("load_video_files called. folder=%s", getattr(self, 'folder_path', None))
         self.video_listbox.delete(0, tk.END)
         self.video_files = []
         extensions = ('.mpg', '.mpeg', '.mp4', '.avi', '.mkv', '.mov')
         
         if not self.folder_path:
-            messagebox.showinfo(self.LABELS["no_folder_selected"], self.LABELS["no_folder_selected"])
+            try:
+                self.video_label.config(text=self.LABELS["no_folder_selected"], image='')
+            except Exception:
+                pass
+            self.update_media_controls()
             return
 
         try:
@@ -1774,7 +1874,9 @@ class VideoAnnotationApp:
                 if os.path.isfile(full_path) and filename.lower().endswith(extensions):
                     self.video_files.append(full_path)
 
-            self.video_files.sort()
+            # Consistent simple sort-by-name on base filename (case-insensitive)
+            self.video_files.sort(key=lambda p: os.path.basename(p).lower())
+            logging.getLogger("videoannotation").debug("Found %d videos", len(self.video_files))
             for video_path in self.video_files:
                 base = os.path.basename(video_path)
                 wav_path = os.path.join(self.folder_path, os.path.splitext(base)[0] + '.wav')
@@ -1782,7 +1884,10 @@ class VideoAnnotationApp:
                 self.video_listbox.insert(tk.END, marker + base)
             
             if not self.video_files:
-                messagebox.showinfo(self.LABELS["no_videos_found"], f"{self.LABELS['no_videos_found']} {self.folder_path}")
+                try:
+                    self.video_label.config(text=f"{self.LABELS['no_videos_found']} {self.folder_path}", image='')
+                except Exception:
+                    pass
 
         except PermissionError:
             messagebox.showerror("Permission Denied", f"You do not have permission to access the folder: {self.folder_path}")
@@ -1814,8 +1919,15 @@ class VideoAnnotationApp:
             self.metadata_editor_frame.destroy()
 
         self.metadata_editor_frame = tk.Frame(self.list_frame)
-        # Ensure the editor sits below the video list pane when (re)shown
-        self.metadata_editor_frame.pack(pady=10, fill=tk.BOTH, expand=True, after=self.video_listbox_frame)
+        # Ensure the editor sits below the video list pane when (re)shown.
+        # If the video list is hidden or not packed, fall back to a normal pack.
+        try:
+            if hasattr(self, "video_listbox_frame") and self.video_listbox_frame and self.video_listbox_frame.winfo_manager() == 'pack' and self.video_listbox_frame.winfo_ismapped():
+                self.metadata_editor_frame.pack(pady=10, fill=tk.BOTH, expand=True, after=self.video_listbox_frame)
+            else:
+                self.metadata_editor_frame.pack(pady=10, fill=tk.BOTH, expand=True)
+        except Exception:
+            self.metadata_editor_frame.pack(pady=10, fill=tk.BOTH, expand=True)
 
         tk.Label(self.metadata_editor_frame, text=self.LABELS["edit_metadata"], font=("Arial", 12, "bold")).pack()
         self.metadata_text = tk.Text(self.metadata_editor_frame, width=40, height=10)
@@ -1833,6 +1945,7 @@ class VideoAnnotationApp:
         messagebox.showinfo(self.LABELS["saved"], self.LABELS["metadata_saved"])
 
     def on_video_select(self, event):
+        logging.getLogger("videoannotation").debug("on_video_select: event=%s", str(event))
         selection = self.video_listbox.curselection()
         if not selection:
             return
@@ -1841,16 +1954,19 @@ class VideoAnnotationApp:
             self.current_video = selected_text[4:]
         else:
             self.current_video = selected_text
+        logging.getLogger("videoannotation").debug("Selected video: %s", self.current_video)
         self.update_media_controls()
         self.show_first_frame()
 
     def show_first_frame(self):
+        logging.getLogger("videoannotation").debug("show_first_frame: current=%s", getattr(self, 'current_video', None))
         if not self.current_video:
             self.video_label.config(image='', text="No video selected")
             return
         video_path = os.path.join(self.folder_path, self.current_video)
         cap = cv2.VideoCapture(video_path)
         ret, frame = cap.read()
+        logging.getLogger("videoannotation").debug("First frame read: %s", ret)
         if ret:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame = cv2.resize(frame, (640, 480))
@@ -2163,11 +2279,18 @@ class VideoAnnotationApp:
         self.open_metadata_editor()
 
     def stop_video(self):
+        logging.getLogger("videoannotation").debug("stop_video called")
         self.playing_video = False
         if self.cap:
             self.cap.release()
             self.cap = None
-        self.show_first_frame()
+        # Do not attempt to redraw a frame here; switching tabs or folders may change
+        # the current selection. Leave redraw to the subsequent load/update logic.
+        try:
+            self.current_video = None
+            self.update_media_controls()
+        except Exception:
+            pass
 
     def play_audio(self):
         if not self.current_video:
@@ -2349,7 +2472,34 @@ class VideoAnnotationApp:
         )
 
 if __name__ == "__main__":
+    # Parse debug CLI flags
+    parser = argparse.ArgumentParser(description="Video Annotation Tool")
+    parser.add_argument("--debug", action="store_true", help="Enable verbose debug logging")
+    parser.add_argument("--log-file", dest="log_file", default=None, help="Write logs and crash traces to file")
+    args = parser.parse_args()
+
+    _setup_logging_and_debug(debug=args.debug, log_file=args.log_file)
+
     root = tk.Tk()
+
+    # Hook Tk callback exceptions into logger
+    def _tk_exc_hook(exc, val, tb):
+        logging.getLogger("videoannotation").error(
+            "Tk callback exception: %s: %s\n%s", getattr(exc, "__name__", str(exc)), val, "".join(traceback.format_tb(tb))
+        )
+    try:
+        root.report_callback_exception = _tk_exc_hook
+    except Exception:
+        pass
+
+    # On Windows, show the Tk console in debug for Tcl warnings
+    if args.debug and sys.platform == "win32":
+        try:
+            root.tk.call('console', 'show')
+        except Exception:
+            pass
+
     app = VideoAnnotationApp(root)
     root.geometry("1400x800")
+    logging.getLogger("videoannotation").info("Application started. Debug=%s", args.debug)
     root.mainloop()
