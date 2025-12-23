@@ -1034,10 +1034,8 @@ class VideoAnnotationApp:
         try:
             if sys.platform == "darwin":
                 self.root.bind_all("<MouseWheel>", self._on_mousewheel_mac)
-                self.root.bind_all("<Shift-MouseWheel>", self._on_shift_mousewheel_mac)
             else:
                 self.root.bind_all("<MouseWheel>", self._on_mousewheel)
-                self.root.bind_all("<Shift-MouseWheel>", self._on_shift_mousewheel)
                 # Linux legacy events
                 self.root.bind_all("<Button-4>", self._on_linux_scroll_up)
                 self.root.bind_all("<Button-5>", self._on_linux_scroll_down)
@@ -1047,7 +1045,6 @@ class VideoAnnotationApp:
     def _unbind_image_canvas_mousewheel(self):
         try:
             self.root.unbind_all("<MouseWheel>")
-            self.root.unbind_all("<Shift-MouseWheel>")
             self.root.unbind_all("<Button-4>")
             self.root.unbind_all("<Button-5>")
         except Exception:
@@ -1062,14 +1059,6 @@ class VideoAnnotationApp:
         # macOS delivers small deltas; use units scrolling
         self.image_canvas.yview_scroll(-delta, "units")
 
-    def _on_shift_mousewheel_mac(self, event):
-        if not self._mouse_over_image_canvas:
-            return
-        delta = int(event.delta)
-        if delta == 0:
-            return
-        self.image_canvas.xview_scroll(-delta, "units")
-
     def _on_mousewheel(self, event):
         if not self._mouse_over_image_canvas:
             return
@@ -1077,14 +1066,6 @@ class VideoAnnotationApp:
         if steps == 0:
             steps = -1 if event.delta < 0 else 1
         self.image_canvas.yview_scroll(steps, "units")
-
-    def _on_shift_mousewheel(self, event):
-        if not self._mouse_over_image_canvas:
-            return
-        steps = -1 * int(event.delta / 120) if event.delta else 0
-        if steps == 0:
-            steps = -1 if event.delta < 0 else 1
-        self.image_canvas.xview_scroll(steps, "units")
 
     def _on_linux_scroll_up(self, event):
         if not self._mouse_over_image_canvas:
@@ -1355,6 +1336,11 @@ class VideoAnnotationApp:
                 break
         self.root.title(self.LABELS["app_title"])
         self.refresh_ui_texts()
+        # Persist language choice
+        try:
+            self.save_settings()
+        except Exception:
+            pass
 
     def refresh_ui_texts(self):
         self.select_button.config(text=self.LABELS["select_folder"])
@@ -1423,6 +1409,11 @@ class VideoAnnotationApp:
             if os.path.exists(self.settings_file):
                 with open(self.settings_file, 'r') as f:
                     settings = json.load(f)
+                    # Language persistence
+                    lang = settings.get('language')
+                    if lang in LABELS_ALL:
+                        self.language = lang
+                        self.LABELS = LABELS_ALL[self.language]
                     self.ocenaudio_path = settings.get('ocenaudio_path')
                     self.last_tab = settings.get('last_tab', 'videos')
                     self.show_filenames_pref = settings.get('show_filenames', True)
@@ -1433,6 +1424,11 @@ class VideoAnnotationApp:
                         self.fullscreen_scale = 1.0
                     # Clamp to [0.5, 1.0] for normalized slider
                     self.fullscreen_scale = max(0.5, min(1.0, self.fullscreen_scale))
+                    # Reflect language choice in dropdown if available
+                    try:
+                        self.language_var.set(LABELS_ALL[self.language]["language_name"])
+                    except Exception:
+                        pass
             else:
                 self.last_tab = 'videos'
                 self.show_filenames_pref = True
@@ -1454,6 +1450,7 @@ class VideoAnnotationApp:
                     settings = {}
             settings['ocenaudio_path'] = self.ocenaudio_path
             settings['last_tab'] = getattr(self, 'last_tab', 'videos')
+            settings['language'] = getattr(self, 'language', 'English')
             try:
                 settings['show_filenames'] = bool(self.show_filenames_var.get())
             except Exception:
