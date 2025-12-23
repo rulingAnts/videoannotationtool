@@ -598,28 +598,35 @@ class VideoAnnotationApp:
         self.double_click_tip_image.pack(side=tk.TOP, fill=tk.X, padx=10)
         self.image_thumb_label = tk.Label(self.image_banner_frame)
         self.image_thumb_label.pack(side=tk.LEFT, padx=6)
-        # Selected image label
+        # Info area: top row for labels, bottom row for the checkbox
+        self.image_info_frame = tk.Frame(self.image_banner_frame)
+        self.image_info_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.image_info_top_row = tk.Frame(self.image_info_frame)
+        self.image_info_top_row.pack(side=tk.TOP, fill=tk.X)
+        # Selected image label (top row)
         self.image_selected_label = tk.Label(
-            self.image_banner_frame,
+            self.image_info_top_row,
             text=self.LABELS.get("selected_image_label", "Selected Image:"),
             anchor='w'
         )
         self.image_selected_label.pack(side=tk.LEFT, padx=8)
         self.image_filename_var = tk.StringVar(value=LABELS_ALL.get(self.language, {}).get("image_no_selection", "No image selected"))
-        self.image_filename_label = tk.Label(self.image_banner_frame, textvariable=self.image_filename_var, anchor='w')
+        self.image_filename_label = tk.Label(self.image_info_top_row, textvariable=self.image_filename_var, anchor='w')
         self.image_filename_label.pack(side=tk.LEFT, padx=10)
-        # Audio controls for selected image
-        self.image_controls = tk.Frame(self.image_banner_frame)
-        self.image_controls.pack(side=tk.RIGHT)
-        # Checkbox to show/hide filenames in grid and banner
+        # Bottom row: checkbox on its own line
+        self.image_info_bottom_row = tk.Frame(self.image_info_frame)
+        self.image_info_bottom_row.pack(side=tk.TOP, fill=tk.X)
         self.show_filenames_var = tk.BooleanVar(value=True)
         self.show_filenames_checkbox = tk.Checkbutton(
-            self.image_banner_frame,
+            self.image_info_bottom_row,
             text=self.LABELS.get("show_filenames", "Show filenames"),
             variable=self.show_filenames_var,
             command=self.on_toggle_show_filenames
         )
-        self.show_filenames_checkbox.pack(side=tk.RIGHT, padx=8)
+        self.show_filenames_checkbox.pack(side=tk.LEFT, padx=8, pady=(2, 0))
+        # Audio controls for selected image (stay on the right)
+        self.image_controls = tk.Frame(self.image_banner_frame)
+        self.image_controls.pack(side=tk.RIGHT)
         # Apply saved preference if available (loaded in load_settings earlier)
         self.show_filenames_var.set(getattr(self, 'show_filenames_pref', True))
         self.image_play_button = tk.Button(self.image_controls, text=self.LABELS["play_audio"], command=self.play_selected_image_audio, state=tk.DISABLED)
@@ -637,6 +644,11 @@ class VideoAnnotationApp:
         self.image_canvas.configure(yscrollcommand=self.image_scrollbar.set)
         self.image_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.image_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Enable trackpad/mousewheel scrolling within the image grid (macOS-friendly)
+        self._mouse_over_image_canvas = False
+        self.image_canvas.bind("<Enter>", self._on_image_canvas_enter)
+        self.image_canvas.bind("<Leave>", self._on_image_canvas_leave)
 
         # Reflow grid on size changes
         self.image_grid_container.bind("<Configure>", lambda e: self.image_canvas.configure(scrollregion=self.image_canvas.bbox("all")))
