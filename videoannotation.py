@@ -98,6 +98,9 @@ LABELS_ALL = {
         "wav_mismatch_msg_prefix": "The following WAV files do not match any video filenames and were not imported:\n",
         "ffmpeg_not_found_msg": "FFmpeg not found. Please ensure FFmpeg is installed or bundled with the executable.",
         "save_combined_wav_dialog_title": "Save Combined WAV File",
+        "recording_indicator": "● Recording",
+        "recording_started": "Recording started",
+        "recording_stopped": "Recording stopped",
     },
     "Bahasa Indonesia": {
         "language_name": "Bahasa Indonesia",
@@ -160,6 +163,9 @@ LABELS_ALL = {
         "wav_mismatch_msg_prefix": "Berkas WAV berikut tidak cocok dengan nama berkas video manapun dan tidak diimpor:\n",
         "ffmpeg_not_found_msg": "FFmpeg tidak ditemukan. Pastikan FFmpeg terpasang atau dibundel dengan eksekutabel.",
         "save_combined_wav_dialog_title": "Simpan Berkas WAV Gabungan",
+        "recording_indicator": "● Merekam",
+        "recording_started": "Perekaman dimulai",
+        "recording_stopped": "Perekaman dihentikan",
     },
     "한국어": {
         "language_name": "한국어",
@@ -222,6 +228,9 @@ LABELS_ALL = {
         "wav_mismatch_msg_prefix": "다음 WAV 파일은 어떤 비디오 파일명과도 일치하지 않아 가져오지 않았습니다:\n",
         "ffmpeg_not_found_msg": "FFmpeg를 찾을 수 없습니다. FFmpeg가 설치되어 있거나 실행 파일과 함께 제공되는지 확인하세요.",
         "save_combined_wav_dialog_title": "결합된 WAV 파일 저장",
+        "recording_indicator": "● 녹음 중",
+        "recording_started": "녹음이 시작되었습니다",
+        "recording_stopped": "녹음이 종료되었습니다",
     },
     "Nederlands": {
         "language_name": "Nederlands",
@@ -284,6 +293,9 @@ LABELS_ALL = {
         "wav_mismatch_msg_prefix": "De volgende WAV-bestanden komen met geen enkele videobestandsnaam overeen en zijn niet geïmporteerd:\n",
         "ffmpeg_not_found_msg": "FFmpeg niet gevonden. Zorg dat FFmpeg is geïnstalleerd of is meegeleverd met de executable.",
         "save_combined_wav_dialog_title": "Gecombineerd WAV-bestand opslaan",
+        "recording_indicator": "● Opname bezig",
+        "recording_started": "Opname gestart",
+        "recording_stopped": "Opname gestopt",
     },
     "Português (Brasil)": {
         "language_name": "Português (Brasil)",
@@ -346,6 +358,9 @@ LABELS_ALL = {
         "wav_mismatch_msg_prefix": "Os seguintes arquivos WAV não correspondem a nenhum nome de arquivo de vídeo e não foram importados:\n",
         "ffmpeg_not_found_msg": "FFmpeg não encontrado. Certifique-se de que o FFmpeg esteja instalado ou incluído no executável.",
         "save_combined_wav_dialog_title": "Salvar arquivo WAV combinado",
+        "recording_indicator": "● Gravando",
+        "recording_started": "Gravação iniciada",
+        "recording_stopped": "Gravação parada",
     },
     "Español (Latinoamérica)": {
         "language_name": "Español (Latinoamérica)",
@@ -408,6 +423,9 @@ LABELS_ALL = {
         "wav_mismatch_msg_prefix": "Los siguientes archivos WAV no coinciden con ningún nombre de archivo de video y no se importaron:\n",
         "ffmpeg_not_found_msg": "FFmpeg no encontrado. Asegúrate de que FFmpeg esté instalado o incluido con el ejecutable.",
         "save_combined_wav_dialog_title": "Guardar archivo WAV combinado",
+        "recording_indicator": "● Grabando",
+        "recording_started": "Grabación iniciada",
+        "recording_stopped": "Grabación detenida",
     },
     "Afrikaans": {
         "language_name": "Afrikaans",
@@ -470,6 +488,9 @@ LABELS_ALL = {
         "wav_mismatch_msg_prefix": "Die volgende WAV-lêers stem met geen videolêernaam ooreen nie en is nie ingevoer nie:\n",
         "ffmpeg_not_found_msg": "FFmpeg nie gevind nie. Maak seker FFmpeg is geïnstalleer of saam met die uitvoerbare gebundel.",
         "save_combined_wav_dialog_title": "Stoor saamgevoegde WAV-lêer",
+        "recording_indicator": "● Opname besig",
+        "recording_started": "Opname begin",
+        "recording_stopped": "Opname gestop",
     },
     "Nederlands": {
         "language_name": "Nederlands",
