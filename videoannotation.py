@@ -873,6 +873,8 @@ class VideoAnnotationApp:
         scale_var = tk.DoubleVar(value=getattr(self, 'fullscreen_scale', 1.0))
         zoom_label = tk.Label(control_bar, text=self.LABELS.get("zoom_label", "Zoom"), foreground="#eee", background="#111")
         zoom_label.pack(side=tk.LEFT, padx=8, pady=6)
+        zoom_tip = tk.Label(control_bar, text=self.LABELS.get("zoom_tip_plus_minus", "Tip: Use + and - keys to zoom"), foreground="#aaa", background="#111")
+        zoom_tip.pack(side=tk.RIGHT, padx=8, pady=6)
         zoom_slider = tk.Scale(control_bar, from_=0.5, to=getattr(self, 'max_image_upscale', 3.0), orient=tk.HORIZONTAL, resolution=0.1, variable=scale_var)
         zoom_slider.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8, pady=6)
         try:
@@ -951,6 +953,8 @@ class VideoAnnotationApp:
         scale_var = tk.DoubleVar(value=getattr(self, 'fullscreen_scale', 1.0))
         zoom_label = tk.Label(control_bar, text=self.LABELS.get("zoom_label", "Zoom"), foreground="#eee", background="#111")
         zoom_label.pack(side=tk.LEFT, padx=8, pady=6)
+        zoom_tip = tk.Label(control_bar, text=self.LABELS.get("zoom_tip_plus_minus", "Tip: Use + and - keys to zoom"), foreground="#aaa", background="#111")
+        zoom_tip.pack(side=tk.RIGHT, padx=8, pady=6)
         zoom_slider = tk.Scale(control_bar, from_=0.5, to=getattr(self, 'max_video_upscale', 2.5), orient=tk.HORIZONTAL, resolution=0.1, variable=scale_var)
         zoom_slider.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8, pady=6)
         running = {"val": True}
