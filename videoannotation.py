@@ -557,6 +557,19 @@ class VideoAnnotationApp:
         self.join_wavs_button = tk.Button(self.list_frame, text=self.LABELS["join_wavs"], command=self.join_all_wavs, state=tk.DISABLED)
         self.join_wavs_button.pack(fill=tk.X, pady=5)
 
+        # Settings: Show advisory on startup toggle
+        try:
+            self.advisory_var = tk.BooleanVar(value=getattr(self, 'show_advisory', True))
+            self.advisory_checkbox = tk.Checkbutton(
+                self.list_frame,
+                text="Show advisory on startup",
+                variable=self.advisory_var,
+                command=self.on_toggle_advisory
+            )
+            self.advisory_checkbox.pack(fill=tk.X, pady=5)
+        except Exception:
+            pass
+
         # Listbox for video files with scrollbar
         self.video_listbox_frame = tk.Frame(self.list_frame)
         self.video_listbox_frame.pack(fill=tk.BOTH, expand=True)
@@ -708,6 +721,13 @@ class VideoAnnotationApp:
 
         self.root.title(self.LABELS["app_title"])
 
+        # Show advisory dialog shortly after startup (if enabled)
+        try:
+            if getattr(self, 'show_advisory', True):
+                self.root.after(200, self.show_advisory_dialog)
+        except Exception:
+            pass
+
     def get_active_tab(self) -> str:
         try:
             current = self.notebook.select()
@@ -716,6 +736,66 @@ class VideoAnnotationApp:
         except Exception:
             pass
         return "videos"
+
+    def show_advisory_dialog(self):
+        advisory_text = (
+            "This tool is for use by field linguists in one of two situations:\n\n"
+            "First, for video elictation kits, for example from Max Planck Institute. Some best practices for these:\n"
+            "(1) Obtain and thoroughly read the activity directions for the video elicitation set you're using. There may be a specific protocol to follow for best results.\n"
+            "(2) Best practice for these sessions in any case: have a separate recording device continuously recording the full session. This will help you later untangle things like participant reference or topic continuity persisting across separate recordings (ideally wide-pickup audio + video. Can be lower quality than the clip recordings if needed for storage space and bandwidth, especially lower quality video is ok).\n\n"
+            "Secondly, these may be useful for GPA review sessions, especially in Phase 1. You can take a series of photos with your camera, save them in a folder, load that folder with this tool, and then record descriptions of each photo with this tool. A 'Review' tab for GPA session review is planned for a future release."
+        )
+        # Avoid multiple dialogs
+        if getattr(self, '_advisory_open', False):
+            return
+        self._advisory_open = True
+        try:
+            win = tk.Toplevel(self.root)
+            win.title("Advisory")
+            win.transient(self.root)
+            try:
+                win.grab_set()
+            except Exception:
+                pass
+            # Compute a reasonable wrap length
+            screen_w = self.root.winfo_screenwidth()
+            wrap_len = max(400, min(int(screen_w * 0.5), 800))
+            # Content
+            body = tk.Frame(win, padx=12, pady=10)
+            body.pack(fill=tk.BOTH, expand=True)
+            tk.Label(body, text=advisory_text, justify=tk.LEFT, wraplength=wrap_len).pack(anchor='w')
+            # Controls
+            controls = tk.Frame(body)
+            controls.pack(fill=tk.X, pady=(8, 0))
+            dont_show_var = tk.BooleanVar(value=False)
+            tk.Checkbutton(controls, text="Don't show again", variable=dont_show_var).pack(side=tk.LEFT)
+            def close_dialog():
+                try:
+                    if dont_show_var.get():
+                        self.show_advisory = False
+                        self.save_settings()
+                except Exception:
+                    pass
+                self._advisory_open = False
+                try:
+                    win.destroy()
+                except Exception:
+                    pass
+            tk.Button(controls, text="OK", command=close_dialog).pack(side=tk.RIGHT)
+            # Position the dialog near center
+            win.update_idletasks()
+            x = self.root.winfo_rootx() + (self.root.winfo_width() - win.winfo_width()) // 2
+            y = self.root.winfo_rooty() + (self.root.winfo_height() - win.winfo_height()) // 3
+            win.geometry(f"+{max(50,x)}+{max(50,y)}")
+        except Exception:
+            self._advisory_open = False
+
+    def on_toggle_advisory(self):
+        try:
+            self.show_advisory = bool(self.advisory_var.get())
+            self.save_settings()
+        except Exception:
+            pass
 
     def on_tab_changed(self, event=None):
         # Stop any playback when switching tabs
@@ -739,7 +819,11 @@ class VideoAnnotationApp:
             self.load_video_files()
             # Show video list when on videos tab
             try:
-                self.video_listbox_frame.pack(fill=tk.BOTH, expand=True)
+                # Ensure the video list appears above the metadata editor
+                if hasattr(self, "metadata_editor_frame") and self.metadata_editor_frame:
+                    self.video_listbox_frame.pack(fill=tk.BOTH, expand=True, before=self.metadata_editor_frame)
+                else:
+                    self.video_listbox_frame.pack(fill=tk.BOTH, expand=True)
             except Exception:
                 pass
 
@@ -1260,6 +1344,7 @@ class VideoAnnotationApp:
                     self.ocenaudio_path = settings.get('ocenaudio_path')
                     self.last_tab = settings.get('last_tab', 'videos')
                     self.show_filenames_pref = settings.get('show_filenames', True)
+                    self.show_advisory = settings.get('show_advisory', True)
                     try:
                         self.fullscreen_scale = float(settings.get('fullscreen_scale', 1.0))
                     except Exception:
@@ -1269,6 +1354,7 @@ class VideoAnnotationApp:
             else:
                 self.last_tab = 'videos'
                 self.show_filenames_pref = True
+                self.show_advisory = True
                 self.fullscreen_scale = 1.0
         except Exception as e:
             messagebox.showwarning("Settings Error", f"Failed to load settings: {e}")
@@ -1291,6 +1377,7 @@ class VideoAnnotationApp:
             except Exception:
                 # If not yet created
                 settings['show_filenames'] = settings.get('show_filenames', True)
+            settings['show_advisory'] = bool(getattr(self, 'show_advisory', True))
             settings['fullscreen_scale'] = float(getattr(self, 'fullscreen_scale', 1.0))
             with open(self.settings_file, 'w') as f:
                 json.dump(settings, f)
