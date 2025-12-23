@@ -55,6 +55,7 @@ LABELS_ALL = {
         "image_failed_to_load": "Failed to load",
         "selected_image_label": "Selected Image:",
         "show_filenames": "Show filenames",
+        "zoom_label": "Zoom",
     },
     "Bahasa Indonesia": {
         "language_name": "Bahasa Indonesia",
@@ -92,6 +93,7 @@ LABELS_ALL = {
         "image_failed_to_load": "Gagal memuat",
         "selected_image_label": "Gambar yang Dipilih:",
         "show_filenames": "Tampilkan nama berkas",
+        "zoom_label": "Perbesaran",
     },
     "한국어": {
         "language_name": "한국어",
@@ -129,6 +131,7 @@ LABELS_ALL = {
         "image_failed_to_load": "불러오기 실패",
         "selected_image_label": "선택된 이미지:",
         "show_filenames": "파일 이름 표시",
+        "zoom_label": "확대/축소",
     },
     "Nederlands": {
         "language_name": "Nederlands",
@@ -166,6 +169,7 @@ LABELS_ALL = {
         "image_failed_to_load": "Laden mislukt",
         "selected_image_label": "Geselecteerde Afbeelding:",
         "show_filenames": "Bestandsnamen tonen",
+        "zoom_label": "Zoom",
     },
     "Português (Brasil)": {
         "language_name": "Português (Brasil)",
@@ -203,6 +207,7 @@ LABELS_ALL = {
         "image_failed_to_load": "Falha ao carregar",
         "selected_image_label": "Imagem Selecionada:",
         "show_filenames": "Mostrar nomes de arquivos",
+        "zoom_label": "Zoom",
     },
     "Español (Latinoamérica)": {
         "language_name": "Español (Latinoamérica)",
@@ -240,6 +245,7 @@ LABELS_ALL = {
         "image_failed_to_load": "Error al cargar",
         "selected_image_label": "Imagen seleccionada:",
         "show_filenames": "Mostrar nombres de archivo",
+        "zoom_label": "Zoom",
     },
     "Afrikaans": {
         "language_name": "Afrikaans",
@@ -277,6 +283,7 @@ LABELS_ALL = {
         "image_failed_to_load": "Kon nie laai nie",
         "selected_image_label": "Gekose Beeld:",
         "show_filenames": "Wys lêernaam",
+        "zoom_label": "Zoem",
     },
 }
 
@@ -828,43 +835,77 @@ class VideoAnnotationApp:
             frame_ref.configure(bd=6)
 
     def on_image_double_click(self, meta: dict):
-        # Open fullscreen preview that closes on click or Esc
+        # Open fullscreen preview that closes on click or Esc, with zoom control and +/- keys
         win = tk.Toplevel(self.root)
         win.attributes("-fullscreen", True)
         canvas = tk.Canvas(win, background="black", highlightthickness=0)
-        canvas.pack(fill=tk.BOTH, expand=True)
+        control_bar = tk.Frame(win, background="#111")
+        canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        control_bar.pack(side=tk.BOTTOM, fill=tk.X)
+        # Zoom slider bound to global fullscreen_scale
+        scale_var = tk.DoubleVar(value=getattr(self, 'fullscreen_scale', 1.0))
+        zoom_label = tk.Label(control_bar, text=self.LABELS.get("zoom_label", "Zoom"), foreground="#eee", background="#111")
+        zoom_label.pack(side=tk.LEFT, padx=8, pady=6)
+        zoom_slider = tk.Scale(control_bar, from_=0.5, to=getattr(self, 'max_image_upscale', 3.0), orient=tk.HORIZONTAL, resolution=0.1, variable=scale_var)
+        zoom_slider.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8, pady=6)
         try:
-            with Image.open(meta["path"]) as im:
-                # Compute upscale to fill screen within cap
-                screen_w = win.winfo_screenwidth()
-                screen_h = win.winfo_screenheight()
-                w, h = im.size
-                # Desired scale to fill
-                fill_scale = max(screen_w / max(w, 1), screen_h / max(h, 1))
-                scale = min(fill_scale, getattr(self, 'max_image_upscale', 3.0))
-                new_w = int(w * scale)
-                new_h = int(h * scale)
-                im2 = im.resize((max(1, new_w), max(1, new_h)), Image.LANCZOS)
-                # If larger than screen, crop to center; else letterbox onto black background
-                if new_w >= screen_w and new_h >= screen_h:
-                    left = (new_w - screen_w) // 2
-                    top = (new_h - screen_h) // 2
-                    im_fit = im2.crop((left, top, left + screen_w, top + screen_h))
-                else:
-                    bg = Image.new('RGB', (screen_w, screen_h), color=(0, 0, 0))
-                    off_x = (screen_w - new_w) // 2
-                    off_y = (screen_h - new_h) // 2
-                    bg.paste(im2, (off_x, off_y))
-                    im_fit = bg
-                photo = ImageTk.PhotoImage(im_fit)
+            with Image.open(meta["path"]) as im_orig:
+                # store a copy for re-rendering
+                im_base = im_orig.copy()
+        except Exception:
+            im_base = None
+        def render_image():
+            canvas.delete("all")
+            if im_base is None:
+                canvas.create_text(20, 20, anchor='nw', fill="white", text=LABELS_ALL.get(self.language, {}).get("image_failed_to_load", "Failed to load"))
+                return
+            screen_w = win.winfo_screenwidth()
+            screen_h = win.winfo_screenheight()
+            w, h = im_base.size
+            fill_scale = max(screen_w / max(w, 1), screen_h / max(h, 1))
+            user_scale = float(scale_var.get())
+            # Apply cap
+            scale = min(fill_scale * user_scale, getattr(self, 'max_image_upscale', 3.0))
+            new_w = max(1, int(w * scale))
+            new_h = max(1, int(h * scale))
+            im2 = im_base.resize((new_w, new_h), Image.LANCZOS)
+            if new_w >= screen_w and new_h >= screen_h:
+                left = (new_w - screen_w) // 2
+                top = (new_h - screen_h) // 2
+                im_fit = im2.crop((left, top, left + screen_w, top + screen_h))
+            else:
+                bg = Image.new('RGB', (screen_w, screen_h), color=(0, 0, 0))
+                off_x = (screen_w - new_w) // 2
+                off_y = (screen_h - new_h) // 2
+                bg.paste(im2, (off_x, off_y))
+                im_fit = bg
+            photo = ImageTk.PhotoImage(im_fit)
             canvas.create_image(0, 0, image=photo, anchor='nw')
             canvas.image = photo
-        except Exception:
-            canvas.create_text(20, 20, anchor='nw', fill="white", text=LABELS_ALL.get(self.language, {}).get("image_failed_to_load", "Failed to load"))
         def close(_e=None):
             win.destroy()
         win.bind("<Button-1>", close)
         win.bind("<Escape>", close)
+        def on_scale_change(_v=None):
+            try:
+                self.fullscreen_scale = float(scale_var.get())
+                self.save_settings()
+            except Exception:
+                pass
+            render_image()
+        zoom_slider.configure(command=on_scale_change)
+        # Keyboard +/- to adjust zoom
+        def adjust_zoom(delta):
+            val = float(scale_var.get()) + delta
+            cap = getattr(self, 'max_image_upscale', 3.0)
+            val = max(0.5, min(cap, val))
+            scale_var.set(val)
+            on_scale_change()
+        for ks in ("plus", "equal", "KP_Add"):
+            win.bind(f"<KeyPress-{ks}>", lambda e, d=0.1: adjust_zoom(d))
+        for ks in ("minus", "underscore", "KP_Subtract"):
+            win.bind(f"<KeyPress-{ks}>", lambda e, d=-0.1: adjust_zoom(d))
+        render_image()
 
     def on_video_double_click(self, event=None):
         if not self.current_video or not self.folder_path:
@@ -875,7 +916,15 @@ class VideoAnnotationApp:
         win = tk.Toplevel(self.root)
         win.attributes("-fullscreen", True)
         canvas = tk.Canvas(win, background="black", highlightthickness=0)
-        canvas.pack(fill=tk.BOTH, expand=True)
+        control_bar = tk.Frame(win, background="#111")
+        canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        control_bar.pack(side=tk.BOTTOM, fill=tk.X)
+        # Zoom slider
+        scale_var = tk.DoubleVar(value=getattr(self, 'fullscreen_scale', 1.0))
+        zoom_label = tk.Label(control_bar, text=self.LABELS.get("zoom_label", "Zoom"), foreground="#eee", background="#111")
+        zoom_label.pack(side=tk.LEFT, padx=8, pady=6)
+        zoom_slider = tk.Scale(control_bar, from_=0.5, to=getattr(self, 'max_video_upscale', 2.5), orient=tk.HORIZONTAL, resolution=0.1, variable=scale_var)
+        zoom_slider.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8, pady=6)
         running = {"val": True}
         cap = cv2.VideoCapture(video_path)
         screen_w = win.winfo_screenwidth()
@@ -889,6 +938,23 @@ class VideoAnnotationApp:
             win.destroy()
         win.bind("<Button-1>", close)
         win.bind("<Escape>", close)
+        def on_scale_change(_v=None):
+            try:
+                self.fullscreen_scale = float(scale_var.get())
+                self.save_settings()
+            except Exception:
+                pass
+        zoom_slider.configure(command=on_scale_change)
+        def adjust_zoom(delta):
+            val = float(scale_var.get()) + delta
+            cap = getattr(self, 'max_video_upscale', 2.5)
+            val = max(0.5, min(cap, val))
+            scale_var.set(val)
+            on_scale_change()
+        for ks in ("plus", "equal", "KP_Add"):
+            win.bind(f"<KeyPress-{ks}>", lambda e, d=0.1: adjust_zoom(d))
+        for ks in ("minus", "underscore", "KP_Subtract"):
+            win.bind(f"<KeyPress-{ks}>", lambda e, d=-0.1: adjust_zoom(d))
         def loop():
             if not running["val"]:
                 return
@@ -902,7 +968,8 @@ class VideoAnnotationApp:
                     return
             h, w = frame.shape[:2]
             fill_scale = max(screen_w / max(w, 1), screen_h / max(h, 1))
-            scale = min(fill_scale, getattr(self, 'max_video_upscale', 2.5))
+            user_scale = float(scale_var.get())
+            scale = min(fill_scale * user_scale, getattr(self, 'max_video_upscale', 2.5))
             new_w = max(1, int(w * scale))
             new_h = max(1, int(h * scale))
             frame_resized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
@@ -1059,9 +1126,11 @@ class VideoAnnotationApp:
                     self.ocenaudio_path = settings.get('ocenaudio_path')
                     self.last_tab = settings.get('last_tab', 'videos')
                     self.show_filenames_pref = settings.get('show_filenames', True)
+                    self.fullscreen_scale = float(settings.get('fullscreen_scale', 1.0))
             else:
                 self.last_tab = 'videos'
                 self.show_filenames_pref = True
+                self.fullscreen_scale = 1.0
         except Exception as e:
             messagebox.showwarning("Settings Error", f"Failed to load settings: {e}")
 
@@ -1083,6 +1152,7 @@ class VideoAnnotationApp:
             except Exception:
                 # If not yet created
                 settings['show_filenames'] = settings.get('show_filenames', True)
+            settings['fullscreen_scale'] = float(getattr(self, 'fullscreen_scale', 1.0))
             with open(self.settings_file, 'w') as f:
                 json.dump(settings, f)
         except Exception as e:
