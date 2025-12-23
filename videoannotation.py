@@ -407,6 +407,9 @@ class AudioRecordingWorker(QObject):
 
 # Main application window
 class VideoAnnotationApp(QMainWindow):
+    ui_info = Signal(str, str)
+    ui_warning = Signal(str, str)
+    ui_error = Signal(str, str)
     def __init__(self):
         super().__init__()
         self.language = "English"
@@ -437,6 +440,34 @@ class VideoAnnotationApp(QMainWindow):
         self.init_ui()
         self.setWindowTitle(self.LABELS["app_title"])
         self.resize(1400, 800)
+        self.ui_info.connect(self._show_info)
+        self.ui_warning.connect(self._show_warning)
+        self.ui_error.connect(self._show_error)
+
+        # If a folder was persisted, reflect it in the UI
+        if self.folder_path:
+            self.update_folder_display()
+            # Enable folder-dependent actions
+            self.export_wavs_button.setEnabled(True)
+            self.clear_wavs_button.setEnabled(True)
+            self.import_wavs_button.setEnabled(True)
+            self.join_wavs_button.setEnabled(True)
+            self.open_ocenaudio_button.setEnabled(True)
+            # Populate list and metadata view
+            self.load_video_files()
+            self.open_metadata_editor()
+
+    def _show_info(self, title, text):
+        QMessageBox.information(self, title, text)
+
+    def _show_warning(self, title, text):
+        QMessageBox.warning(self, title, text)
+
+    def _show_error(self, title, text):
+        QMessageBox.critical(self, title, text)
+
+    def _show_worker_error(self, msg):
+        QMessageBox.critical(self, "Error", msg)
     
     def init_ui(self):
         # Central widget
@@ -599,8 +630,7 @@ class VideoAnnotationApp(QMainWindow):
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
             self.audio_label.setText(self.LABELS["audio_no_annotation"])
         
-        if not self.folder_path:
-            self.update_folder_display()
+        self.update_folder_display()
     
     def update_folder_display(self):
         if self.folder_path:
@@ -621,6 +651,9 @@ class VideoAnnotationApp(QMainWindow):
                     if saved_lang and saved_lang in LABELS_ALL:
                         self.language = saved_lang
                         self.LABELS = LABELS_ALL[self.language]
+                    last_folder = settings.get('last_folder')
+                    if last_folder and os.path.isdir(last_folder):
+                        self.folder_path = last_folder
         except Exception as e:
             logging.warning(f"Failed to load settings: {e}")
     
@@ -637,7 +670,8 @@ class VideoAnnotationApp(QMainWindow):
             logging.warning(f"Failed to save settings: {e}")
     
     def select_folder(self):
-        folder = QFileDialog.getExistingDirectory(self, "Select Folder with Video Files")
+        initial_dir = self.folder_path or os.path.expanduser("~")
+        folder = QFileDialog.getExistingDirectory(self, "Select Folder with Video Files", initial_dir)
         if folder:
             self.folder_path = folder
             self.update_folder_display()
@@ -827,7 +861,7 @@ class VideoAnnotationApp(QMainWindow):
         self.audio_worker.finished.connect(self.audio_thread.quit)
         self.audio_worker.finished.connect(self.audio_worker.deleteLater)
         self.audio_thread.finished.connect(self.audio_thread.deleteLater)
-        self.audio_worker.error.connect(lambda msg: QMessageBox.critical(self, "Error", msg))
+        self.audio_worker.error.connect(self._show_worker_error)
         self.audio_thread.start()
     
     def stop_audio(self):
@@ -873,7 +907,7 @@ class VideoAnnotationApp(QMainWindow):
             self.recording_worker.finished.connect(self.recording_worker.deleteLater)
             self.recording_thread.finished.connect(self.recording_thread.deleteLater)
             self.recording_worker.finished.connect(self.update_media_controls)
-            self.recording_worker.error.connect(lambda msg: QMessageBox.critical(self, "Error", msg))
+            self.recording_worker.error.connect(self._show_worker_error)
             self.recording_thread.start()
     
     def open_in_ocenaudio(self):
@@ -1198,9 +1232,9 @@ class VideoAnnotationApp(QMainWindow):
                         combined_audio += click_segment
                 
                 combined_audio.export(output_file, format="wav")
-                QMessageBox.information(self, self.LABELS["success"], f"{self.LABELS['wavs_joined']}\n{output_file}")
+                self.ui_info.emit(self.LABELS["success"], f"{self.LABELS['wavs_joined']}\n{output_file}")
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"An error occurred while joining files:\n{e}")
+                self.ui_error.emit("Error", f"An error occurred while joining files:\n{e}")
         
         threading.Thread(target=process_and_join, daemon=True).start()
     
