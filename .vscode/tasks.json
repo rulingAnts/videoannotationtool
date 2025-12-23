@@ -1,0 +1,137 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run: App (Normal)",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "videoannotation.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "osx": {
+        "command": "python3.11"
+      },
+      "windows": {
+        "command": "python"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run: App (Debug)",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "videoannotation.py",
+        "--debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "osx": {
+        "command": "python3.11"
+      },
+      "windows": {
+        "command": "python"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run: App (Debug + Log)",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "videoannotation.py",
+        "--debug",
+        "--log-file",
+        "debug-linux.log"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "osx": {
+        "command": "python3.11",
+        "args": [
+          "videoannotation.py",
+          "--debug",
+          "--log-file",
+          "debug-mac.log"
+        ]
+      },
+      "windows": {
+        "command": "python",
+        "args": [
+          "videoannotation.py",
+          "--debug",
+          "--log-file",
+          "debug-win.log"
+        ]
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run: App (Debug Dev Flags)",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "-X",
+        "dev",
+        "-X",
+        "tracemalloc=5",
+        "videoannotation.py",
+        "--debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONFAULTHANDLER": "1",
+          "PYTHONWARNINGS": "default"
+        }
+      },
+      "osx": {
+        "command": "python3.11",
+        "options": {
+          "env": {
+            "PYTHONFAULTHANDLER": "1",
+            "PYTHONWARNINGS": "default"
+          }
+        }
+      },
+      "windows": {
+        "command": "python",
+        "options": {
+          "env": {
+            "PYTHONFAULTHANDLER": "1",
+            "PYTHONWARNINGS": "default"
+          }
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Reset: App Settings",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "set -euo pipefail && dir=\"${HOME}/.videooralannotation\" && if [ -d \"$dir\" ]; then echo \"Backing up settings to $dir.bak\" && rm -rf \"$dir.bak\" && cp -R \"$dir\" \"$dir.bak\" && echo \"Removing $dir\" && rm -rf \"$dir\" && echo \"Done.\"; else echo \"Settings directory not found: $dir\"; fi"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "windows": {
+        "command": "powershell",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-Command",
+          "$dir=Join-Path $env:USERPROFILE '.videooralannotation'; if (Test-Path $dir) { Write-Host 'Backing up settings to ' ($dir + '.bak'); Remove-Item -Recurse -Force ($dir + '.bak') -ErrorAction SilentlyContinue; Copy-Item -Recurse -Force $dir ($dir + '.bak'); Write-Host 'Removing ' $dir; Remove-Item -Recurse -Force $dir; Write-Host 'Done.' } else { Write-Host 'Settings directory not found: ' $dir }"
+        ]
+      },
+      "problemMatcher": []
+    }
+  ]
+}
