@@ -56,6 +56,9 @@ LABELS_ALL = {
         "selected_image_label": "Selected Image:",
         "show_filenames": "Show filenames",
         "zoom_label": "Zoom",
+        "zoom_tip_plus_minus": "Tip: Use + and - keys to zoom",
+        "double_click_tip_image": "Double-click an image to view it fullscreen",
+        "double_click_tip_video": "Double-click the video to view it fullscreen",
     },
     "Bahasa Indonesia": {
         "language_name": "Bahasa Indonesia",
@@ -94,6 +97,9 @@ LABELS_ALL = {
         "selected_image_label": "Gambar yang Dipilih:",
         "show_filenames": "Tampilkan nama berkas",
         "zoom_label": "Perbesaran",
+        "zoom_tip_plus_minus": "Tips: Gunakan tombol + dan - untuk memperbesar",
+        "double_click_tip_image": "Klik ganda gambar untuk melihat layar penuh",
+        "double_click_tip_video": "Klik ganda video untuk melihat layar penuh",
     },
     "한국어": {
         "language_name": "한국어",
@@ -132,6 +138,9 @@ LABELS_ALL = {
         "selected_image_label": "선택된 이미지:",
         "show_filenames": "파일 이름 표시",
         "zoom_label": "확대/축소",
+        "zoom_tip_plus_minus": "팁: +와 - 키로 확대/축소",
+        "double_click_tip_image": "이미지를 더블 클릭하여 전체 화면으로 보기",
+        "double_click_tip_video": "비디오를 더블 클릭하여 전체 화면으로 보기",
     },
     "Nederlands": {
         "language_name": "Nederlands",
@@ -170,6 +179,9 @@ LABELS_ALL = {
         "selected_image_label": "Geselecteerde Afbeelding:",
         "show_filenames": "Bestandsnamen tonen",
         "zoom_label": "Zoom",
+        "zoom_tip_plus_minus": "Tip: Gebruik + en - om te zoomen",
+        "double_click_tip_image": "Dubbelklik op een afbeelding voor volledig scherm",
+        "double_click_tip_video": "Dubbelklik op de video voor volledig scherm",
     },
     "Português (Brasil)": {
         "language_name": "Português (Brasil)",
@@ -208,6 +220,9 @@ LABELS_ALL = {
         "selected_image_label": "Imagem Selecionada:",
         "show_filenames": "Mostrar nomes de arquivos",
         "zoom_label": "Zoom",
+        "zoom_tip_plus_minus": "Dica: Use as teclas + e - para zoom",
+        "double_click_tip_image": "Clique duas vezes na imagem para tela cheia",
+        "double_click_tip_video": "Clique duas vezes no vídeo para tela cheia",
     },
     "Español (Latinoamérica)": {
         "language_name": "Español (Latinoamérica)",
@@ -246,6 +261,9 @@ LABELS_ALL = {
         "selected_image_label": "Imagen seleccionada:",
         "show_filenames": "Mostrar nombres de archivo",
         "zoom_label": "Zoom",
+        "zoom_tip_plus_minus": "Consejo: Usa las teclas + y - para zoom",
+        "double_click_tip_image": "Haz doble clic en la imagen para verla a pantalla completa",
+        "double_click_tip_video": "Haz doble clic en el video para verlo a pantalla completa",
     },
     "Afrikaans": {
         "language_name": "Afrikaans",
@@ -284,6 +302,9 @@ LABELS_ALL = {
         "selected_image_label": "Gekose Beeld:",
         "show_filenames": "Wys lêernaam",
         "zoom_label": "Zoem",
+        "zoom_tip_plus_minus": "Wenk: Gebruik + en - vir zoem",
+        "double_click_tip_image": "Dubbelklik op die beeld vir volskerm",
+        "double_click_tip_video": "Dubbelklik op die video vir volskerm",
     },
 }
 
@@ -572,6 +593,9 @@ class VideoAnnotationApp:
         # Image banner (thumbnail + filename + audio controls)
         self.image_banner_frame = tk.Frame(self.images_tab)
         self.image_banner_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
+        # Double-click tip for images
+        self.double_click_tip_image = tk.Label(self.images_tab, text=self.LABELS.get("double_click_tip_image", "Double-click an image to view it fullscreen"), anchor='w')
+        self.double_click_tip_image.pack(side=tk.TOP, fill=tk.X, padx=10)
         self.image_thumb_label = tk.Label(self.image_banner_frame)
         self.image_thumb_label.pack(side=tk.LEFT, padx=6)
         # Selected image label
@@ -630,6 +654,9 @@ class VideoAnnotationApp:
             pass
 
         # Video player section
+        # Double-click tip for video
+        self.double_click_tip_video = tk.Label(self.media_frame, text=self.LABELS.get("double_click_tip_video", "Double-click the video to view it fullscreen"), anchor='w')
+        self.double_click_tip_video.pack(side=tk.TOP, fill=tk.X)
         self.video_label = tk.Label(self.media_frame, text=self.LABELS["video_listbox_no_video"])
         self.video_label.pack()
         # Fullscreen on double-click
@@ -884,7 +911,8 @@ class VideoAnnotationApp:
             canvas.image = photo
         def close(_e=None):
             win.destroy()
-        win.bind("<Button-1>", close)
+        # Close on canvas click only; clicking controls won't close
+        canvas.bind("<Button-1>", close)
         win.bind("<Escape>", close)
         def on_scale_change(_v=None):
             try:
@@ -936,7 +964,8 @@ class VideoAnnotationApp:
             except Exception:
                 pass
             win.destroy()
-        win.bind("<Button-1>", close)
+        # Close on canvas click only; clicking controls won't close
+        canvas.bind("<Button-1>", close)
         win.bind("<Escape>", close)
         def on_scale_change(_v=None):
             try:
@@ -1107,6 +1136,10 @@ class VideoAnnotationApp:
             self.image_selected_label.config(text=self.LABELS.get("selected_image_label", "Selected Image:"))
         if hasattr(self, "show_filenames_checkbox"):
             self.show_filenames_checkbox.config(text=self.LABELS.get("show_filenames", "Show filenames"))
+        if hasattr(self, "double_click_tip_image"):
+            self.double_click_tip_image.config(text=self.LABELS.get("double_click_tip_image", "Double-click an image to view it fullscreen"))
+        if hasattr(self, "double_click_tip_video"):
+            self.double_click_tip_video.config(text=self.LABELS.get("double_click_tip_video", "Double-click the video to view it fullscreen"))
 
     def update_folder_display(self):
         if self.folder_path:
@@ -1126,7 +1159,12 @@ class VideoAnnotationApp:
                     self.ocenaudio_path = settings.get('ocenaudio_path')
                     self.last_tab = settings.get('last_tab', 'videos')
                     self.show_filenames_pref = settings.get('show_filenames', True)
-                    self.fullscreen_scale = float(settings.get('fullscreen_scale', 1.0))
+                    try:
+                        self.fullscreen_scale = float(settings.get('fullscreen_scale', 1.0))
+                    except Exception:
+                        self.fullscreen_scale = 1.0
+                    # Clamp to [0.5, 1.0] for normalized slider
+                    self.fullscreen_scale = max(0.5, min(1.0, self.fullscreen_scale))
             else:
                 self.last_tab = 'videos'
                 self.show_filenames_pref = True
