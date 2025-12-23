@@ -30,11 +30,11 @@ from pydub import AudioSegment
 
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QListWidget, QLabel, QTextEdit, QMessageBox,
-    QFileDialog, QComboBox, QTabWidget, QSplitter
+    QPushButton, QListWidget, QListWidgetItem, QLabel, QTextEdit, QMessageBox,
+    QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle
 )
-from PySide6.QtCore import Qt, QTimer, Signal, QThread, QObject
-from PySide6.QtGui import QImage, QPixmap, QKeyEvent
+from PySide6.QtCore import Qt, QTimer, Signal, QThread, QObject, QSize
+from PySide6.QtGui import QImage, QPixmap, QKeyEvent, QIcon
 
 # UI labels for easy translation, with language names in their own language
 LABELS_ALL = {
@@ -1040,6 +1040,8 @@ class VideoAnnotationApp(QMainWindow):
         # Join WAVs state
         self.join_thread = None
         self.join_worker = None
+        # Internal flags/state
+        self._suppress_item_changed = False
         
         self.load_settings()
         self.init_ui()
@@ -1086,6 +1088,19 @@ class VideoAnnotationApp(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
+
+        # Precompute icons for list indicators
+        try:
+            self._check_icon = self.style().standardIcon(QStyle.SP_DialogApplyButton)
+        except Exception:
+            self._check_icon = QIcon()
+        # Transparent placeholder to keep alignment when no audio
+        try:
+            placeholder = QPixmap(16, 16)
+            placeholder.fill(Qt.transparent)
+            self._empty_icon = QIcon(placeholder)
+        except Exception:
+            self._empty_icon = QIcon()
         
         # Language selector at top
         self.language_dropdown = QComboBox()
@@ -1170,11 +1185,29 @@ class VideoAnnotationApp(QMainWindow):
         self.video_label = QLabel(self.LABELS["video_listbox_no_video"])
         self.video_label.setAlignment(Qt.AlignCenter)
         self.video_label.setMinimumSize(640, 480)
-        self.video_label.setStyleSheet("background-color: black; color: white;")
+        self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
         videos_layout.addWidget(self.video_label)
+        # Badge overlay to indicate recording exists for current video
+        self.badge_label = QLabel(self.video_label)
+        self.badge_label.setText("✓")
+        self.badge_label.setAlignment(Qt.AlignCenter)
+        self.badge_label.setFixedSize(22, 22)
+        self.badge_label.setStyleSheet("background-color: #2ecc71; color: white; border-radius: 11px;")
+        self.badge_label.setVisible(False)
+        # Reposition badge on resize/move
+        self.video_label.installEventFilter(self)
         
         # Video controls
         video_controls_layout = QHBoxLayout()
+        # Previous button
+        self.prev_button = QToolButton()
+        try:
+            self.prev_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipBackward))
+        except Exception:
+            self.prev_button.setText("◀")
+        self.prev_button.setToolTip("Previous video")
+        self.prev_button.clicked.connect(self.go_prev)
+        video_controls_layout.addWidget(self.prev_button)
         self.play_video_button = QPushButton(self.LABELS["play_video"])
         self.play_video_button.clicked.connect(self.play_video)
         self.play_video_button.setEnabled(False)
@@ -1184,6 +1217,15 @@ class VideoAnnotationApp(QMainWindow):
         self.stop_video_button.clicked.connect(self.stop_video)
         self.stop_video_button.setEnabled(False)
         video_controls_layout.addWidget(self.stop_video_button)
+        # Next button
+        self.next_button = QToolButton()
+        try:
+            self.next_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipForward))
+        except Exception:
+            self.next_button.setText("▶")
+        self.next_button.setToolTip("Next video")
+        self.next_button.clicked.connect(self.go_next)
+        video_controls_layout.addWidget(self.next_button)
         videos_layout.addLayout(video_controls_layout)
         
         # Audio annotation section
@@ -1344,8 +1386,12 @@ class VideoAnnotationApp(QMainWindow):
             
             self.video_files.sort()
             basenames = [os.path.basename(vp) for vp in self.video_files]
+            # Populate list with green check icons reflecting audio presence
             for name in basenames:
-                self.video_listbox.addItem(name)
+                item = QListWidgetItem(name)
+                wav_exists = os.path.exists(os.path.join(self.folder_path, os.path.splitext(name)[0] + '.wav'))
+                item.setIcon(self._check_icon if wav_exists else self._empty_icon)
+                self.video_listbox.addItem(item)
 
             # Restore last selected video if available
             if self.last_video_name and self.last_video_name in basenames:
@@ -1365,6 +1411,8 @@ class VideoAnnotationApp(QMainWindow):
         if not self.video_files:
             self.current_video = None
         self.update_media_controls()
+        # Ensure list icons reflect current state
+        self.update_video_file_checks()
     
     def open_metadata_editor(self):
         # Safeguard against being called before a folder is selected
@@ -1436,6 +1484,11 @@ class VideoAnnotationApp(QMainWindow):
         self.save_settings()
         self.update_media_controls()
         self.show_first_frame()
+        # Ensure badge position after frame update
+        try:
+            self._position_badge()
+        except Exception:
+            pass
     
     def show_first_frame(self):
         if not self.current_video:
@@ -1490,10 +1543,18 @@ class VideoAnnotationApp(QMainWindow):
                 self.audio_label.setText(f"{self.LABELS['audio_label_prefix']}{os.path.splitext(self.current_video)[0]}.wav")
                 self.play_audio_button.setEnabled(True)
                 self.stop_audio_button.setEnabled(True)
+                # Green border and badge when audio exists
+                self.video_label.setStyleSheet("background-color: black; color: white; border: 3px solid #2ecc71;")
+                if getattr(self, 'badge_label', None):
+                    self.badge_label.setVisible(True)
             else:
                 self.audio_label.setText(self.LABELS["audio_no_annotation"])
                 self.play_audio_button.setEnabled(False)
                 self.stop_audio_button.setEnabled(False)
+                # Neutral border and hide badge when no audio
+                self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
+                if getattr(self, 'badge_label', None):
+                    self.badge_label.setVisible(False)
         else:
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
             self.play_video_button.setEnabled(False)
@@ -1504,6 +1565,12 @@ class VideoAnnotationApp(QMainWindow):
             self.record_button.setEnabled(False)
             self.record_button.setText(self.LABELS["record_audio"])
             self.update_recording_indicator()
+            # Neutral border and hide badge when no selection
+            self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
+            if getattr(self, 'badge_label', None):
+                self.badge_label.setVisible(False)
+        # Keep list checkboxes in sync
+        self.update_video_file_checks()
 
     def update_recording_indicator(self):
         # Reflect current recording state in the UI
@@ -1598,6 +1665,10 @@ class VideoAnnotationApp(QMainWindow):
             self.cap.release()
             self.cap = None
         self.show_first_frame()
+        try:
+            self._position_badge()
+        except Exception:
+            pass
     
     def play_audio(self):
         if not self.current_video:
@@ -1670,6 +1741,8 @@ class VideoAnnotationApp(QMainWindow):
                 self.statusBar().showMessage(self.LABELS.get("recording_stopped", "Recording stopped"), 2000)
             except Exception:
                 pass
+            # Update list checkboxes and visuals
+            self.update_video_file_checks()
         else:
             wav_path = os.path.join(self.folder_path, os.path.splitext(self.current_video)[0] + '.wav')
             if os.path.exists(wav_path):
@@ -1911,6 +1984,8 @@ class VideoAnnotationApp(QMainWindow):
         
         self.load_video_files()
         self.open_metadata_editor()
+        # Ensure checkboxes reflect cleared state
+        self.update_video_file_checks()
     
     def import_wavs(self):
         if not self.folder_path:
@@ -2022,6 +2097,7 @@ class VideoAnnotationApp(QMainWindow):
         
         self.load_video_files()
         self.open_metadata_editor()
+        self.update_video_file_checks()
     
     def join_all_wavs(self):
         if not self.folder_path:
@@ -2058,6 +2134,8 @@ class VideoAnnotationApp(QMainWindow):
         self.join_worker.success.connect(self._on_join_success)
         self.join_worker.error.connect(self._on_join_error)
         self.join_thread.start()
+        # No list change expected here, but keep UI indicators consistent
+        self.update_video_file_checks()
     
     def generate_click_sound_pydub(self, duration_ms, freq, rate):
         """Generates a short, subtle click sound using a high-frequency sine wave with a rapid decay."""
@@ -2072,6 +2150,71 @@ class VideoAnnotationApp(QMainWindow):
             frame_rate=rate,
             channels=1
         )
+
+    # --- UI helpers & navigation ---
+    def update_video_file_checks(self):
+        """Sync the list icon for each item with the presence of its WAV file."""
+        if not self.folder_path:
+            return
+        for i in range(self.video_listbox.count()):
+            item = self.video_listbox.item(i)
+            name = item.text()
+            wav_exists = os.path.exists(os.path.join(self.folder_path, os.path.splitext(name)[0] + '.wav'))
+            desired_icon = self._check_icon if wav_exists else self._empty_icon
+            item.setIcon(desired_icon)
+
+    # No interactive checkbox handling needed; icons are display-only
+
+    def go_prev(self):
+        if self.video_listbox.count() == 0:
+            return
+        row = self.video_listbox.currentRow()
+        if row > 0:
+            self.video_listbox.setCurrentRow(row - 1)
+
+    def go_next(self):
+        if self.video_listbox.count() == 0:
+            return
+        row = self.video_listbox.currentRow()
+        if row < self.video_listbox.count() - 1:
+            self.video_listbox.setCurrentRow(row + 1)
+
+    def keyPressEvent(self, event):
+        try:
+            key = event.key()
+        except Exception:
+            return super().keyPressEvent(event)
+        if key == Qt.Key_Right:
+            self.go_next()
+            event.accept()
+            return
+        if key == Qt.Key_Left:
+            self.go_prev()
+            event.accept()
+            return
+        return super().keyPressEvent(event)
+
+    def eventFilter(self, obj, event):
+        # Keep the badge anchored in the top-right corner of the video label
+        if obj is self.video_label:
+            try:
+                self._position_badge()
+            except Exception:
+                pass
+        return super().eventFilter(obj, event)
+
+    def _position_badge(self):
+        if not getattr(self, 'badge_label', None):
+            return
+        if not self.badge_label.isVisible():
+            return
+        w = self.video_label.width()
+        h = self.video_label.height()
+        bw = self.badge_label.width()
+        # 8px margin from top-right
+        x = max(0, w - bw - 8)
+        y = 8
+        self.badge_label.move(x, y)
 
 
 def main():
