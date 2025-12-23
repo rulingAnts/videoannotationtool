@@ -783,7 +783,16 @@ class VideoAnnotationApp:
         # Double-click tip for video
         self.double_click_tip_video = tk.Label(self.media_frame, text=self.LABELS.get("double_click_tip_video", "Double-click the video to view it fullscreen"), anchor='w')
         self.double_click_tip_video.pack(side=tk.TOP, fill=tk.X)
-        self.video_label = tk.Label(self.media_frame, text=self.LABELS["video_listbox_no_video"])
+        # Container around the video label so we can color the border without overlapping the image
+        self.video_container = tk.Frame(self.media_frame, bd=0, relief=tk.FLAT)
+        # Set a neutral border by default
+        try:
+            self.video_container.configure(highlightthickness=1, highlightbackground="#cccccc", highlightcolor="#cccccc")
+        except Exception:
+            pass
+        self.video_container.pack()
+        # Video label lives inside the container
+        self.video_label = tk.Label(self.video_container, text=self.LABELS["video_listbox_no_video"])
         self.video_label.pack()
         # Fullscreen on double-click
         self.video_label.bind("<Double-Button-1>", self.on_video_double_click)
@@ -1077,18 +1086,28 @@ class VideoAnnotationApp:
                     break
                 meta = metas[i + j]
                 tile_w = int(container_w / cap) - 18
-                tile = tk.Frame(self.image_grid_container, bd=3, relief=tk.SOLID)
+                # Use highlight border so we can color-code the whole tile
+                tile = tk.Frame(self.image_grid_container, bd=0, relief=tk.FLAT)
                 tile.grid(row=r, column=j, padx=6, pady=6, sticky="nsew")
                 # Thumbnail
                 thumb_lbl = tk.Label(tile)
                 thumb_lbl.pack(fill=tk.BOTH, expand=True)
-                # Recording indicator (visible badge + bottom bar)
+                # Recording indicator (visible badge + colored border)
                 try:
                     ext = os.path.splitext(meta["name"])[1].lstrip('.')
                     candidate = self.get_audio_path_for_media(meta["name"], ext, "image")
                     has_audio = os.path.exists(candidate)
                 except Exception:
                     has_audio = False
+                # Color the tile border: green if audio exists, neutral gray otherwise
+                try:
+                    tile.configure(
+                        highlightthickness=(3 if has_audio else 1),
+                        highlightbackground=("#4CAF50" if has_audio else "#cccccc"),
+                        highlightcolor=("#4CAF50" if has_audio else "#cccccc")
+                    )
+                except Exception:
+                    pass
                 try:
                     badge = tk.Label(
                         tile,
@@ -1098,11 +1117,6 @@ class VideoAnnotationApp:
                         font=("Arial", 10, "bold")
                     )
                     badge.place(relx=1.0, rely=0.0, x=-4, y=4, anchor="ne")
-                except Exception:
-                    pass
-                try:
-                    bar = tk.Frame(tile, height=4, bg=("#4CAF50" if has_audio else "#ddd"))
-                    bar.pack(side=tk.BOTTOM, fill=tk.X)
                 except Exception:
                     pass
                 # Filename label (conditional)
@@ -1918,7 +1932,7 @@ class VideoAnnotationApp:
                 self.next_video_button.config(state=tk.NORMAL)
             except Exception:
                 pass
-            wav_path = os.path.join(self.folder_path, os.path.splitext(self.current_video)[0] + '.wav')
+            wav_path = self.get_audio_path_for_media(self.current_video, None, media_type="video")
             if os.path.exists(wav_path):
                 self.audio_label.config(text=f"{self.LABELS['audio_label_prefix']}{os.path.splitext(self.current_video)[0]}.wav")
                 self.play_audio_button.config(state=tk.NORMAL)
@@ -1928,6 +1942,12 @@ class VideoAnnotationApp:
                     self.audio_label.config(bg="#d9fdd3", font=("Arial", 10, "bold"))
                 except Exception:
                     pass
+                # Highlight the video container border (green) to indicate a recording exists
+                try:
+                    if hasattr(self, 'video_container') and self.video_container:
+                        self.video_container.configure(highlightthickness=3, highlightbackground="#4CAF50", highlightcolor="#4CAF50")
+                except Exception:
+                    pass
             else:
                 self.audio_label.config(text=self.LABELS["audio_no_annotation"])
                 self.play_audio_button.config(state=tk.DISABLED)
@@ -1935,6 +1955,12 @@ class VideoAnnotationApp:
                 # Restore audio label styling
                 try:
                     self.audio_label.config(bg=self.audio_label_default_bg)
+                except Exception:
+                    pass
+                # Restore neutral video container border
+                try:
+                    if hasattr(self, 'video_container') and self.video_container:
+                        self.video_container.configure(highlightthickness=1, highlightbackground="#cccccc", highlightcolor="#cccccc")
                 except Exception:
                     pass
         else:
@@ -1948,6 +1974,12 @@ class VideoAnnotationApp:
             try:
                 self.prev_video_button.config(state=tk.DISABLED)
                 self.next_video_button.config(state=tk.DISABLED)
+            except Exception:
+                pass
+            # When no video is selected, keep the border neutral
+            try:
+                if hasattr(self, 'video_container') and self.video_container:
+                    self.video_container.configure(highlightthickness=1, highlightbackground="#cccccc", highlightcolor="#cccccc")
             except Exception:
                 pass
 
