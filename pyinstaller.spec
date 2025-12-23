@@ -1,5 +1,5 @@
-# PyInstaller spec generated to create a onefile, windowed build with the app icon
-from PyInstaller.utils.hooks import collect_submodules
+# PyInstaller spec for PySide6-based Video Annotation Tool (onefile, windowed build)
+from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 block_cipher = None
 
 a = Analysis([
@@ -7,8 +7,8 @@ a = Analysis([
 ],
     pathex=[],
     binaries=[],
-    datas=[],
-    hiddenimports=[],
+    datas=collect_data_files('PySide6', include_py_files=False),
+    hiddenimports=['PySide6.QtCore', 'PySide6.QtGui', 'PySide6.QtWidgets'],
     hookspath=[],
     runtime_hooks=[],
     excludes=[],
