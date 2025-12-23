@@ -806,6 +806,9 @@ class VideoAnnotationApp:
         self.image_stop_button.pack(side=tk.LEFT, padx=5)
         self.image_record_button = tk.Button(self.image_controls, text=self.LABELS["record_audio"], command=self.toggle_image_recording, state=tk.DISABLED)
         self.image_record_button.pack(side=tk.LEFT, padx=5)
+        # Manual refresh for images grid (helps verify folder sync)
+        self.image_refresh_button = tk.Button(self.image_controls, text="Refresh Images", command=self.refresh_images_only)
+        self.image_refresh_button.pack(side=tk.LEFT, padx=5)
 
         # Scrollable image grid
         self.image_canvas = tk.Canvas(self.images_tab, highlightthickness=0)
@@ -1064,40 +1067,40 @@ class VideoAnnotationApp:
             self.save_settings()
         except Exception:
             pass
-        # Avoid re-entrant heavy UI updates by scheduling a single lazy refresh
-        if getattr(self, '_tab_refresh_pending', False):
-            logging.getLogger("videoannotation").debug("Tab refresh already pending; skipping schedule")
-            return
-        self._tab_refresh_pending = True
-        def _do_refresh():
-            try:
-                active = self.get_active_tab()
-                logging.getLogger("videoannotation").debug("Executing deferred refresh for tab: %s", active)
-                if active == "images":
-                    self.load_image_files()
-                    # Hide video list when on images tab
-                    try:
-                        self.video_listbox_frame.pack_forget()
-                    except Exception:
-                        pass
-                else:
-                    # Always attempt to load videos; the loader itself will show a friendly
-                    # message and return if no folder is selected. This avoids stale lists.
-                    self.load_video_files()
-                    # Show video list when on videos tab
-                    try:
-                        if hasattr(self, "metadata_editor_frame") and self.metadata_editor_frame:
-                            self.video_listbox_frame.pack(fill=tk.BOTH, expand=True, before=self.metadata_editor_frame)
-                        else:
-                            self.video_listbox_frame.pack(fill=tk.BOTH, expand=True)
-                    except Exception:
-                        pass
-            finally:
-                self._tab_refresh_pending = False
+        # Unified refresh to keep both tabs in sync
+        def _do_refresh_all():
+            self.refresh_all_media()
         try:
-            self.root.after_idle(_do_refresh)
+            self.root.after_idle(_do_refresh_all)
         except Exception:
-            _do_refresh()
+            _do_refresh_all()
+
+    def refresh_all_media(self):
+        """Refresh both Videos and Images views from the current folder, keeping them in sync.
+        Also manages showing/hiding the video list depending on the active tab.
+        """
+        logging.getLogger("videoannotation").debug("refresh_all_media: folder=%s", getattr(self, 'folder_path', None))
+        active = self.get_active_tab()
+        # Always update both lists to avoid stale content when switching
+        try:
+            self.load_image_files()
+        except Exception:
+            pass
+        try:
+            self.load_video_files()
+        except Exception:
+            pass
+        # Manage the visibility of the video list on the left based on the active tab
+        try:
+            if active == "images":
+                self.video_listbox_frame.pack_forget()
+            else:
+                if hasattr(self, "metadata_editor_frame") and self.metadata_editor_frame:
+                    self.video_listbox_frame.pack(fill=tk.BOTH, expand=True, before=self.metadata_editor_frame)
+                else:
+                    self.video_listbox_frame.pack(fill=tk.BOTH, expand=True)
+        except Exception:
+            pass
 
     def get_audio_path_for_media(self, name: str, ext: str | None, media_type: str) -> str:
         # Build the expected audio filename for media
@@ -1116,6 +1119,11 @@ class VideoAnnotationApp:
     def load_image_files(self):
         # Populate image list based on supported extensions
         logging.getLogger("videoannotation").debug("load_image_files called. folder=%s", getattr(self, 'folder_path', None))
+        # Clear any cached thumbnails to avoid stale images
+        try:
+            self.image_thumbs.clear()
+        except Exception:
+            pass
         self.image_files = []
         if not self.folder_path:
             self.update_folder_display()
@@ -1126,6 +1134,8 @@ class VideoAnnotationApp:
             # Consistent simple sort-by-name (case-insensitive)
             self.image_files = sorted(files, key=lambda s: s.lower())
             logging.getLogger("videoannotation").debug("Found %d images", len(self.image_files))
+            if self.image_files:
+                logging.getLogger("videoannotation").debug("First few images: %s", ", ".join(self.image_files[:5]))
             # Build grid view
             self.build_image_grid()
             # Reset banner
@@ -1136,6 +1146,10 @@ class VideoAnnotationApp:
             self.image_record_button.config(state=tk.DISABLED)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load images: {e}")
+
+    def refresh_images_only(self):
+        """Force a rebuild of the images view from the current folder."""
+        self.load_image_files()
 
     def build_image_grid(self):
         # Clear existing tiles
@@ -1731,6 +1745,13 @@ class VideoAnnotationApp:
         logging.getLogger("videoannotation").debug("select_folder result: %s", self.folder_path)
         if self.folder_path:
             self.update_folder_display()
+            # Reset image banner selection and clear cached thumbnails
+            try:
+                self.current_image = None
+                self.image_filename_var.set(LABELS_ALL.get(self.language, {}).get("image_no_selection", "No image selected"))
+                self.image_thumbs.clear()
+            except Exception:
+                pass
             # On Windows, delete all files starting with a period
             if sys.platform == "win32":
                 hidden_files = [f for f in os.listdir(self.folder_path) if f.startswith('.')]
@@ -1747,11 +1768,11 @@ class VideoAnnotationApp:
                 self.save_settings()
             except Exception:
                 pass
-            # Trigger a lazy tab refresh based on the active tab; avoid direct loads here
+            # Refresh both tabs immediately so they stay in sync
             try:
-                self.root.after_idle(self.on_tab_changed)
+                self.root.after_idle(self.refresh_all_media)
             except Exception:
-                pass
+                self.refresh_all_media()
             # Persist selected folder
             try:
                 self.save_settings()

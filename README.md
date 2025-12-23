@@ -117,6 +117,15 @@ For most users, we highly recommend using the **portable build for Windows (x64)
 5.  Edit project metadata using the text box on the left, and remember to click **"Save"**.
 6.  Use the various export buttons to manage your audio data and prepare it for further analysis.
 
+### Troubleshooting: Tabs not refreshing together
+
+If the Images or Videos tab shows stale content or doesn't update after changing folders:
+
+- Use the new "Refresh Images" button (on the right side of the Images banner) to force a rebuild of the image grid.
+- Make sure the folder name shown under the language selector matches the folder you selected; hover over it to see the full path tooltip.
+- From the Tasks panel, you can run "Reset: App Settings" to clear saved state (last folder, language, etc.) if settings persist an old folder.
+- Running the app in debug mode ("Run: App (Debug + Log)") will show lines like `refresh_all_media` and `Found N images / M videos` with the exact folder path being used, which helps confirm both tabs are loading from the same folder.
+
 ## 🚀 Call for Contributors: Windows Installer Development
 
 Currently, the portable build is large and must be manually updated (and also looks slightly sketchy). We are looking for contributors to help us develop a professional, small-footprint Windows Installer.
