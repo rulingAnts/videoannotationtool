@@ -211,3 +211,24 @@ This project, and related tools, owe their existence to an **AI-first developmen
 * **Built With:** The application relies on the following essential open-source libraries and the foundational **Python Standard Library** (e.g., `os`, `json`, `threading`):
     * **UI Framework:** `PySide6` (Qt for Python)
     * **Multimedia & Processing:** `opencv-python`, `Pillow`, `pydub`, `pyaudio`, `numpy`
+
+## Code Structure (modular)
+
+The app has been reorganized into a small Python package for clarity and maintainability:
+
+- `vat/main.py`: CLI and application bootstrap
+- `vat/ui/app.py`: `VideoAnnotationApp` and interface labels (currently English)
+- `vat/audio/recording.py`: background audio recording worker
+- `vat/audio/playback.py`: background audio playback worker
+- `vat/audio/joiner.py`: WAV concatenation worker with click markers
+- `vat/utils/resources.py`: `resource_path` and FFmpeg environment configuration
+
+### Run
+
+Use Python 3.11 to run the modular entrypoint:
+
+```bash
+python3.11 -m vat.main
+```
+
+VS Code tasks include "Run: App (Modular)".
