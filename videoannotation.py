@@ -14,6 +14,7 @@ import argparse
 import logging
 import wave
 import threading
+import math
 from pathlib import Path
 #from typing import Optional
 
@@ -1392,6 +1393,38 @@ class VideoAnnotationApp(QMainWindow):
     def on_video_select(self, current_row):
         if current_row < 0:
             return
+        # Clean up any ongoing playback or recording when switching videos
+        try:
+            self.stop_audio()
+        except Exception:
+            pass
+        try:
+            if self.playing_video:
+                self.stop_video()
+        except Exception:
+            pass
+        try:
+            if self.is_recording:
+                # Stop recording gracefully
+                self.is_recording = False
+                if self.recording_worker:
+                    try:
+                        self.recording_worker.stop()
+                    except RuntimeError:
+                        pass
+                if self.recording_thread:
+                    try:
+                        if self.recording_thread.isRunning():
+                            self.recording_thread.quit()
+                            self.recording_thread.wait()
+                    except RuntimeError:
+                        pass
+                    finally:
+                        self.recording_thread = None
+                        self.recording_worker = None
+                self.update_recording_indicator()
+        except Exception:
+            pass
         self.current_video = self.video_listbox.item(current_row).text()
         self.last_video_name = self.current_video
         self.save_settings()
@@ -1485,7 +1518,42 @@ class VideoAnnotationApp(QMainWindow):
             QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["cannot_open_video"]) 
             return
         self.playing_video = True
-        self.video_timer.start(30)  # ~30 FPS
+        fps = self.cap.get(cv2.CAP_PROP_FPS)
+        if fps is None:
+            fps = 0.0
+        # Validate FPS and compute interval in ms, with sensible clamps
+        if isinstance(fps, (float, int)) and not math.isnan(float(fps)) and float(fps) > 0.0 and not math.isinf(float(fps)):
+            interval_ms = int(round(1000.0 / float(fps)))
+        else:
+            interval_ms = 33  # Fallback to ~30 FPS
+        interval_ms = max(5, min(1000, interval_ms))
+        # Gather resolution and codec information for logging
+        width = 0
+        height = 0
+        codec = ""
+        try:
+            width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+            height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+            fourcc_val = int(self.cap.get(cv2.CAP_PROP_FOURCC) or 0)
+            if fourcc_val:
+                codec_chars = [
+                    chr((fourcc_val >> 0) & 0xFF),
+                    chr((fourcc_val >> 8) & 0xFF),
+                    chr((fourcc_val >> 16) & 0xFF),
+                    chr((fourcc_val >> 24) & 0xFF),
+                ]
+                codec = "".join(codec_chars).strip()
+        except Exception:
+            pass
+
+        try:
+            logging.info(
+                f"Playing '{os.path.basename(video_path)}' at {float(fps):.2f} FPS, timer interval {interval_ms} ms, "
+                f"resolution {width}x{height}, codec {codec or fourcc_val}"
+            )
+        except Exception:
+            pass
+        self.video_timer.start(interval_ms)
     
     def update_video_frame(self):
         try:
@@ -1627,6 +1695,54 @@ class VideoAnnotationApp(QMainWindow):
     def _on_recording_thread_finished(self):
         self.recording_thread = None
         self.recording_worker = None
+    
+    def closeEvent(self, event):
+        # Attempt to cleanly stop all background activity before exit
+        try:
+            # Stop audio playback
+            try:
+                self.stop_audio()
+            except Exception:
+                pass
+
+            # Stop video playback
+            try:
+                if self.playing_video:
+                    self.stop_video()
+            except Exception:
+                pass
+
+            # Stop recording if active
+            try:
+                if self.is_recording:
+                    self.is_recording = False
+                    if self.recording_worker:
+                        try:
+                            self.recording_worker.stop()
+                        except RuntimeError:
+                            pass
+                    if self.recording_thread:
+                        try:
+                            if self.recording_thread.isRunning():
+                                self.recording_thread.quit()
+                                self.recording_thread.wait()
+                        except RuntimeError:
+                            pass
+                        finally:
+                            self.recording_thread = None
+                            self.recording_worker = None
+                    self.update_recording_indicator()
+            except Exception:
+                pass
+
+            # If joining is in progress, wait for completion to avoid orphaned thread
+            try:
+                if hasattr(self, 'join_thread') and self.join_thread and self.join_thread.isRunning():
+                    self.join_thread.wait()
+            except Exception:
+                pass
+        finally:
+            super().closeEvent(event)
     
     def open_in_ocenaudio(self):
         if not self.folder_path:
