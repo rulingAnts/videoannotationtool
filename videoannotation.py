@@ -15,7 +15,7 @@ import logging
 import wave
 import threading
 from pathlib import Path
-from typing import Optional
+#from typing import Optional
 
 # Use PyAudio for audio (note: may not work in headless CI)
 try:
@@ -471,6 +471,254 @@ LABELS_ALL = {
         "ffmpeg_not_found_msg": "FFmpeg nie gevind nie. Maak seker FFmpeg is geïnstalleer of saam met die uitvoerbare gebundel.",
         "save_combined_wav_dialog_title": "Stoor saamgevoegde WAV-lêer",
     },
+    "Nederlands": {
+        "language_name": "Nederlands",
+        "app_title": "Video Annotatie Tool",
+        "select_folder": "Selecteer Map",
+        "open_ocenaudio": "Open alle opnamen in Ocenaudio (Normaliseren, Knippen, Bewerken...)",
+        "export_wavs": "Opgenomen Data Exporteren",
+        "clear_wavs": "Opgenomen Data Wissen",
+        "import_wavs": "Opgenomen Data Importeren",
+        "join_wavs": "Exporteren als Enkel Geluidsbestand (voor SayMore/ELAN)",
+        "video_listbox_no_video": "Geen video geselecteerd",
+        "play_video": "Video Afspelen",
+        "stop_video": "Video Stoppen",
+        "audio_no_annotation": "Geen audio annotatie",
+        "play_audio": "Audio Afspelen",
+        "stop_audio": "Audio Stoppen",
+        "record_audio": "Audio Opnemen",
+        "stop_recording": "Opname Stoppen",
+        "edit_metadata": "Metadata Bewerken",
+        "save_metadata": "Opslaan",
+        "audio_label_prefix": "Audio: ",
+        "no_folder_selected": "Geen map geselecteerd",
+        "no_videos_found": "Geen videobestanden gevonden in de geselecteerde map:",
+        "no_files": "Geen bestanden",
+        "no_wavs_found": "Geen WAV-bestanden gevonden in de huidige map.",
+        "overwrite": "Overschrijven?",
+        "overwrite_audio": "Audiobestand bestaat al. Overschrijven?",
+        "saved": "Opgeslagen",
+        "metadata_saved": "Metadata opgeslagen!",
+        "success": "Succes",
+        "wavs_joined": "Alle WAV-bestanden succesvol samengevoegd tot:",
+        "videos_tab_title": "Video's",
+        "select_folder_dialog": "Selecteer map met videobestanden",
+        "cleanup_errors_title": "Opschoningsfouten",
+        "permission_denied_title": "Toegang geweigerd",
+        "folder_not_found_title": "Map niet gevonden",
+        "unexpected_error_title": "Er is een fout opgetreden",
+        "error_title": "Fout",
+        "cannot_open_video": "Kan videobestand niet openen.",
+        "ocenaudio_locate_title": "Ocenaudio-programma zoeken",
+        "ocenaudio_not_found_title": "Ocenaudio niet gevonden",
+        "ocenaudio_open_fail_prefix": "Ocenaudio openen mislukt: ",
+        "export_select_folder_dialog": "Selecteer exportmap voor WAV-bestanden",
+        "overwrite_files_title": "Bestanden overschrijven?",
+        "overwrite_export_body_prefix": "De volgende bestanden bestaan al in de exportmap en zullen worden overschreven:\n",
+        "overwrite_import_body_prefix": "De volgende bestanden bestaan al en zullen door import worden overschreven:\n",
+        "overwrite_question_suffix": "\n\nWilt u ze overschrijven?",
+        "export_cancelled_title": "Export geannuleerd",
+        "export_cancelled_msg": "Export is geannuleerd om overschrijven te voorkomen.",
+        "delete_errors_title": "Verwijderfouten",
+        "delete_errors_msg_prefix": "Sommige bestanden konden niet worden verwijderd of metadata.txt kon niet worden teruggezet:\n",
+        "clear_success_msg_prefix": "{count} WAV-bestanden verwijderd en metadata.txt teruggezet.",
+        "import_select_folder_dialog": "Selecteer map om bestanden uit te importeren",
+        "confirm_delete_title": "Verwijderen bevestigen",
+        "confirm_import_title": "Import bevestigen",
+        "import_errors_title": "Importfouten",
+        "import_errors_msg_prefix": "Sommige bestanden konden niet worden geïmporteerd of verwijderd:\n",
+        "import_success_msg_prefix": "{count} WAV-bestanden en metadata.txt geïmporteerd.",
+        "wav_mismatch_title": "WAV-bestandsnamen komen niet overeen",
+        "wav_mismatch_msg_prefix": "De volgende WAV-bestanden komen met geen enkele videobestandsnaam overeen en zijn niet geïmporteerd:\n",
+        "ffmpeg_not_found_msg": "FFmpeg niet gevonden. Zorg dat FFmpeg is geïnstalleerd of is meegeleverd met de executable.",
+        "save_combined_wav_dialog_title": "Gecombineerd WAV-bestand opslaan",
+    },
+    "Português (Brasil)": {
+        "language_name": "Português (Brasil)",
+        "app_title": "Ferramenta de Anotação de Vídeo",
+        "select_folder": "Selecionar Pasta",
+        "open_ocenaudio": "Abrir todas as gravações no Ocenaudio (Para normalizar, cortar, editar...)",
+        "export_wavs": "Exportar Dados Gravados",
+        "clear_wavs": "Limpar Dados Gravados",
+        "import_wavs": "Importar Dados Gravados",
+        "join_wavs": "Exportar como Arquivo Único de Áudio (para SayMore/ELAN)",
+        "video_listbox_no_video": "Nenhum vídeo selecionado",
+        "play_video": "Reproduzir Vídeo",
+        "stop_video": "Parar Vídeo",
+        "audio_no_annotation": "Sem anotação de áudio",
+        "play_audio": "Reproduzir Áudio",
+        "stop_audio": "Parar Áudio",
+        "record_audio": "Gravar Áudio",
+        "stop_recording": "Parar Gravação",
+        "edit_metadata": "Editar Metadados",
+        "save_metadata": "Salvar",
+        "audio_label_prefix": "Áudio: ",
+        "no_folder_selected": "Nenhuma pasta selecionada",
+        "no_videos_found": "Nenhum arquivo de vídeo encontrado na pasta selecionada:",
+        "no_files": "Nenhum arquivo",
+        "no_wavs_found": "Nenhum arquivo WAV encontrado na pasta atual.",
+        "overwrite": "Sobrescrever?",
+        "overwrite_audio": "O arquivo de áudio já existe. Sobrescrever?",
+        "saved": "Salvo",
+        "metadata_saved": "Metadados salvos!",
+        "success": "Sucesso",
+        "wavs_joined": "Todos os arquivos WAV foram unidos com sucesso em:",
+        "videos_tab_title": "Vídeos",
+        "select_folder_dialog": "Selecionar pasta com arquivos de vídeo",
+        "cleanup_errors_title": "Erros de limpeza",
+        "permission_denied_title": "Permissão negada",
+        "folder_not_found_title": "Pasta não encontrada",
+        "unexpected_error_title": "Ocorreu um erro",
+        "error_title": "Erro",
+        "cannot_open_video": "Não é possível abrir o arquivo de vídeo.",
+        "ocenaudio_locate_title": "Localizar executável do Ocenaudio",
+        "ocenaudio_not_found_title": "Ocenaudio não encontrado",
+        "ocenaudio_open_fail_prefix": "Falha ao abrir Ocenaudio: ",
+        "export_select_folder_dialog": "Selecionar pasta de exportação para arquivos WAV",
+        "overwrite_files_title": "Sobrescrever arquivos?",
+        "overwrite_export_body_prefix": "Os seguintes arquivos já existem na pasta de exportação e serão sobrescritos:\n",
+        "overwrite_import_body_prefix": "Os seguintes arquivos já existem e serão sobrescritos pela importação:\n",
+        "overwrite_question_suffix": "\n\nDeseja sobrescrevê-los?",
+        "export_cancelled_title": "Exportação cancelada",
+        "export_cancelled_msg": "A exportação foi cancelada para evitar sobrescrições.",
+        "delete_errors_title": "Erros ao excluir",
+        "delete_errors_msg_prefix": "Alguns arquivos não puderam ser excluídos ou metadata.txt não pôde ser redefinido:\n",
+        "clear_success_msg_prefix": "{count} arquivos WAV excluídos e metadata.txt redefinido.",
+        "import_select_folder_dialog": "Selecionar pasta de onde importar arquivos",
+        "confirm_delete_title": "Confirmar exclusão",
+        "confirm_import_title": "Confirmar importação",
+        "import_errors_title": "Erros na importação",
+        "import_errors_msg_prefix": "Alguns arquivos não puderam ser importados ou excluídos:\n",
+        "import_success_msg_prefix": "{count} arquivos WAV e metadata.txt importados.",
+        "wav_mismatch_title": "Incompatibilidade de nomes de arquivos WAV",
+        "wav_mismatch_msg_prefix": "Os seguintes arquivos WAV não correspondem a nenhum nome de arquivo de vídeo e não foram importados:\n",
+        "ffmpeg_not_found_msg": "FFmpeg não encontrado. Certifique-se de que o FFmpeg esteja instalado ou incluído no executável.",
+        "save_combined_wav_dialog_title": "Salvar arquivo WAV combinado",
+    },
+    "Español (Latinoamérica)": {
+        "language_name": "Español (Latinoamérica)",
+        "app_title": "Herramienta de Anotación de Video",
+        "select_folder": "Seleccionar Carpeta",
+        "open_ocenaudio": "Abrir todas las grabaciones en Ocenaudio (Para normalizar, recortar, editar...)",
+        "export_wavs": "Exportar Datos Grabados",
+        "clear_wavs": "Borrar Datos Grabados",
+        "import_wavs": "Importar Datos Grabados",
+        "join_wavs": "Exportar como Archivo Único de Audio (para SayMore/ELAN)",
+        "video_listbox_no_video": "No se seleccionó ningún video",
+        "play_video": "Reproducir Video",
+        "stop_video": "Detener Video",
+        "audio_no_annotation": "Sin anotación de audio",
+        "play_audio": "Reproducir Audio",
+        "stop_audio": "Detener Audio",
+        "record_audio": "Grabar Audio",
+        "stop_recording": "Detener Grabación",
+        "edit_metadata": "Editar Metadatos",
+        "save_metadata": "Guardar",
+        "audio_label_prefix": "Audio: ",
+        "no_folder_selected": "No se seleccionó ninguna carpeta",
+        "no_videos_found": "No se encontraron archivos de video en la carpeta seleccionada:",
+        "no_files": "Sin archivos",
+        "no_wavs_found": "No se encontraron archivos WAV en la carpeta actual.",
+        "overwrite": "¿Sobrescribir?",
+        "overwrite_audio": "El archivo de audio ya existe. ¿Sobrescribir?",
+        "saved": "Guardado",
+        "metadata_saved": "¡Metadatos guardados!",
+        "success": "Éxito",
+        "wavs_joined": "Todos los archivos WAV se unieron exitosamente en:",
+        "videos_tab_title": "Videos",
+        "select_folder_dialog": "Seleccionar carpeta con archivos de video",
+        "cleanup_errors_title": "Errores de limpieza",
+        "permission_denied_title": "Permiso denegado",
+        "folder_not_found_title": "Carpeta no encontrada",
+        "unexpected_error_title": "Ocurrió un error",
+        "error_title": "Error",
+        "cannot_open_video": "No se puede abrir el archivo de video.",
+        "ocenaudio_locate_title": "Ubicar ejecutable de Ocenaudio",
+        "ocenaudio_not_found_title": "Ocenaudio no encontrado",
+        "ocenaudio_open_fail_prefix": "Error al abrir Ocenaudio: ",
+        "export_select_folder_dialog": "Seleccionar carpeta de exportación para archivos WAV",
+        "overwrite_files_title": "¿Sobrescribir archivos?",
+        "overwrite_export_body_prefix": "Los siguientes archivos ya existen en la carpeta de exportación y serán sobrescritos:\n",
+        "overwrite_import_body_prefix": "Los siguientes archivos ya existen y serán sobrescritos al importar:\n",
+        "overwrite_question_suffix": "\n\n¿Desea sobrescribirlos?",
+        "export_cancelled_title": "Exportación cancelada",
+        "export_cancelled_msg": "Se canceló la exportación para evitar sobrescrituras.",
+        "delete_errors_title": "Errores al eliminar",
+        "delete_errors_msg_prefix": "Algunos archivos no se pudieron eliminar o metadata.txt no se pudo restablecer:\n",
+        "clear_success_msg_prefix": "Se eliminaron {count} archivos WAV y se restableció metadata.txt.",
+        "import_select_folder_dialog": "Seleccionar carpeta desde la cual importar archivos",
+        "confirm_delete_title": "Confirmar eliminación",
+        "confirm_import_title": "Confirmar importación",
+        "import_errors_title": "Errores de importación",
+        "import_errors_msg_prefix": "Algunos archivos no se pudieron importar o eliminar:\n",
+        "import_success_msg_prefix": "Se importaron {count} archivos WAV y metadata.txt.",
+        "wav_mismatch_title": "Incompatibilidad en nombres de archivos WAV",
+        "wav_mismatch_msg_prefix": "Los siguientes archivos WAV no coinciden con ningún nombre de archivo de video y no se importaron:\n",
+        "ffmpeg_not_found_msg": "FFmpeg no encontrado. Asegúrate de que FFmpeg esté instalado o incluido con el ejecutable.",
+        "save_combined_wav_dialog_title": "Guardar archivo WAV combinado",
+    },
+    "Afrikaans": {
+        "language_name": "Afrikaans",
+        "app_title": "Video Annotasie Hulpmiddel",
+        "select_folder": "Kies Gids",
+        "open_ocenaudio": "Maak alle Opnames in Ocenaudio oop (Vir Normaliseer, Sny, Redigeer...)",
+        "export_wavs": "Voer Opname Data Uit",
+        "clear_wavs": "Vee Opname Data Uit",
+        "import_wavs": "Voer Opname Data In",
+        "join_wavs": "Voer uit as Enkel Klanklêer (vir SayMore/ELAN)",
+        "video_listbox_no_video": "Geen video gekies nie",
+        "play_video": "Speel Video",
+        "stop_video": "Stop Video",
+        "audio_no_annotation": "Geen klankannotasie nie",
+        "play_audio": "Speel Klank",
+        "stop_audio": "Stop Klank",
+        "record_audio": "Neem Klank op",
+        "stop_recording": "Stop Opname",
+        "edit_metadata": "Redigeer Metadata",
+        "save_metadata": "Stoor",
+        "audio_label_prefix": "Klank: ",
+        "no_folder_selected": "Geen gids gekies nie",
+        "no_videos_found": "Geen videolêers in die gekose gids gevind nie:",
+        "no_files": "Geen lêers",
+        "no_wavs_found": "Geen WAV-lêers in die huidige gids gevind nie.",
+        "overwrite": "Oorskryf?",
+        "overwrite_audio": "Klanklêer bestaan reeds. Oorskryf?",
+        "saved": "Gestoor",
+        "metadata_saved": "Metadata gestoor!",
+        "success": "Sukses",
+        "wavs_joined": "Alle WAV-lêers suksesvol saamgevoeg tot:",
+        "videos_tab_title": "Video's",
+        "select_folder_dialog": "Kies gids met videolêers",
+        "cleanup_errors_title": "Opruimfoute",
+        "permission_denied_title": "Toegang geweier",
+        "folder_not_found_title": "Gids nie gevind nie",
+        "unexpected_error_title": "'n Fout het plaasgevind",
+        "error_title": "Fout",
+        "cannot_open_video": "Kan videolêer nie oopmaak nie.",
+        "ocenaudio_locate_title": "Skep Ocenaudio uitvoerbare",
+        "ocenaudio_not_found_title": "Ocenaudio nie gevind nie",
+        "ocenaudio_open_fail_prefix": "Kon Ocenaudio nie oopmaak nie: ",
+        "export_select_folder_dialog": "Kies uitvoergids vir WAV-lêers",
+        "overwrite_files_title": "Oorskryf lêers?",
+        "overwrite_export_body_prefix": "Die volgende lêers bestaan reeds in die uitvoergids en sal oorskryf word:\n",
+        "overwrite_import_body_prefix": "Die volgende lêers bestaan reeds en sal deur invoer oorskryf word:\n",
+        "overwrite_question_suffix": "\n\nWil u dit oorskryf?",
+        "export_cancelled_title": "Uitvoer gekanselleer",
+        "export_cancelled_msg": "Uitvoer is gekanselleer om oorskrywing te vermy.",
+        "delete_errors_title": "Skrapfoute",
+        "delete_errors_msg_prefix": "Sommige lêers kon nie geskrap word nie of metadata.txt kon nie teruggestel word nie:\n",
+        "clear_success_msg_prefix": "{count} WAV-lêers geskrap en metadata.txt teruggestel.",
+        "import_select_folder_dialog": "Kies gids om vanaf te invoer",
+        "confirm_delete_title": "Bevestig skrap",
+        "confirm_import_title": "Bevestig invoer",
+        "import_errors_title": "Invoerfoute",
+        "import_errors_msg_prefix": "Sommige lêers kon nie ingevoer of geskrap word nie:\n",
+        "import_success_msg_prefix": "{count} WAV-lêers en metadata.txt ingevoer.",
+        "wav_mismatch_title": "WAV-lêernaam stem nie ooreen nie",
+        "wav_mismatch_msg_prefix": "Die volgende WAV-lêers stem met geen videolêernaam ooreen nie en is nie ingevoer nie:\n",
+        "ffmpeg_not_found_msg": "FFmpeg nie gevind nie. Maak seker FFmpeg is geïnstalleer of saam met die uitvoerbare gebundel.",
+        "save_combined_wav_dialog_title": "Stoor saamgevoegde WAV-lêer",
+    },
 }
 
 
@@ -562,21 +810,13 @@ class AudioPlaybackWorker(QObject):
             p.terminate()
             wf.close()
         except Exception as e:
-            self.error.emit(f"Audio playback failed: {e}")
-        finally:
-            self.finished.emit()
-    
-    def stop(self):
-        self.should_stop = True
-
-
-# Audio recording worker (runs in QThread)
-class AudioRecordingWorker(QObject):
-    finished = Signal()
-    error = Signal(str)
-    
-    def __init__(self, wav_path):
-        super().__init__()
+                self.join_thread = QThread()
+                self.join_worker = JoinWavsWorker(self.folder_path, output_file)
+                self.join_worker.moveToThread(self.join_thread)
+                self.join_thread.started.connect(self.join_worker.run)
+                self.join_worker.finished.connect(self.join_thread.quit)
+        except Exception as e:
+                self.error.emit(f"Audio playback failed: {e}")
         self.wav_path = wav_path
         self.should_stop = False
         self.frames = []
@@ -586,7 +826,7 @@ class AudioRecordingWorker(QObject):
             self.error.emit("PyAudio is not available")
             self.finished.emit()
             return
-            
+
         try:
             p = pyaudio.PyAudio()
             stream = p.open(
@@ -622,6 +862,120 @@ class AudioRecordingWorker(QObject):
         self.should_stop = True
 
 
+# WAV joining worker (runs in QThread)
+class JoinWavsWorker(QObject):
+    finished = Signal()
+    error = Signal(str)
+    success = Signal(str)
+
+    def __init__(self, folder_path: str, output_file: str):
+        super().__init__()
+        self.folder_path = folder_path
+        self.output_file = output_file
+
+    def run(self):
+        try:
+            wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
+            wav_files.sort()
+            std_rate = 44100
+            std_channels = 1
+            std_sample_width = 2
+            silence_segment = AudioSegment.silent(duration=500, frame_rate=std_rate)
+            # Generate click sound inline to avoid UI dependencies
+            t = np.linspace(0, 5 / 1000, int(std_rate * 5 / 1000), endpoint=False)
+            sine_wave = np.sin(2 * np.pi * 2000 * t)
+            decay_factor = np.exp(-5 * t)
+            clicked_wave = sine_wave * decay_factor * 0.2
+            audio_samples = (clicked_wave * 32767).astype(np.int16)
+            click_sound = AudioSegment(
+                audio_samples.tobytes(),
+                frame_rate=std_rate,
+                sample_width=2,
+                channels=1
+            )
+            click_segment = silence_segment + click_sound + silence_segment
+            combined_audio = AudioSegment.empty()
+            combined_audio = combined_audio.set_frame_rate(std_rate).set_channels(std_channels).set_sample_width(std_sample_width)
+
+            for i, file in enumerate(wav_files):
+                file_path = os.path.join(self.folder_path, file)
+                audio = AudioSegment.from_file(file_path, format="wav")
+                if audio.frame_rate != std_rate:
+                    audio = audio.set_frame_rate(std_rate)
+                if audio.channels != std_channels:
+                    audio = audio.set_channels(std_channels)
+                if audio.sample_width != std_sample_width:
+                    audio = audio.set_sample_width(std_sample_width)
+                combined_audio += audio
+                if i < len(wav_files) - 1:
+                    combined_audio += click_segment
+
+            combined_audio.export(self.output_file, format="wav")
+            self.success.emit(self.output_file)
+        except Exception as e:
+            self.error.emit(str(e))
+        finally:
+            self.finished.emit()
+
+
+# Join WAVs worker (runs in QThread)
+class JoinWavsWorker(QObject):
+    finished = Signal()
+    error = Signal(str)
+    success = Signal(str)
+
+    def __init__(self, folder_path: str, output_file: str):
+        super().__init__()
+        self.folder_path = folder_path
+        self.output_file = output_file
+
+    def generate_click_sound_pydub(self, duration_ms: int, freq: int, rate: int):
+        t = np.linspace(0, duration_ms / 1000, int(rate * duration_ms / 1000), endpoint=False)
+        sine_wave = np.sin(2 * np.pi * freq * t)
+        decay = np.linspace(1, 0, len(sine_wave))
+        click_data = sine_wave * decay
+        click_data = (click_data * 0.5 * (2**15 - 1)).astype(np.int16).tobytes()
+        return AudioSegment(
+            data=click_data,
+            sample_width=2,
+            frame_rate=rate,
+            channels=1
+        )
+
+    def run(self):
+        try:
+            wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
+            wav_files.sort()
+            std_rate = 44100
+            std_channels = 1
+            std_sample_width = 2
+            silence_segment = AudioSegment.silent(duration=500, frame_rate=std_rate)
+            click_sound = self.generate_click_sound_pydub(duration_ms=5, freq=2000, rate=std_rate)
+            click_segment = silence_segment + click_sound + silence_segment
+            combined_audio = AudioSegment.empty()
+            combined_audio = combined_audio.set_frame_rate(std_rate).set_channels(std_channels).set_sample_width(std_sample_width)
+
+            for i, file in enumerate(wav_files):
+                file_path = os.path.join(self.folder_path, file)
+                audio = AudioSegment.from_file(file_path, format="wav")
+                if audio.frame_rate != std_rate:
+                    audio = audio.set_frame_rate(std_rate)
+                if audio.channels != std_channels:
+                    audio = audio.set_channels(std_channels)
+                if audio.sample_width != std_sample_width:
+                    audio = audio.set_sample_width(std_sample_width)
+                combined_audio += audio
+                if i < len(wav_files) - 1:
+                    combined_audio += click_segment
+
+            combined_audio.export(self.output_file, format="wav")
+            self.success.emit(self.output_file)
+        except Exception as e:
+            self.error.emit(f"An error occurred while joining files:\n{e}")
+        finally:
+            self.finished.emit()
+
+
 # Main application window
 class VideoAnnotationApp(QMainWindow):
     ui_info = Signal(str, str)
@@ -653,6 +1007,10 @@ class VideoAnnotationApp(QMainWindow):
         self.is_recording = False
         self.recording_thread = None
         self.recording_worker = None
+
+        # Join WAVs state
+        self.join_thread = None
+        self.join_worker = None
         
         self.load_settings()
         self.init_ui()
@@ -686,6 +1044,12 @@ class VideoAnnotationApp(QMainWindow):
 
     def _show_worker_error(self, msg):
         QMessageBox.critical(self, "Error", msg)
+
+    def _on_join_success(self, output_file: str):
+        self.ui_info.emit(self.LABELS["success"], f"{self.LABELS['wavs_joined']}\n{output_file}")
+
+    def _on_join_error(self, msg: str):
+        self.ui_error.emit(self.LABELS["error_title"], f"An error occurred while joining files:\n{msg}")
     
     def init_ui(self):
         # Central widget
@@ -853,16 +1217,20 @@ class VideoAnnotationApp(QMainWindow):
             self.audio_label.setText(self.LABELS["audio_no_annotation"])
         
         self.update_folder_display()
-    
+
     def update_folder_display(self):
+        # Update the label at the top of the UI to reflect the current folder
+        if getattr(self, 'folder_display_label', None) is None:
+            return
         if self.folder_path:
-            folder_name = os.path.basename(os.path.normpath(self.folder_path)) or self.folder_path
-            self.folder_display_label.setText(folder_name)
+            # Show the folder name, with the full path in a tooltip
+            base = os.path.basename(self.folder_path.rstrip(os.sep)) or self.folder_path
+            self.folder_display_label.setText(base)
             self.folder_display_label.setToolTip(self.folder_path)
         else:
             self.folder_display_label.setText(self.LABELS["no_folder_selected"])
             self.folder_display_label.setToolTip("")
-    
+
     def load_settings(self):
         try:
             if os.path.exists(self.settings_file):
@@ -881,7 +1249,7 @@ class VideoAnnotationApp(QMainWindow):
                         self.last_video_name = last_video
         except Exception as e:
             logging.warning(f"Failed to load settings: {e}")
-    
+
     def save_settings(self):
         try:
             os.makedirs(os.path.dirname(self.settings_file), exist_ok=True)
@@ -1010,7 +1378,7 @@ class VideoAnnotationApp(QMainWindow):
             frame = cv2.resize(frame, (640, 480))
             h, w, ch = frame.shape
             bytes_per_line = ch * w
-            qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888)
+            qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
             pixmap = QPixmap.fromImage(qt_image)
             self.video_label.setPixmap(pixmap)
         else:
@@ -1063,7 +1431,7 @@ class VideoAnnotationApp(QMainWindow):
                 frame = cv2.resize(frame, (640, 480))
                 h, w, ch = frame.shape
                 bytes_per_line = ch * w
-                qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888)
+                qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
                 pixmap = QPixmap.fromImage(qt_image)
                 self.video_label.setPixmap(pixmap)
             else:
@@ -1414,12 +1782,12 @@ class VideoAnnotationApp(QMainWindow):
     
     def join_all_wavs(self):
         if not self.folder_path:
-            QMessageBox.critical(self, "Error", "No folder selected.")
+            QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["no_folder_selected"]) 
             return
         
         wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
         if not wav_files:
-            QMessageBox.information(self, "No Files", "No WAV files found in the current folder.")
+            QMessageBox.information(self, self.LABELS["no_files"], self.LABELS["no_wavs_found"]) 
             return
         
         ffmpeg_path = resource_path(os.path.join("ffmpeg", "bin", "ffmpeg"))
@@ -1436,38 +1804,17 @@ class VideoAnnotationApp(QMainWindow):
         if not output_file:
             return
         
-        # Run in a separate thread to avoid blocking the UI
-        def process_and_join():
-            try:
-                wav_files.sort()
-                std_rate = 44100
-                std_channels = 1
-                std_sample_width = 2
-                silence_segment = AudioSegment.silent(duration=500, frame_rate=std_rate)
-                click_sound = self.generate_click_sound_pydub(duration_ms=5, freq=2000, rate=std_rate)
-                click_segment = silence_segment + click_sound + silence_segment
-                combined_audio = AudioSegment.empty()
-                combined_audio = combined_audio.set_frame_rate(std_rate).set_channels(std_channels).set_sample_width(std_sample_width)
-                
-                for i, file in enumerate(wav_files):
-                    file_path = os.path.join(self.folder_path, file)
-                    audio = AudioSegment.from_file(file_path, format="wav")
-                    if audio.frame_rate != std_rate:
-                        audio = audio.set_frame_rate(std_rate)
-                    if audio.channels != std_channels:
-                        audio = audio.set_channels(std_channels)
-                    if audio.sample_width != std_sample_width:
-                        audio = audio.set_sample_width(std_sample_width)
-                    combined_audio += audio
-                    if i < len(wav_files) - 1:
-                        combined_audio += click_segment
-                
-                combined_audio.export(output_file, format="wav")
-                self.ui_info.emit(self.LABELS["success"], f"{self.LABELS['wavs_joined']}\n{output_file}")
-            except Exception as e:
-                self.ui_error.emit("Error", f"An error occurred while joining files:\n{e}")
-        
-        threading.Thread(target=process_and_join, daemon=True).start()
+        # Use QThread + worker for joining
+        self.join_thread = QThread()
+        self.join_worker = JoinWavsWorker(self.folder_path, output_file)
+        self.join_worker.moveToThread(self.join_thread)
+        self.join_thread.started.connect(self.join_worker.run)
+        self.join_worker.finished.connect(self.join_thread.quit)
+        self.join_worker.finished.connect(self.join_worker.deleteLater)
+        self.join_thread.finished.connect(self.join_thread.deleteLater)
+        self.join_worker.success.connect(self._on_join_success)
+        self.join_worker.error.connect(self._on_join_error)
+        self.join_thread.start()
     
     def generate_click_sound_pydub(self, duration_ms, freq, rate):
         """Generates a short, subtle click sound using a high-frequency sine wave with a rapid decay."""
