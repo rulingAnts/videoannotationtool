@@ -1,0 +1,1 @@
+- [] Add a tab for a grid-view interface of still images (and the ability to click each and have a play/record modal/menu come up. For record, confirm overwrite. Recorded audio for images should include the file extension of the image file before .wav so that they don't overwrite the video recording.)
