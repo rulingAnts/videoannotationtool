@@ -1364,6 +1364,9 @@ class VideoAnnotationApp(QMainWindow):
         self.update_media_controls()
     
     def open_metadata_editor(self):
+        # Safeguard against being called before a folder is selected
+        if not self.folder_path:
+            return
         metadata_path = os.path.join(self.folder_path, "metadata.txt")
         default_content = (
             "name: \n"
