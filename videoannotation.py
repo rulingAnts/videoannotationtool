@@ -845,10 +845,95 @@ class VideoAnnotationApp:
             r += 1
 
     def on_toggle_show_filenames(self):
-        # Update banner filename and rebuild grid to show/hide labels
+        # Update banner filename visibility and rebuild grid to show/hide labels
+        show = self.show_filenames_var.get()
         if self.current_image:
-            self.image_filename_var.set(self.current_image if self.show_filenames_var.get() else "")
+            self.image_filename_var.set(self.current_image if show else "")
+        # Keep filename label above checkbox when toggling back on
+        try:
+            if show:
+                self.image_filename_label.pack_forget()
+                self.image_filename_label.pack(in_=self.image_info_top_row, side=tk.LEFT, padx=10)
+            else:
+                self.image_filename_label.pack_forget()
+        except Exception:
+            pass
         self.build_image_grid()
+
+    # --- Mouse wheel/trackpad support for image grid ---
+    def _on_image_canvas_enter(self, event=None):
+        self._mouse_over_image_canvas = True
+        self._bind_image_canvas_mousewheel()
+
+    def _on_image_canvas_leave(self, event=None):
+        self._mouse_over_image_canvas = False
+        self._unbind_image_canvas_mousewheel()
+
+    def _bind_image_canvas_mousewheel(self):
+        try:
+            if sys.platform == "darwin":
+                self.root.bind_all("<MouseWheel>", self._on_mousewheel_mac)
+                self.root.bind_all("<Shift-MouseWheel>", self._on_shift_mousewheel_mac)
+            else:
+                self.root.bind_all("<MouseWheel>", self._on_mousewheel)
+                self.root.bind_all("<Shift-MouseWheel>", self._on_shift_mousewheel)
+                # Linux legacy events
+                self.root.bind_all("<Button-4>", self._on_linux_scroll_up)
+                self.root.bind_all("<Button-5>", self._on_linux_scroll_down)
+        except Exception:
+            pass
+
+    def _unbind_image_canvas_mousewheel(self):
+        try:
+            self.root.unbind_all("<MouseWheel>")
+            self.root.unbind_all("<Shift-MouseWheel>")
+            self.root.unbind_all("<Button-4>")
+            self.root.unbind_all("<Button-5>")
+        except Exception:
+            pass
+
+    def _on_mousewheel_mac(self, event):
+        if not self._mouse_over_image_canvas:
+            return
+        delta = int(event.delta)
+        if delta == 0:
+            return
+        # macOS delivers small deltas; use units scrolling
+        self.image_canvas.yview_scroll(-delta, "units")
+
+    def _on_shift_mousewheel_mac(self, event):
+        if not self._mouse_over_image_canvas:
+            return
+        delta = int(event.delta)
+        if delta == 0:
+            return
+        self.image_canvas.xview_scroll(-delta, "units")
+
+    def _on_mousewheel(self, event):
+        if not self._mouse_over_image_canvas:
+            return
+        steps = -1 * int(event.delta / 120) if event.delta else 0
+        if steps == 0:
+            steps = -1 if event.delta < 0 else 1
+        self.image_canvas.yview_scroll(steps, "units")
+
+    def _on_shift_mousewheel(self, event):
+        if not self._mouse_over_image_canvas:
+            return
+        steps = -1 * int(event.delta / 120) if event.delta else 0
+        if steps == 0:
+            steps = -1 if event.delta < 0 else 1
+        self.image_canvas.xview_scroll(steps, "units")
+
+    def _on_linux_scroll_up(self, event):
+        if not self._mouse_over_image_canvas:
+            return
+        self.image_canvas.yview_scroll(-1, "units")
+
+    def _on_linux_scroll_down(self, event):
+        if not self._mouse_over_image_canvas:
+            return
+        self.image_canvas.yview_scroll(1, "units")
 
     def select_image(self, meta: dict, frame_ref: tk.Frame | None = None):
         self.current_image = meta["name"]
@@ -1382,7 +1467,8 @@ class VideoAnnotationApp:
             self.metadata_editor_frame.destroy()
 
         self.metadata_editor_frame = tk.Frame(self.list_frame)
-        self.metadata_editor_frame.pack(pady=10, fill=tk.BOTH, expand=True)
+        # Ensure the editor sits below the video list pane when (re)shown
+        self.metadata_editor_frame.pack(pady=10, fill=tk.BOTH, expand=True, after=self.video_listbox_frame)
 
         tk.Label(self.metadata_editor_frame, text=self.LABELS["edit_metadata"], font=("Arial", 12, "bold")).pack()
         self.metadata_text = tk.Text(self.metadata_editor_frame, width=40, height=10)
