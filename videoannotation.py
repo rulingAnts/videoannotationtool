@@ -49,6 +49,11 @@ LABELS_ALL = {
         "metadata_saved": "Metadata saved!",
         "success": "Success",
         "wavs_joined": "All WAV files successfully joined into:",
+        "videos_tab_title": "Videos",
+        "images_tab_title": "Still Images",
+        "image_no_selection": "No image selected",
+        "image_failed_to_load": "Failed to load",
+        "selected_image_label": "Selected Image:",
     },
     "Bahasa Indonesia": {
         "language_name": "Bahasa Indonesia",
@@ -80,6 +85,11 @@ LABELS_ALL = {
         "metadata_saved": "Metadata tersimpan!",
         "success": "Berhasil",
         "wavs_joined": "Semua berkas WAV berhasil digabungkan menjadi:",
+        "videos_tab_title": "Video",
+        "images_tab_title": "Gambar Diam",
+        "image_no_selection": "Tidak ada gambar yang dipilih",
+        "image_failed_to_load": "Gagal memuat",
+        "selected_image_label": "Gambar yang Dipilih:",
     },
     "한국어": {
         "language_name": "한국어",
@@ -111,6 +121,11 @@ LABELS_ALL = {
         "metadata_saved": "메타데이터가 저장되었습니다!",
         "success": "성공",
         "wavs_joined": "모든 WAV 파일이 성공적으로 결합되었습니다:",
+        "videos_tab_title": "비디오",
+        "images_tab_title": "정지 이미지",
+        "image_no_selection": "선택된 이미지 없음",
+        "image_failed_to_load": "불러오기 실패",
+        "selected_image_label": "선택된 이미지:",
     },
     "Nederlands": {
         "language_name": "Nederlands",
@@ -142,6 +157,11 @@ LABELS_ALL = {
         "metadata_saved": "Metadata opgeslagen!",
         "success": "Succes",
         "wavs_joined": "Alle WAV-bestanden succesvol samengevoegd tot:",
+        "videos_tab_title": "Video's",
+        "images_tab_title": "Stilstaande Afbeeldingen",
+        "image_no_selection": "Geen afbeelding geselecteerd",
+        "image_failed_to_load": "Laden mislukt",
+        "selected_image_label": "Geselecteerde Afbeelding:",
     },
     "Português (Brasil)": {
         "language_name": "Português (Brasil)",
@@ -173,6 +193,11 @@ LABELS_ALL = {
         "metadata_saved": "Metadados salvos!",
         "success": "Sucesso",
         "wavs_joined": "Todos os arquivos WAV foram unidos com sucesso em:",
+        "videos_tab_title": "Vídeos",
+        "images_tab_title": "Imagens Estáticas",
+        "image_no_selection": "Nenhuma imagem selecionada",
+        "image_failed_to_load": "Falha ao carregar",
+        "selected_image_label": "Imagem Selecionada:",
     },
     "Español (Latinoamérica)": {
         "language_name": "Español (Latinoamérica)",
@@ -204,6 +229,11 @@ LABELS_ALL = {
         "metadata_saved": "¡Metadatos guardados!",
         "success": "Éxito",
         "wavs_joined": "Todos los archivos WAV se unieron exitosamente en:",
+        "videos_tab_title": "Videos",
+        "images_tab_title": "Imágenes fijas",
+        "image_no_selection": "No se seleccionó ninguna imagen",
+        "image_failed_to_load": "Error al cargar",
+        "selected_image_label": "Imagen seleccionada:",
     },
     "Afrikaans": {
         "language_name": "Afrikaans",
@@ -235,6 +265,11 @@ LABELS_ALL = {
         "metadata_saved": "Metadata gestoor!",
         "success": "Sukses",
         "wavs_joined": "Alle WAV-lêers suksesvol saamgevoeg tot:",
+        "videos_tab_title": "Video's",
+        "images_tab_title": "Stilstaande Beelde",
+        "image_no_selection": "Geen beeld gekies nie",
+        "image_failed_to_load": "Kon nie laai nie",
+        "selected_image_label": "Gekose Beeld:",
     },
 }
 
@@ -493,9 +528,74 @@ class VideoAnnotationApp:
         # Metadata editor frame placeholder
         self.metadata_editor_frame = None
 
-        # Right frame: Video player and audio controls
-        self.media_frame = tk.Frame(self.main_frame)
-        self.media_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5)
+        # Right frame: Notebook with Videos and Still Images tabs
+        self.notebook = ttk.Notebook(self.main_frame)
+        self.notebook.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5)
+
+        # Videos tab (reuse existing video UI under this frame)
+        self.videos_tab = tk.Frame(self.notebook)
+        self.notebook.add(self.videos_tab, text=LABELS_ALL.get(self.language, {}).get("videos_tab_title", "Videos"))
+
+        # Images tab (new image UI)
+        self.images_tab = tk.Frame(self.notebook)
+        self.notebook.add(self.images_tab, text=LABELS_ALL.get(self.language, {}).get("images_tab_title", "Still Images"))
+
+        # For backwards compatibility, keep using media_frame for video widgets
+        self.media_frame = tk.Frame(self.videos_tab)
+        self.media_frame.pack(fill=tk.BOTH, expand=True, padx=5)
+
+        # Track images state
+        self.image_files = []
+        self.current_image = None
+        self.image_thumbs = {}
+        # Image banner (thumbnail + filename + audio controls)
+        self.image_banner_frame = tk.Frame(self.images_tab)
+        self.image_banner_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
+        self.image_thumb_label = tk.Label(self.image_banner_frame)
+        self.image_thumb_label.pack(side=tk.LEFT, padx=6)
+        # Selected image label
+        self.image_selected_label = tk.Label(
+            self.image_banner_frame,
+            text=self.LABELS.get("selected_image_label", "Selected Image:"),
+            anchor='w'
+        )
+        self.image_selected_label.pack(side=tk.LEFT, padx=8)
+        self.image_filename_var = tk.StringVar(value=LABELS_ALL.get(self.language, {}).get("image_no_selection", "No image selected"))
+        self.image_filename_label = tk.Label(self.image_banner_frame, textvariable=self.image_filename_var, anchor='w')
+        self.image_filename_label.pack(side=tk.LEFT, padx=10)
+        # Audio controls for selected image
+        self.image_controls = tk.Frame(self.image_banner_frame)
+        self.image_controls.pack(side=tk.RIGHT)
+        self.image_play_button = tk.Button(self.image_controls, text=self.LABELS["play_audio"], command=self.play_selected_image_audio, state=tk.DISABLED)
+        self.image_play_button.pack(side=tk.LEFT, padx=5)
+        self.image_stop_button = tk.Button(self.image_controls, text=self.LABELS["stop_audio"], command=self.stop_audio, state=tk.DISABLED)
+        self.image_stop_button.pack(side=tk.LEFT, padx=5)
+        self.image_record_button = tk.Button(self.image_controls, text=self.LABELS["record_audio"], command=self.toggle_image_recording, state=tk.DISABLED)
+        self.image_record_button.pack(side=tk.LEFT, padx=5)
+
+        # Scrollable image grid
+        self.image_canvas = tk.Canvas(self.images_tab, highlightthickness=0)
+        self.image_scrollbar = tk.Scrollbar(self.images_tab, orient=tk.VERTICAL, command=self.image_canvas.yview)
+        self.image_grid_container = tk.Frame(self.image_canvas)
+        self.image_canvas.create_window((0, 0), window=self.image_grid_container, anchor="nw")
+        self.image_canvas.configure(yscrollcommand=self.image_scrollbar.set)
+        self.image_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.image_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Reflow grid on size changes
+        self.image_grid_container.bind("<Configure>", lambda e: self.image_canvas.configure(scrollregion=self.image_canvas.bbox("all")))
+        self.images_tab.bind("<Configure>", lambda e: self.build_image_grid())
+
+        # Persist last active tab and update contents on switch
+        self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_changed)
+        # Select last tab if available
+        try:
+            if getattr(self, 'last_tab', 'videos') == 'images':
+                self.notebook.select(self.images_tab)
+            else:
+                self.notebook.select(self.videos_tab)
+        except Exception:
+            pass
 
         # Video player section
         self.video_label = tk.Label(self.media_frame, text=self.LABELS["video_listbox_no_video"])
@@ -535,6 +635,236 @@ class VideoAnnotationApp:
 
         self.root.title(self.LABELS["app_title"])
 
+    def get_active_tab(self) -> str:
+        try:
+            current = self.notebook.select()
+            if current == str(self.images_tab):
+                return "images"
+        except Exception:
+            pass
+        return "videos"
+
+    def on_tab_changed(self, event=None):
+        # Stop any playback when switching tabs
+        self.stop_video()
+        self.stop_audio()
+        # Save last tab selection to settings
+        try:
+            self.last_tab = self.get_active_tab()
+            self.save_settings()
+        except Exception:
+            pass
+        # Populate media for the active tab
+        if self.get_active_tab() == "images":
+            self.load_image_files()
+        else:
+            self.load_video_files()
+
+    def get_audio_path_for_media(self, name: str, ext: str | None, media_type: str) -> str:
+        base = os.path.join(self.folder_path or "", name)
+        if media_type == "image" and ext:
+            return base + f".{ext}.wav"
+        # videos use plain basename.wav
+        return base + ".wav"
+
+    def load_image_files(self):
+        # Populate image list based on supported extensions
+        self.image_files = []
+        if not self.folder_path:
+            self.update_folder_display()
+            return
+        try:
+            exts = ('.jpg', '.jpeg', '.png', '.tif', '.tiff', '.bmp', '.gif')
+            files = [f for f in os.listdir(self.folder_path) if f.lower().endswith(exts) and not f.startswith('.')]
+            self.image_files = sorted(files)
+            # Build grid view
+            self.build_image_grid()
+            # Reset banner
+            self.current_image = None
+            self.image_filename_var.set(LABELS_ALL.get(self.language, {}).get("image_no_selection", "No image selected"))
+            self.image_play_button.config(state=tk.DISABLED)
+            self.image_stop_button.config(state=tk.DISABLED)
+            self.image_record_button.config(state=tk.DISABLED)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load images: {e}")
+
+    def build_image_grid(self):
+        # Clear existing tiles
+        for child in list(self.image_grid_container.children.values()):
+            child.destroy()
+        if not self.image_files:
+            return
+        # Determine container width
+        container_w = max(self.image_canvas.winfo_width(), 600)
+        # Thumbnail target height
+        target_h = 240
+        row = []
+        # Determine orientation for each image (portrait if h > w)
+        metas = []
+        for fname in self.image_files:
+            path = os.path.join(self.folder_path, fname)
+            try:
+                with Image.open(path) as im:
+                    w, h = im.size
+                metas.append({"name": fname, "path": path, "portrait": (h >= w)})
+            except Exception:
+                metas.append({"name": fname, "path": path, "portrait": False, "error": True})
+        # Build rows according to rule: 3-wide for all-portrait rows; otherwise 2-wide; if two portraits then landscape next -> stop at 2
+        r = 0
+        c = 0
+        i = 0
+        while i < len(metas):
+            # Decide row capacity
+            cap = 3 if all(m.get("portrait", False) for m in metas[i:i+3]) else 2
+            # Special case: first two portraits and third landscape -> cap=2
+            if len(metas) - i >= 3:
+                if metas[i].get("portrait", False) and metas[i+1].get("portrait", False) and not metas[i+2].get("portrait", False):
+                    cap = 2
+            # Place up to cap items
+            for j in range(cap):
+                if i + j >= len(metas):
+                    break
+                meta = metas[i + j]
+                tile_w = int(container_w / cap) - 18
+                tile = tk.Frame(self.image_grid_container, bd=3, relief=tk.SOLID)
+                tile.grid(row=r, column=j, padx=6, pady=6, sticky="nsew")
+                # Thumbnail
+                thumb_lbl = tk.Label(tile)
+                thumb_lbl.pack(fill=tk.BOTH, expand=True)
+                # Filename label
+                tk.Label(tile, text=meta["name"], anchor='w').pack(fill=tk.X)
+                # Load thumbnail lazily into cache bucket
+                try:
+                    with Image.open(meta["path"]) as im:
+                        im.thumbnail((tile_w, target_h))
+                        photo = ImageTk.PhotoImage(im)
+                    # Keep reference
+                    self.image_thumbs[(meta["path"], tile_w, target_h)] = photo
+                    thumb_lbl.configure(image=photo)
+                    thumb_lbl.image = photo
+                except Exception:
+                    thumb_lbl.configure(text=LABELS_ALL.get(self.language, {}).get("image_failed_to_load", "Failed to load"))
+                # Bind selection and double-click
+                def make_handlers(m=meta, frame_ref=tile):
+                    def on_click(_e=None):
+                        self.select_image(m, frame_ref)
+                    def on_dbl(_e=None):
+                        self.on_image_double_click(m)
+                    return on_click, on_dbl
+                click_h, dbl_h = make_handlers()
+                tile.bind("<Button-1>", click_h)
+                thumb_lbl.bind("<Button-1>", click_h)
+                tile.bind("<Double-Button-1>", dbl_h)
+                thumb_lbl.bind("<Double-Button-1>", dbl_h)
+            # Next row
+            i += cap
+            r += 1
+
+    def select_image(self, meta: dict, frame_ref: tk.Frame | None = None):
+        self.current_image = meta["name"]
+        # Update banner
+        self.image_filename_var.set(meta["name"])
+        # Update thumbnail preview in banner
+        try:
+            with Image.open(meta["path"]) as im:
+                im.thumbnail((96, 96))
+                photo = ImageTk.PhotoImage(im)
+            self.image_thumb_label.configure(image=photo)
+            self.image_thumb_label.image = photo
+        except Exception:
+            self.image_thumb_label.configure(image="", text=LABELS_ALL.get(self.language, {}).get("image_failed_to_load", "Failed to load"))
+        # Enable audio buttons
+        self.image_play_button.config(state=tk.NORMAL)
+        self.image_stop_button.config(state=tk.NORMAL)
+        self.image_record_button.config(state=tk.NORMAL)
+        # Highlight selection
+        if frame_ref is not None:
+            for child in self.image_grid_container.children.values():
+                child.configure(bd=3)
+            frame_ref.configure(bd=6)
+
+    def on_image_double_click(self, meta: dict):
+        # Open fullscreen preview that closes on click or Esc
+        win = tk.Toplevel(self.root)
+        win.attributes("-fullscreen", True)
+        canvas = tk.Canvas(win, background="black", highlightthickness=0)
+        canvas.pack(fill=tk.BOTH, expand=True)
+        try:
+            with Image.open(meta["path"]) as im:
+                screen_w = win.winfo_screenwidth()
+                screen_h = win.winfo_screenheight()
+                im.thumbnail((screen_w, screen_h))
+                photo = ImageTk.PhotoImage(im)
+            img_id = canvas.create_image(screen_w//2, screen_h//2, image=photo)
+            canvas.image = photo
+        except Exception:
+            canvas.create_text(20, 20, anchor='nw', fill="white", text=LABELS_ALL.get(self.language, {}).get("image_failed_to_load", "Failed to load"))
+        def close(_e=None):
+            win.destroy()
+        win.bind("<Button-1>", close)
+        win.bind("<Escape>", close)
+
+    def play_selected_image_audio(self):
+        if not self.folder_path or not self.current_image:
+            return
+        name, ext = os.path.splitext(self.current_image)
+        ext = ext.lstrip('.')
+        wav_path = self.get_audio_path_for_media(name, ext, media_type="image")
+        if not os.path.exists(wav_path):
+            messagebox.showwarning(self.LABELS["no_files"], self.LABELS.get("audio_no_annotation", "No audio annotation"))
+            return
+        # Reuse audio playback but targeted to image audio
+        try:
+            segment = AudioSegment.from_wav(wav_path)
+            # Simple synchronous playback via pydub/playback would block; keep existing stream approach if available
+            from pydub.playback import play
+            threading.Thread(target=lambda: play(segment), daemon=True).start()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to play audio: {e}")
+
+    def toggle_image_recording(self):
+        if not self.folder_path or not self.current_image:
+            return
+        name, ext = os.path.splitext(self.current_image)
+        ext = ext.lstrip('.')
+        wav_path = self.get_audio_path_for_media(name, ext, media_type="image")
+        # Confirm overwrite
+        if os.path.exists(wav_path):
+            if not messagebox.askyesno(self.LABELS.get("overwrite", "Overwrite?"), self.LABELS.get("overwrite_audio", "Audio file already exists. Overwrite?")):
+                return
+        # Delegate to existing recording thread logic if available; else minimal stub
+        try:
+            import pyaudio, wave
+            pa = pyaudio.PyAudio()
+            stream = pa.open(format=pyaudio.paInt16, channels=1, rate=44100, input=True, frames_per_buffer=1024)
+            frames = []
+            self.is_recording = True
+            self.image_record_button.config(text=self.LABELS["stop_recording"]) 
+            def worker():
+                try:
+                    while self.is_recording:
+                        data = stream.read(1024)
+                        frames.append(data)
+                finally:
+                    stream.stop_stream()
+                    stream.close()
+                    pa.terminate()
+                    wf = wave.open(wav_path, 'wb')
+                    wf.setnchannels(1)
+                    wf.setsampwidth(pyaudio.get_sample_size(pyaudio.paInt16))
+                    wf.setframerate(44100)
+                    wf.writeframes(b''.join(frames))
+                    wf.close()
+                    # Restore button label and command after finishing
+                    self.root.after(0, lambda: self.image_record_button.config(text=self.LABELS["record_audio"], command=self.toggle_image_recording))
+            threading.Thread(target=worker, daemon=True).start()
+            # Toggle stop on second press
+            def stop_record(_e=None):
+                self.is_recording = False
+            self.image_record_button.configure(command=stop_record)
+        except Exception as e:
+            messagebox.showerror("Error", f"Recording failed: {e}")
+
     def change_language(self, event=None):
         selected_name = self.language_var.get()
         for key, labels in LABELS_ALL.items():
@@ -568,6 +898,23 @@ class VideoAnnotationApp:
         # Update current folder display text in case no folder is selected (localized)
         if not self.folder_path:
             self.update_folder_display()
+        # Update tab titles and image banner controls
+        if hasattr(self, "notebook"):
+            try:
+                self.notebook.tab(self.videos_tab, text=self.LABELS.get("videos_tab_title", "Videos"))
+                self.notebook.tab(self.images_tab, text=self.LABELS.get("images_tab_title", "Still Images"))
+            except Exception:
+                pass
+        if hasattr(self, "image_play_button"):
+            self.image_play_button.config(text=self.LABELS["play_audio"])
+        if hasattr(self, "image_stop_button"):
+            self.image_stop_button.config(text=self.LABELS["stop_audio"])
+        if hasattr(self, "image_record_button"):
+            self.image_record_button.config(text=self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
+        if hasattr(self, "image_filename_var") and not self.current_image:
+            self.image_filename_var.set(LABELS_ALL.get(self.language, {}).get("image_no_selection", "No image selected"))
+        if hasattr(self, "image_selected_label"):
+            self.image_selected_label.config(text=self.LABELS.get("selected_image_label", "Selected Image:"))
 
     def update_folder_display(self):
         if self.folder_path:
@@ -585,14 +932,27 @@ class VideoAnnotationApp:
                 with open(self.settings_file, 'r') as f:
                     settings = json.load(f)
                     self.ocenaudio_path = settings.get('ocenaudio_path')
+                    self.last_tab = settings.get('last_tab', 'videos')
+            else:
+                self.last_tab = 'videos'
         except Exception as e:
             messagebox.showwarning("Settings Error", f"Failed to load settings: {e}")
 
     def save_settings(self):
         try:
             os.makedirs(os.path.dirname(self.settings_file), exist_ok=True)
+            # Merge with existing settings
+            settings = {}
+            if os.path.exists(self.settings_file):
+                try:
+                    with open(self.settings_file, 'r') as f:
+                        settings = json.load(f)
+                except Exception:
+                    settings = {}
+            settings['ocenaudio_path'] = self.ocenaudio_path
+            settings['last_tab'] = getattr(self, 'last_tab', 'videos')
             with open(self.settings_file, 'w') as f:
-                json.dump({'ocenaudio_path': self.ocenaudio_path}, f)
+                json.dump(settings, f)
         except Exception as e:
             messagebox.showwarning("Settings Error", f"Failed to save settings: {e}")
 
@@ -611,7 +971,11 @@ class VideoAnnotationApp:
                         errors.append(f"Delete {f}: {e}")
                 if errors:
                     messagebox.showwarning("Cleanup Errors", "Some hidden files could not be deleted:\n" + "\n".join(errors))
-            self.load_video_files()
+            # Load media based on active tab
+            if self.get_active_tab() == 'images':
+                self.load_image_files()
+            else:
+                self.load_video_files()
             self.open_metadata_editor()
             self.export_wavs_button.config(state=tk.NORMAL)
             self.clear_wavs_button.config(state=tk.NORMAL)
@@ -836,7 +1200,25 @@ class VideoAnnotationApp:
             messagebox.showerror("Error", "No folder selected.")
             return
 
-        wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
+        # Build list based on active tab and visible media order
+        wav_files = []
+        try:
+            active = self.get_active_tab()
+        except Exception:
+            active = "videos"
+        if active == "images" and getattr(self, "image_files", None):
+            for img in self.image_files:
+                base, ext = os.path.splitext(img)
+                ext = ext.lstrip('.')
+                candidate = f"{base}.{ext}.wav"
+                if os.path.exists(os.path.join(self.folder_path, candidate)):
+                    wav_files.append(candidate)
+        else:
+            for vid in getattr(self, "video_files", []):
+                base, _ = os.path.splitext(vid)
+                candidate = f"{base}.wav"
+                if os.path.exists(os.path.join(self.folder_path, candidate)):
+                    wav_files.append(candidate)
         if not wav_files:
             messagebox.showinfo("No Files", "No WAV files found in the current folder to open.")
             return
@@ -1098,7 +1480,25 @@ class VideoAnnotationApp:
             messagebox.showerror("Error", "No folder selected.")
             return
 
-        wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
+        # Build list based on active tab and visible media order
+        wav_files = []
+        try:
+            active = self.get_active_tab()
+        except Exception:
+            active = "videos"
+        if active == "images" and getattr(self, "image_files", None):
+            for img in self.image_files:
+                base, ext = os.path.splitext(img)
+                ext = ext.lstrip('.')
+                candidate = f"{base}.{ext}.wav"
+                if os.path.exists(os.path.join(self.folder_path, candidate)):
+                    wav_files.append(candidate)
+        else:
+            for vid in getattr(self, "video_files", []):
+                base, _ = os.path.splitext(vid)
+                candidate = f"{base}.wav"
+                if os.path.exists(os.path.join(self.folder_path, candidate)):
+                    wav_files.append(candidate)
         if not wav_files:
             messagebox.showinfo("No Files", "No WAV files found in the current folder.")
             return
