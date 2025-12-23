@@ -59,6 +59,17 @@ LABELS_ALL = {
         "zoom_tip_plus_minus": "Tip: Use + and - keys to zoom",
         "double_click_tip_image": "Double-click an image to view it fullscreen",
         "double_click_tip_video": "Double-click the video to view it fullscreen",
+        "show_advisory_startup": "Show advisory on startup",
+        "advisory_title": "Advisory",
+        "dont_show_again": "Don't show again",
+        "ok": "OK",
+        "advisory_message": (
+            "This tool is for use by field linguists in one of two situations:\n\n"
+            "First, for video elictation kits, for example from Max Planck Institute. Some best practices for these:\n"
+            "(1) Obtain and thoroughly read the activity directions for the video elicitation set you're using. There may be a specific protocol to follow for best results.\n"
+            "(2) Best practice for these sessions in any case: have a separate recording device continuously recording the full session. This will help you later untangle things like participant reference or topic continuity persisting across separate recordings (ideally wide-pickup audio + video. Can be lower quality than the clip recordings if needed for storage space and bandwidth, especially lower quality video is ok).\n\n"
+            "Secondly, these may be useful for GPA review sessions, especially in Phase 1. You can take a series of photos with your camera, save them in a folder, load that folder with this tool, and then record descriptions of each photo with this tool. A 'Review' tab for GPA session review is planned for a future release."
+        ),
     },
     "Bahasa Indonesia": {
         "language_name": "Bahasa Indonesia",
@@ -100,6 +111,17 @@ LABELS_ALL = {
         "zoom_tip_plus_minus": "Tips: Gunakan tombol + dan - untuk memperbesar",
         "double_click_tip_image": "Klik ganda gambar untuk melihat layar penuh",
         "double_click_tip_video": "Klik ganda video untuk melihat layar penuh",
+        "show_advisory_startup": "Tampilkan pemberitahuan saat mulai",
+        "advisory_title": "Pemberitahuan",
+        "dont_show_again": "Jangan tampilkan lagi",
+        "ok": "OK",
+        "advisory_message": (
+            "Alat ini untuk digunakan oleh linguis lapangan dalam dua situasi:\n\n"
+            "Pertama, untuk paket elisitasi video, misalnya dari Max Planck Institute. Beberapa praktik terbaik untuk ini:\n"
+            "(1) Dapatkan dan baca dengan saksama petunjuk aktivitas untuk set elisitasi video yang Anda gunakan. Mungkin ada protokol khusus yang harus diikuti untuk hasil terbaik.\n"
+            "(2) Praktik terbaik dalam sesi apa pun: miliki perangkat perekam terpisah yang terus merekam seluruh sesi. Ini akan membantu Anda nantinya mengurai hal-hal seperti rujukan partisipan atau kesinambungan topik yang berlanjut di antara rekaman terpisah (idealnya audio + video dengan cakupan luas. Boleh berkualitas lebih rendah daripada rekaman klip jika diperlukan untuk ruang penyimpanan dan bandwidth, khususnya video berkualitas lebih rendah tidak masalah).\n\n"
+            "Selain itu, alat ini dapat berguna untuk sesi peninjauan GPA, terutama pada Fase 1. Anda dapat mengambil serangkaian foto dengan kamera, menyimpannya dalam sebuah folder, memuat folder itu dengan alat ini, lalu merekam deskripsi setiap foto dengan alat ini. Tab 'Review' untuk peninjauan sesi GPA direncanakan untuk rilis di masa mendatang."
+        ),
     },
     "한국어": {
         "language_name": "한국어",
@@ -141,6 +163,17 @@ LABELS_ALL = {
         "zoom_tip_plus_minus": "팁: +와 - 키로 확대/축소",
         "double_click_tip_image": "이미지를 더블 클릭하여 전체 화면으로 보기",
         "double_click_tip_video": "비디오를 더블 클릭하여 전체 화면으로 보기",
+        "show_advisory_startup": "시작 시 안내 표시",
+        "advisory_title": "안내",
+        "dont_show_again": "다시 표시하지 않기",
+        "ok": "확인",
+        "advisory_message": (
+            "이 도구는 현장 언어학자를 위한 두 가지 상황에서 사용됩니다:\n\n"
+            "첫째, Max Planck Institute 등의 비디오 유도 키트에 사용합니다. 모범 사례는 다음과 같습니다:\n"
+            "(1) 사용 중인 비디오 유도 세트의 활동 지침을 확보하여 꼼꼼히 읽으십시오. 최상의 결과를 위해 따라야 할 특정 프로토콜이 있을 수 있습니다.\n"
+            "(2) 어떤 경우에도 모범 사례: 별도의 녹음 장치를 사용하여 전체 세션을 지속적으로 녹음하십시오. 이는 분리된 녹음들 사이에서 참가자 지시나 주제 연속성 등을 나중에 구분하는 데 도움이 됩니다(이상적으로는 광범위 포착 오디오 + 비디오. 저장 공간과 대역폭이 필요하다면 클립 녹음보다 낮은 품질이어도 괜찮으며, 특히 비디오는 낮은 품질이어도 무방합니다).\n\n"
+            "둘째, 특히 1단계에서 GPA 리뷰 세션에 유용할 수 있습니다. 카메라로 일련의 사진을 찍어 폴더에 저장하고, 이 도구로 그 폴더를 불러온 다음 각 사진에 대한 설명을 이 도구로 녹음할 수 있습니다. GPA 세션 리뷰를 위한 'Review' 탭은 향후 릴리스에서 제공될 예정입니다."
+        ),
     },
     "Nederlands": {
         "language_name": "Nederlands",
@@ -182,6 +215,17 @@ LABELS_ALL = {
         "zoom_tip_plus_minus": "Tip: Gebruik + en - om te zoomen",
         "double_click_tip_image": "Dubbelklik op een afbeelding voor volledig scherm",
         "double_click_tip_video": "Dubbelklik op de video voor volledig scherm",
+        "show_advisory_startup": "Toon advies bij opstarten",
+        "advisory_title": "Advies",
+        "dont_show_again": "Niet opnieuw tonen",
+        "ok": "OK",
+        "advisory_message": (
+            "Deze tool is bedoeld voor veldlinguïsten in twee situaties:\n\n"
+            "Eerst, voor video-elicitatiesets, bijvoorbeeld van het Max Planck Institute. Enkele best practices hiervoor:\n"
+            "(1) Verkrijg en lees de activiteitsinstructies voor de video-elicitatieset die u gebruikt grondig. Er kan een specifiek protocol zijn dat u moet volgen voor de beste resultaten.\n"
+            "(2) Best practice in elk geval: gebruik een apart opnameapparaat dat de volledige sessie continu opneemt. Dit helpt later bij het ontwarren van zaken zoals verwijzing naar deelnemers of onderwerpcontinuïteit die voortduurt over afzonderlijke opnamen (bij voorkeur audio + video met brede opname. Dit mag van lagere kwaliteit zijn dan de clipopnamen indien nodig voor opslagruimte en bandbreedte; vooral video van lagere kwaliteit is oké).\n\n"
+            "Ten tweede kunnen deze nuttig zijn voor GPA-reviewsessies, vooral in Fase 1. U kunt een reeks foto’s met uw camera maken, ze in een map opslaan, die map met deze tool laden en vervolgens beschrijvingen van elke foto met deze tool opnemen. Een 'Review'-tab voor GPA-sessieherziening is gepland voor een toekomstige release."
+        ),
     },
     "Português (Brasil)": {
         "language_name": "Português (Brasil)",
@@ -223,6 +267,17 @@ LABELS_ALL = {
         "zoom_tip_plus_minus": "Dica: Use as teclas + e - para zoom",
         "double_click_tip_image": "Clique duas vezes na imagem para tela cheia",
         "double_click_tip_video": "Clique duas vezes no vídeo para tela cheia",
+        "show_advisory_startup": "Exibir aviso na inicialização",
+        "advisory_title": "Aviso",
+        "dont_show_again": "Não mostrar novamente",
+        "ok": "OK",
+        "advisory_message": (
+            "Esta ferramenta é para uso por linguistas de campo em duas situações:\n\n"
+            "Primeiro, para kits de elicitação de vídeo, por exemplo, do Max Planck Institute. Algumas práticas recomendadas:\n"
+            "(1) Obtenha e leia cuidadosamente as instruções de atividade do conjunto de elicitação de vídeo que você está usando. Pode haver um protocolo específico a ser seguido para melhores resultados.\n"
+            "(2) Prática recomendada em qualquer sessão: tenha um dispositivo de gravação separado gravando continuamente toda a sessão. Isso ajudará você posteriormente a esclarecer coisas como referência de participantes ou continuidade de tópico que persiste em gravações separadas (idealmente áudio + vídeo de captura ampla. Pode ser de qualidade inferior às gravações de clipes, se necessário, por espaço de armazenamento e largura de banda; especialmente vídeo de qualidade inferior está ok).\n\n"
+            "Em segundo lugar, isso pode ser útil para sessões de revisão do GPA, especialmente na Fase 1. Você pode tirar uma série de fotos com sua câmera, salvá-las em uma pasta, carregar essa pasta com esta ferramenta e então gravar descrições de cada foto com esta ferramenta. Uma guia 'Revisão' para revisão de sessões GPA está planejada para uma versão futura."
+        ),
     },
     "Español (Latinoamérica)": {
         "language_name": "Español (Latinoamérica)",
@@ -264,6 +319,17 @@ LABELS_ALL = {
         "zoom_tip_plus_minus": "Consejo: Usa las teclas + y - para zoom",
         "double_click_tip_image": "Haz doble clic en la imagen para verla a pantalla completa",
         "double_click_tip_video": "Haz doble clic en el video para verlo a pantalla completa",
+        "show_advisory_startup": "Mostrar aviso al iniciar",
+        "advisory_title": "Aviso",
+        "dont_show_again": "No volver a mostrar",
+        "ok": "OK",
+        "advisory_message": (
+            "Esta herramienta está destinada a lingüistas de campo en dos situaciones:\n\n"
+            "Primero, para conjuntos de elicitación en video, por ejemplo del Max Planck Institute. Algunas buenas prácticas para estos:\n"
+            "(1) Obtenga y lea detenidamente las instrucciones de la actividad para el conjunto de elicitación de video que esté usando. Puede haber un protocolo específico que seguir para obtener mejores resultados.\n"
+            "(2) Buena práctica en cualquier caso: tenga un dispositivo de grabación separado que grabe continuamente toda la sesión. Esto le ayudará más tarde a desentrañar cosas como la referencia a participantes o la continuidad del tema que persiste a través de grabaciones separadas (idealmente audio + video de cobertura amplia. Puede ser de menor calidad que las grabaciones de clips si es necesario por espacio de almacenamiento y ancho de banda; especialmente el video de menor calidad está bien).\n\n"
+            "En segundo lugar, esto puede ser útil para sesiones de revisión de GPA, especialmente en la Fase 1. Puede tomar una serie de fotos con su cámara, guardarlas en una carpeta, cargar esa carpeta con esta herramienta y luego grabar descripciones de cada foto con esta herramienta. Una pestaña de 'Revisión' para la revisión de sesiones de GPA está planeada para una versión futura."
+        ),
     },
     "Afrikaans": {
         "language_name": "Afrikaans",
@@ -305,6 +371,17 @@ LABELS_ALL = {
         "zoom_tip_plus_minus": "Wenk: Gebruik + en - vir zoem",
         "double_click_tip_image": "Dubbelklik op die beeld vir volskerm",
         "double_click_tip_video": "Dubbelklik op die video vir volskerm",
+        "show_advisory_startup": "Wys advies by aanvang",
+        "advisory_title": "Advies",
+        "dont_show_again": "Moenie weer wys nie",
+        "ok": "OK",
+        "advisory_message": (
+            "Hierdie hulpmiddel is vir gebruik deur veldlinguiste in twee situasies:\n\n"
+            "Eerstens, vir video-elisitasie-stelle, byvoorbeeld van die Max Planck Institute. 'n Paar beste praktyke hiervoor:\n"
+            "(1) Verkry en lees deeglik die aktiwiteitsriglyne vir die video-elisitasie-stel wat jy gebruik. Daar kan 'n spesifieke protokol wees wat gevolg moet word vir die beste resultate.\n"
+            "(2) Beste praktyk in elk geval: hê 'n aparte opname-toestel wat die volledige sessie deurlopend opneem. Dit sal jou later help om dinge soos deelnemer-verwysing of onderwerp-kontinuïteit wat oor afsonderlike opnames voortduur, uit te pluis (by voorkeur wye-opname klank + video. Dit kan van laer gehalte wees as die clip-opnames indien nodig vir bergingsruimte en bandwydte; veral laer gehalte video is okay).\n\n"
+            "Tweedens kan dit nuttig wees vir GPA-hersieningsessies, veral in Fase 1. Jy kan 'n reeks foto's met jou kamera neem, dit in 'n gids stoor, daardie gids met hierdie hulpmiddel laai, en dan beskrywings van elke foto met hierdie hulpmiddel opneem. 'n 'Review'-oortjie vir GPA-sessie-hersiening word vir 'n toekomstige vrystelling beplan."
+        ),
     },
 }
 
@@ -562,7 +639,7 @@ class VideoAnnotationApp:
             self.advisory_var = tk.BooleanVar(value=getattr(self, 'show_advisory', True))
             self.advisory_checkbox = tk.Checkbutton(
                 self.list_frame,
-                text="Show advisory on startup",
+                text=self.LABELS.get("show_advisory_startup", "Show advisory on startup"),
                 variable=self.advisory_var,
                 command=self.on_toggle_advisory
             )
@@ -738,20 +815,20 @@ class VideoAnnotationApp:
         return "videos"
 
     def show_advisory_dialog(self):
-        advisory_text = (
+        advisory_text = self.LABELS.get("advisory_message", (
             "This tool is for use by field linguists in one of two situations:\n\n"
             "First, for video elictation kits, for example from Max Planck Institute. Some best practices for these:\n"
             "(1) Obtain and thoroughly read the activity directions for the video elicitation set you're using. There may be a specific protocol to follow for best results.\n"
             "(2) Best practice for these sessions in any case: have a separate recording device continuously recording the full session. This will help you later untangle things like participant reference or topic continuity persisting across separate recordings (ideally wide-pickup audio + video. Can be lower quality than the clip recordings if needed for storage space and bandwidth, especially lower quality video is ok).\n\n"
             "Secondly, these may be useful for GPA review sessions, especially in Phase 1. You can take a series of photos with your camera, save them in a folder, load that folder with this tool, and then record descriptions of each photo with this tool. A 'Review' tab for GPA session review is planned for a future release."
-        )
+        ))
         # Avoid multiple dialogs
         if getattr(self, '_advisory_open', False):
             return
         self._advisory_open = True
         try:
             win = tk.Toplevel(self.root)
-            win.title("Advisory")
+            win.title(self.LABELS.get("advisory_title", "Advisory"))
             win.transient(self.root)
             try:
                 win.grab_set()
@@ -768,7 +845,7 @@ class VideoAnnotationApp:
             controls = tk.Frame(body)
             controls.pack(fill=tk.X, pady=(8, 0))
             dont_show_var = tk.BooleanVar(value=False)
-            tk.Checkbutton(controls, text="Don't show again", variable=dont_show_var).pack(side=tk.LEFT)
+            tk.Checkbutton(controls, text=self.LABELS.get("dont_show_again", "Don't show again"), variable=dont_show_var).pack(side=tk.LEFT)
             def close_dialog():
                 try:
                     if dont_show_var.get():
@@ -781,7 +858,7 @@ class VideoAnnotationApp:
                     win.destroy()
                 except Exception:
                     pass
-            tk.Button(controls, text="OK", command=close_dialog).pack(side=tk.RIGHT)
+            tk.Button(controls, text=self.LABELS.get("ok", "OK"), command=close_dialog).pack(side=tk.RIGHT)
             # Position the dialog near center
             win.update_idletasks()
             x = self.root.winfo_rootx() + (self.root.winfo_width() - win.winfo_width()) // 2
@@ -1325,6 +1402,11 @@ class VideoAnnotationApp:
             self.double_click_tip_image.config(text=self.LABELS.get("double_click_tip_image", "Double-click an image to view it fullscreen"))
         if hasattr(self, "double_click_tip_video"):
             self.double_click_tip_video.config(text=self.LABELS.get("double_click_tip_video", "Double-click the video to view it fullscreen"))
+        if hasattr(self, "advisory_checkbox"):
+            try:
+                self.advisory_checkbox.config(text=self.LABELS.get("show_advisory_startup", "Show advisory on startup"))
+            except Exception:
+                pass
 
     def update_folder_display(self):
         if self.folder_path:
