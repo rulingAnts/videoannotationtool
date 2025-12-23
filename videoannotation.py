@@ -1058,6 +1058,7 @@ class VideoAnnotationApp(QMainWindow):
             self.import_wavs_button.setEnabled(True)
             self.join_wavs_button.setEnabled(True)
             self.open_ocenaudio_button.setEnabled(True)
+            self.save_metadata_btn.setEnabled(True)
             # Populate list and metadata view
             self.load_video_files()
             self.open_metadata_editor()
@@ -1153,6 +1154,7 @@ class VideoAnnotationApp(QMainWindow):
         
         self.save_metadata_btn = QPushButton(self.LABELS["save_metadata"])
         self.save_metadata_btn.clicked.connect(self.save_metadata)
+        self.save_metadata_btn.setEnabled(False)
         left_layout.addWidget(self.save_metadata_btn)
         
         splitter.addWidget(left_panel)
@@ -1322,6 +1324,7 @@ class VideoAnnotationApp(QMainWindow):
             self.import_wavs_button.setEnabled(True)
             self.join_wavs_button.setEnabled(True)
             self.open_ocenaudio_button.setEnabled(True)
+            self.save_metadata_btn.setEnabled(True)
             self.save_settings()
     
     def load_video_files(self):
