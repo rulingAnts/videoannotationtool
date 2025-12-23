@@ -132,6 +132,115 @@
         ]
       },
       "problemMatcher": []
+    },
+    {
+      "label": "Run: App (Qt Normal)",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "videoannotation_qt.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "osx": {
+        "command": "python3.11"
+      },
+      "windows": {
+        "command": "python"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run: App (Qt Debug)",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "videoannotation_qt.py",
+        "--debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "osx": {
+        "command": "python3.11"
+      },
+      "windows": {
+        "command": "python"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run: App (Qt Debug + Log)",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "videoannotation_qt.py",
+        "--debug",
+        "--log-file",
+        "debug-linux.log"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "osx": {
+        "command": "python3.11",
+        "args": [
+          "videoannotation_qt.py",
+          "--debug",
+          "--log-file",
+          "debug-mac.log"
+        ]
+      },
+      "windows": {
+        "command": "python",
+        "args": [
+          "videoannotation_qt.py",
+          "--debug",
+          "--log-file",
+          "debug-win.log"
+        ]
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run: App (Qt Debug Dev Flags)",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "-X",
+        "dev",
+        "-X",
+        "tracemalloc=5",
+        "videoannotation_qt.py",
+        "--debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONFAULTHANDLER": "1",
+          "PYTHONWARNINGS": "default"
+        }
+      },
+      "osx": {
+        "command": "python3.11",
+        "options": {
+          "env": {
+            "PYTHONFAULTHANDLER": "1",
+            "PYTHONWARNINGS": "default"
+          }
+        }
+      },
+      "windows": {
+        "command": "python",
+        "options": {
+          "env": {
+            "PYTHONFAULTHANDLER": "1",
+            "PYTHONWARNINGS": "default"
+          }
+        }
+      },
+      "problemMatcher": []
     }
   ]
 }

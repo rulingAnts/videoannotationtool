@@ -105,6 +105,29 @@ For most users, we highly recommend using the **portable build for Windows (x64)
     python3.11 videoannotation.py
     ```
 
+## Qt Version (Recommended for macOS)
+
+For improved stability on macOS, we provide a Qt-based version (`videoannotation_qt.py`) using PySide6. This version provides the same features as the Tkinter version but with better native integration and stability on macOS.
+
+### Running the Qt Version
+
+After installing the dependencies (which now include PySide6), run:
+
+```bash
+python3.11 videoannotation_qt.py
+```
+
+The Qt version is particularly recommended for macOS users experiencing UI freezes or crashes with the Tkinter version. Both versions share the same settings file (`~/.videooralannotation/settings.json`), so you can switch between them without losing your preferences.
+
+**Available command-line options:**
+- `--debug`: Enable verbose debug logging
+- `--log-file <filename>`: Write logs and crash traces to a file
+
+Example with debug mode and logging:
+```bash
+python3.11 videoannotation_qt.py --debug --log-file debug.log
+```
+
 ## Usage
 
 1.  Run the application from your terminal (or double-click the portable app "Video Annotation Tool.exe"):
