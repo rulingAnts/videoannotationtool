@@ -1400,12 +1400,29 @@ class VideoAnnotationApp(QMainWindow):
     
     def show_first_frame(self):
         if not self.current_video:
-            self.video_label.setText("No video selected")
+            self.video_label.setText(self.LABELS["video_listbox_no_video"])
             return
         video_path = os.path.join(self.folder_path, self.current_video)
-        cap = cv2.VideoCapture(video_path)
-        ret, frame = cap.read()
-        if ret:
+
+        if not os.path.exists(video_path):
+            QMessageBox.critical(self, self.LABELS["error_title"], f"{self.LABELS['cannot_open_video']}\n{video_path}")
+            self.video_label.setText(self.LABELS["cannot_open_video"])
+            return
+
+        cap = None
+        try:
+            cap = cv2.VideoCapture(video_path)
+            if not cap.isOpened():
+                QMessageBox.critical(self, self.LABELS["error_title"], f"{self.LABELS['cannot_open_video']}\n{video_path}")
+                self.video_label.setText(self.LABELS["cannot_open_video"])
+                return
+
+            ret, frame = cap.read()
+            if not ret:
+                QMessageBox.warning(self, self.LABELS["unexpected_error_title"], f"{self.LABELS['cannot_open_video']}\n{video_path}")
+                self.video_label.setText(self.LABELS["cannot_open_video"])
+                return
+
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame = cv2.resize(frame, (640, 480))
             h, w, ch = frame.shape
@@ -1413,9 +1430,13 @@ class VideoAnnotationApp(QMainWindow):
             qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
             pixmap = QPixmap.fromImage(qt_image)
             self.video_label.setPixmap(pixmap)
-        else:
-            self.video_label.setText("Cannot read video")
-        cap.release()
+        except Exception as e:
+            logging.error(f"Failed to load first frame for {video_path}: {e}")
+            QMessageBox.critical(self, self.LABELS["error_title"], f"{self.LABELS['unexpected_error_title']}: {e}")
+            self.video_label.setText(self.LABELS["cannot_open_video"])
+        finally:
+            if cap is not None:
+                cap.release()
     
     def update_media_controls(self):
         if self.current_video:
@@ -1467,9 +1488,17 @@ class VideoAnnotationApp(QMainWindow):
         self.video_timer.start(30)  # ~30 FPS
     
     def update_video_frame(self):
-        if self.playing_video and self.cap:
-            ret, frame = self.cap.read()
-            if ret:
+        try:
+            if self.playing_video and self.cap:
+                if not self.cap.isOpened():
+                    self.stop_video()
+                    self.video_label.setText(self.LABELS.get("cannot_open_video", "Cannot open video file."))
+                    return
+                ret, frame = self.cap.read()
+                if not ret:
+                    self.stop_video()
+                    self.video_label.setText(self.LABELS.get("cannot_open_video", "Cannot open video file."))
+                    return
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 frame = cv2.resize(frame, (640, 480))
                 h, w, ch = frame.shape
@@ -1477,8 +1506,10 @@ class VideoAnnotationApp(QMainWindow):
                 qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
                 pixmap = QPixmap.fromImage(qt_image)
                 self.video_label.setPixmap(pixmap)
-            else:
-                self.stop_video()
+        except Exception as e:
+            logging.error(f"Video frame update failed: {e}")
+            self.stop_video()
+            self.video_label.setText(self.LABELS.get("cannot_open_video", "Cannot open video file."))
     
     def stop_video(self):
         self.playing_video = False
