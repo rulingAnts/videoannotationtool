@@ -778,18 +778,18 @@ configure_pydub_ffmpeg()
 class AudioPlaybackWorker(QObject):
     finished = Signal()
     error = Signal(str)
-    
-    def __init__(self, wav_path):
+
+    def __init__(self, wav_path: str):
         super().__init__()
         self.wav_path = wav_path
         self.should_stop = False
-    
+
     def run(self):
         if not PYAUDIO_AVAILABLE:
             self.error.emit("PyAudio is not available")
             self.finished.emit()
             return
-            
+
         try:
             p = pyaudio.PyAudio()
             wf = wave.open(self.wav_path, 'rb')
@@ -799,28 +799,36 @@ class AudioPlaybackWorker(QObject):
                 rate=wf.getframerate(),
                 output=True
             )
-            
+
             data = wf.readframes(1024)
             while data and not self.should_stop:
                 stream.write(data)
                 data = wf.readframes(1024)
-            
+
             stream.stop_stream()
             stream.close()
             p.terminate()
             wf.close()
         except Exception as e:
-                self.join_thread = QThread()
-                self.join_worker = JoinWavsWorker(self.folder_path, output_file)
-                self.join_worker.moveToThread(self.join_thread)
-                self.join_thread.started.connect(self.join_worker.run)
-                self.join_worker.finished.connect(self.join_thread.quit)
-        except Exception as e:
-                self.error.emit(f"Audio playback failed: {e}")
+            self.error.emit(f"Audio playback failed: {e}")
+        finally:
+            self.finished.emit()
+
+    def stop(self):
+        self.should_stop = True
+
+
+# Audio recording worker (runs in QThread)
+class AudioRecordingWorker(QObject):
+    finished = Signal()
+    error = Signal(str)
+
+    def __init__(self, wav_path: str):
+        super().__init__()
         self.wav_path = wav_path
         self.should_stop = False
         self.frames = []
-    
+
     def run(self):
         if not PYAUDIO_AVAILABLE:
             self.error.emit("PyAudio is not available")
@@ -836,16 +844,15 @@ class AudioPlaybackWorker(QObject):
                 input=True,
                 frames_per_buffer=1024
             )
-            
+
             while not self.should_stop:
                 data = stream.read(1024, exception_on_overflow=False)
                 self.frames.append(data)
-            
+
             stream.stop_stream()
             stream.close()
             p.terminate()
-            
-            # Save WAV file
+
             if self.frames:
                 wf = wave.open(self.wav_path, 'wb')
                 wf.setnchannels(1)
@@ -857,7 +864,7 @@ class AudioPlaybackWorker(QObject):
             self.error.emit(f"Recording failed: {e}")
         finally:
             self.finished.emit()
-    
+
     def stop(self):
         self.should_stop = True
 
@@ -1176,6 +1183,10 @@ class VideoAnnotationApp(QMainWindow):
         self.record_button.clicked.connect(self.toggle_recording)
         self.record_button.setEnabled(False)
         audio_controls_layout.addWidget(self.record_button)
+        # Recording status indicator (shows a red dot and text while recording)
+        self.recording_status_label = QLabel("")
+        self.recording_status_label.setStyleSheet("color: red; font-weight: bold;")
+        audio_controls_layout.addWidget(self.recording_status_label)
         videos_layout.addLayout(audio_controls_layout)
         
         videos_layout.addStretch()
@@ -1391,6 +1402,7 @@ class VideoAnnotationApp(QMainWindow):
             self.stop_video_button.setEnabled(True)
             self.record_button.setEnabled(True)
             self.record_button.setText(self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
+            self.update_recording_indicator()
             
             wav_path = os.path.join(self.folder_path, os.path.splitext(self.current_video)[0] + '.wav')
             if os.path.exists(wav_path):
@@ -1410,6 +1422,16 @@ class VideoAnnotationApp(QMainWindow):
             self.stop_audio_button.setEnabled(False)
             self.record_button.setEnabled(False)
             self.record_button.setText(self.LABELS["record_audio"])
+            self.update_recording_indicator()
+
+    def update_recording_indicator(self):
+        # Reflect current recording state in the UI
+        if getattr(self, 'recording_status_label', None) is None:
+            return
+        if self.is_recording:
+            self.recording_status_label.setText(self.LABELS.get("recording_indicator", "● Recording"))
+        else:
+            self.recording_status_label.setText("")
     
     def play_video(self):
         if not self.current_video:
@@ -1464,15 +1486,30 @@ class VideoAnnotationApp(QMainWindow):
         self.audio_worker.finished.connect(self.audio_thread.quit)
         self.audio_worker.finished.connect(self.audio_worker.deleteLater)
         self.audio_thread.finished.connect(self.audio_thread.deleteLater)
+        self.audio_thread.finished.connect(self._on_audio_thread_finished)
         self.audio_worker.error.connect(self._show_worker_error)
         self.audio_thread.start()
     
     def stop_audio(self):
         if self.audio_worker:
-            self.audio_worker.stop()
+            try:
+                self.audio_worker.stop()
+            except RuntimeError:
+                pass
         if self.audio_thread:
-            self.audio_thread.quit()
-            self.audio_thread.wait()
+            try:
+                if self.audio_thread.isRunning():
+                    self.audio_thread.quit()
+                    self.audio_thread.wait()
+            except RuntimeError:
+                pass
+            finally:
+                self.audio_thread = None
+                self.audio_worker = None
+    
+    def _on_audio_thread_finished(self):
+        self.audio_thread = None
+        self.audio_worker = None
     
     def toggle_recording(self):
         if not self.current_video:
@@ -1481,11 +1518,26 @@ class VideoAnnotationApp(QMainWindow):
         if self.is_recording:
             self.is_recording = False
             if self.recording_worker:
-                self.recording_worker.stop()
+                try:
+                    self.recording_worker.stop()
+                except RuntimeError:
+                    pass
             if self.recording_thread:
-                self.recording_thread.quit()
-                self.recording_thread.wait()
+                try:
+                    if self.recording_thread.isRunning():
+                        self.recording_thread.quit()
+                        self.recording_thread.wait()
+                except RuntimeError:
+                    pass
+                finally:
+                    self.recording_thread = None
+                    self.recording_worker = None
             self.update_media_controls()
+            # Brief status notification for stopping
+            try:
+                self.statusBar().showMessage(self.LABELS.get("recording_stopped", "Recording stopped"), 2000)
+            except Exception:
+                pass
         else:
             wav_path = os.path.join(self.folder_path, os.path.splitext(self.current_video)[0] + '.wav')
             if os.path.exists(wav_path):
@@ -1501,6 +1553,12 @@ class VideoAnnotationApp(QMainWindow):
             
             self.is_recording = True
             self.record_button.setText(self.LABELS["stop_recording"])
+            self.update_recording_indicator()
+            # Brief status notification for starting
+            try:
+                self.statusBar().showMessage(self.LABELS.get("recording_started", "Recording started"), 2000)
+            except Exception:
+                pass
             
             self.recording_thread = QThread()
             self.recording_worker = AudioRecordingWorker(wav_path)
@@ -1510,8 +1568,13 @@ class VideoAnnotationApp(QMainWindow):
             self.recording_worker.finished.connect(self.recording_worker.deleteLater)
             self.recording_thread.finished.connect(self.recording_thread.deleteLater)
             self.recording_worker.finished.connect(self.update_media_controls)
+            self.recording_thread.finished.connect(self._on_recording_thread_finished)
             self.recording_worker.error.connect(self._show_worker_error)
             self.recording_thread.start()
+
+    def _on_recording_thread_finished(self):
+        self.recording_thread = None
+        self.recording_worker = None
     
     def open_in_ocenaudio(self):
         if not self.folder_path:
