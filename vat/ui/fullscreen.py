@@ -1,12 +1,15 @@
 import os
 import math
 import cv2
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QFont
 
 class FullscreenVideoViewer(QWidget):
-    def __init__(self, video_path: str, parent=None):
+    # Emitted when the zoom scale changes
+    scale_changed = Signal(float)
+
+    def __init__(self, video_path: str, initial_scale: float | None = None, parent=None):
         super().__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.setFocusPolicy(Qt.StrongFocus)
@@ -15,11 +18,12 @@ class FullscreenVideoViewer(QWidget):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._update_frame)
         self.playing = False
-        self.scale = 1.0
+        # If an initial scale is provided, use it; else auto-fit on first paint
+        self.scale = initial_scale if (initial_scale is not None and initial_scale > 0.0) else 1.0
         self.offset_x = 0
         self.offset_y = 0
         self._current_pixmap = None
-        self._auto_fit_done = False
+        self._auto_fit_done = initial_scale is not None
         self._start_video()
 
     def _start_video(self):
@@ -105,11 +109,19 @@ class FullscreenVideoViewer(QWidget):
             return
         if key in (Qt.Key_Plus, Qt.Key_Equal):
             self.scale = min(8.0, self.scale * 1.1)
+            try:
+                self.scale_changed.emit(float(self.scale))
+            except Exception:
+                pass
             self.update()
             event.accept()
             return
         if key == Qt.Key_Minus:
             self.scale = max(0.1, self.scale / 1.1)
+            try:
+                self.scale_changed.emit(float(self.scale))
+            except Exception:
+                pass
             self.update()
             event.accept()
             return

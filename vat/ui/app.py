@@ -498,6 +498,9 @@ class VideoAnnotationApp(QMainWindow):
         self.join_thread = None
         self.join_worker = None
         self._suppress_item_changed = False
+        # Fullscreen viewer state
+        self._fullscreen_viewer = None
+        self.fullscreen_zoom = None
         self.load_settings()
         self.init_ui()
         self.setWindowTitle(self.LABELS["app_title"])
@@ -709,6 +712,10 @@ class VideoAnnotationApp(QMainWindow):
                     last_video = settings.get('last_video')
                     if last_video:
                         self.last_video_name = last_video
+                    # Persistent fullscreen zoom
+                    zoom = settings.get('fullscreen_zoom')
+                    if isinstance(zoom, (int, float)) and zoom > 0:
+                        self.fullscreen_zoom = float(zoom)
         except Exception as e:
             logging.warning(f"Failed to load settings: {e}")
     def save_settings(self):
@@ -719,7 +726,9 @@ class VideoAnnotationApp(QMainWindow):
                     'ocenaudio_path': self.ocenaudio_path,
                     'language': self.language,
                     'last_folder': self.folder_path,
-                    'last_video': self.current_video
+                    'last_video': self.current_video,
+                    # Persist the last used fullscreen zoom if set
+                    'fullscreen_zoom': self.fullscreen_zoom if isinstance(self.fullscreen_zoom, (int, float)) else None,
                 }, f)
         except Exception as e:
             logging.warning(f"Failed to save settings: {e}")
@@ -1468,9 +1477,19 @@ class VideoAnnotationApp(QMainWindow):
         try:
             if not self.current_video or not self.folder_path:
                 return
+            # Safeguard: if already open, bring to front
+            if getattr(self, '_fullscreen_viewer', None) is not None:
+                try:
+                    if self._fullscreen_viewer.isVisible():
+                        self._fullscreen_viewer.raise_()
+                        self._fullscreen_viewer.activateWindow()
+                        self._fullscreen_viewer.setFocus()
+                        return
+                except Exception:
+                    pass
             video_path = os.path.join(self.folder_path, self.current_video)
             # Create as top-level window (no parent) so it truly fullscreen
-            viewer = FullscreenVideoViewer(video_path)
+            viewer = FullscreenVideoViewer(video_path, initial_scale=self.fullscreen_zoom)
             self._fullscreen_viewer = viewer
             viewer.showFullScreen()
             try:
@@ -1479,8 +1498,26 @@ class VideoAnnotationApp(QMainWindow):
                 viewer.setFocus()
             except Exception:
                 pass
+            # Track zoom changes and persist on close
+            try:
+                viewer.scale_changed.connect(self._on_fullscreen_scale_changed)
+                viewer.destroyed.connect(self._on_fullscreen_closed)
+            except Exception:
+                pass
         except Exception as e:
             logging.error(f"Failed to open fullscreen viewer: {e}")
+    def _on_fullscreen_scale_changed(self, scale: float):
+        try:
+            if isinstance(scale, (int, float)) and scale > 0:
+                self.fullscreen_zoom = float(scale)
+        except Exception:
+            pass
+    def _on_fullscreen_closed(self, *args):
+        try:
+            self._fullscreen_viewer = None
+            self.save_settings()
+        except Exception:
+            pass
     def _position_badge(self):
         if not getattr(self, 'badge_label', None):
             return
