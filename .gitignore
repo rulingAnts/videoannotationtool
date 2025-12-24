@@ -2,7 +2,7 @@
 *.dmg
 *.pkg
 *.mpkg
-build_mac.py
+#build_mac.py
 
 #Icons
 *.ico
