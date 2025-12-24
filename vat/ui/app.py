@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle
 )
 from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent
-from PySide6.QtGui import QImage, QPixmap, QIcon
+from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence
 
 from vat.audio import PYAUDIO_AVAILABLE
 from vat.audio.playback import AudioPlaybackWorker
@@ -505,6 +505,18 @@ class VideoAnnotationApp(QMainWindow):
         self.init_ui()
         self.setWindowTitle(self.LABELS["app_title"])
         self.resize(1400, 800)
+        # Global shortcuts: work regardless of focus
+        try:
+            self._shortcut_log_ctrl = QShortcut(QKeySequence("Ctrl+Shift+L"), self)
+            self._shortcut_log_ctrl.activated.connect(self._show_log_viewer)
+            self._shortcut_log_meta = QShortcut(QKeySequence("Meta+Shift+L"), self)
+            self._shortcut_log_meta.activated.connect(self._show_log_viewer)
+            self._shortcut_ff_ctrl = QShortcut(QKeySequence("Ctrl+Shift+F"), self)
+            self._shortcut_ff_ctrl.activated.connect(self._show_ffmpeg_diagnostics)
+            self._shortcut_ff_meta = QShortcut(QKeySequence("Meta+Shift+F"), self)
+            self._shortcut_ff_meta.activated.connect(self._show_ffmpeg_diagnostics)
+        except Exception:
+            pass
         self.ui_info.connect(self._show_info)
         self.ui_warning.connect(self._show_warning)
         self.ui_error.connect(self._show_error)
@@ -1451,6 +1463,21 @@ class VideoAnnotationApp(QMainWindow):
             key = event.key()
         except Exception:
             return super().keyPressEvent(event)
+        try:
+            mods = event.modifiers()
+            is_mac = sys.platform == 'darwin'
+            # Secret: Cmd+Shift+L (mac) or Ctrl+Shift+L (others) opens log viewer
+            if key == Qt.Key_L and (mods & Qt.ShiftModifier) and ((is_mac and (mods & Qt.MetaModifier)) or ((not is_mac) and (mods & Qt.ControlModifier))):
+                self._show_log_viewer()
+                event.accept()
+                return
+            # Secret: Cmd+Shift+F (mac) or Ctrl+Shift+F (others) shows ffmpeg/ffprobe diagnostics
+            if key == Qt.Key_F and (mods & Qt.ShiftModifier) and ((is_mac and (mods & Qt.MetaModifier)) or ((not is_mac) and (mods & Qt.ControlModifier))):
+                self._show_ffmpeg_diagnostics()
+                event.accept()
+                return
+        except Exception:
+            pass
         if key == Qt.Key_Right:
             self.go_next()
             event.accept()
@@ -1460,6 +1487,52 @@ class VideoAnnotationApp(QMainWindow):
             event.accept()
             return
         return super().keyPressEvent(event)
+    def _show_log_viewer(self):
+        try:
+            from PySide6.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QPushButton
+            dlg = QDialog(self)
+            dlg.setWindowTitle("Debug Log")
+            layout = QVBoxLayout(dlg)
+            text = QTextEdit(dlg)
+            text.setReadOnly(True)
+            content = ""
+            log_path = getattr(self, 'log_file_path', None)
+            if log_path and os.path.exists(log_path):
+                try:
+                    with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        # Show last ~200 lines
+                        lines = f.readlines()
+                        content = ''.join(lines[-200:])
+                except Exception as e:
+                    content = f"Failed to read log: {e}"
+            else:
+                content = "No log file configured. Run with --debug --log-file <path>."
+            text.setPlainText(content)
+            layout.addWidget(text)
+            close_btn = QPushButton("Close", dlg)
+            close_btn.clicked.connect(dlg.accept)
+            layout.addWidget(close_btn)
+            dlg.resize(800, 500)
+            dlg.exec()
+        except Exception:
+            QMessageBox.information(self, "Debug Log", "Unable to display log.")
+    def _show_ffmpeg_diagnostics(self):
+        try:
+            from vat.utils.resources import resolve_ff_tools
+            info = resolve_ff_tools()
+            ffm = info.get('ffmpeg') or 'none'
+            ffp = info.get('ffprobe') or 'none'
+            srcm = info.get('ffmpeg_origin')
+            srcp = info.get('ffprobe_origin')
+            msg = (
+                f"FFmpeg: {ffm}\n"
+                f"  origin: {srcm}\n"
+                f"FFprobe: {ffp}\n"
+                f"  origin: {srcp}\n"
+            )
+            QMessageBox.information(self, "FF Tools Diagnostics", msg)
+        except Exception as e:
+            QMessageBox.information(self, "FF Tools Diagnostics", f"Error: {e}")
     def eventFilter(self, obj, event):
         if obj is self.video_label:
             try:

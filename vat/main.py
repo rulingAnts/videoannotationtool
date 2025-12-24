@@ -1,6 +1,7 @@
 import sys
 import logging
 import argparse
+import os
 from PySide6.QtWidgets import QApplication
 
 from vat.ui.app import VideoAnnotationApp
@@ -12,24 +13,33 @@ def main():
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     parser.add_argument("--log-file", type=str, help="Log file path")
     args = parser.parse_args()
+    # Always enable file logging to a default path so the in-app viewer works
     log_level = logging.DEBUG if args.debug else logging.INFO
-    log_handlers = []
-    if args.log_file:
-        log_handlers.append(logging.FileHandler(args.log_file))
+    default_log_dir = os.path.expanduser("~/.videooralannotation")
+    try:
+        os.makedirs(default_log_dir, exist_ok=True)
+    except Exception:
+        pass
+    log_file_path = args.log_file or os.path.join(default_log_dir, "app.log")
+    handlers = [logging.FileHandler(log_file_path)]
     if args.debug:
-        log_handlers.append(logging.StreamHandler(sys.stdout))
-    if log_handlers:
-        logging.basicConfig(
-            level=log_level,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=log_handlers
-        )
+        handlers.append(logging.StreamHandler(sys.stdout))
+    logging.basicConfig(
+        level=log_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=handlers
+    )
     logging.info("Starting Video Annotation Tool (PySide6 version)")
     configure_opencv_ffmpeg()
     configure_pydub_ffmpeg()
     app = QApplication(sys.argv)
     app.setApplicationName("Video Annotation Tool")
     window = VideoAnnotationApp()
+    try:
+        # Provide log file path to the in-app viewer regardless of CLI flags
+        window.log_file_path = log_file_path
+    except Exception:
+        pass
     window.show()
     sys.exit(app.exec())
 
