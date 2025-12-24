@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QPushButton, QListWidget, QListWidgetItem, QLabel, QTextEdit, QMessageBox,
     QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle
 )
-from PySide6.QtCore import Qt, QTimer, Signal, QThread
+from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent
 from PySide6.QtGui import QImage, QPixmap, QIcon
 
 from vat.audio import PYAUDIO_AVAILABLE
@@ -23,6 +23,7 @@ from vat.audio.playback import AudioPlaybackWorker
 from vat.audio.recording import AudioRecordingWorker
 from vat.audio.joiner import JoinWavsWorker
 from vat.utils.resources import resource_path
+from vat.ui.fullscreen import FullscreenVideoViewer
 
 # UI labels for easy translation, with language names in their own language
 LABELS_ALL = {
@@ -1453,10 +1454,33 @@ class VideoAnnotationApp(QMainWindow):
     def eventFilter(self, obj, event):
         if obj is self.video_label:
             try:
+                if event.type() == QEvent.MouseButtonDblClick and self.current_video and self.folder_path:
+                    self._open_fullscreen_video()
+                    return True
+            except Exception:
+                pass
+            try:
                 self._position_badge()
             except Exception:
                 pass
         return super().eventFilter(obj, event)
+    def _open_fullscreen_video(self):
+        try:
+            if not self.current_video or not self.folder_path:
+                return
+            video_path = os.path.join(self.folder_path, self.current_video)
+            # Create as top-level window (no parent) so it truly fullscreen
+            viewer = FullscreenVideoViewer(video_path)
+            self._fullscreen_viewer = viewer
+            viewer.showFullScreen()
+            try:
+                viewer.raise_()
+                viewer.activateWindow()
+                viewer.setFocus()
+            except Exception:
+                pass
+        except Exception as e:
+            logging.error(f"Failed to open fullscreen viewer: {e}")
     def _position_badge(self):
         if not getattr(self, 'badge_label', None):
             return
