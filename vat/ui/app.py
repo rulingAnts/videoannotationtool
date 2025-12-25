@@ -650,6 +650,11 @@ class VideoAnnotationApp(QMainWindow):
         right_panel = QTabWidget()
         videos_tab = QWidget()
         videos_layout = QVBoxLayout(videos_tab)
+        try:
+            videos_layout.setSpacing(6)
+            videos_layout.setContentsMargins(8, 4, 8, 6)
+        except Exception:
+            pass
         self.video_label = QLabel(self.LABELS["video_listbox_no_video"])
         self.video_label.setAlignment(Qt.AlignCenter)
         self.video_label.setMinimumSize(640, 480)
@@ -663,6 +668,11 @@ class VideoAnnotationApp(QMainWindow):
         self.badge_label.setVisible(False)
         self.video_label.installEventFilter(self)
         video_controls_layout = QHBoxLayout()
+        try:
+            video_controls_layout.setSpacing(4)
+            video_controls_layout.setContentsMargins(0, 0, 0, 0)
+        except Exception:
+            pass
         self.prev_button = QToolButton()
         try:
             self.prev_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipBackward))
@@ -697,6 +707,11 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             pass
         audio_controls_layout = QHBoxLayout()
+        try:
+            audio_controls_layout.setSpacing(4)
+            audio_controls_layout.setContentsMargins(0, 0, 0, 0)
+        except Exception:
+            pass
         self.play_audio_button = QPushButton(self.LABELS["play_audio"])
         self.play_audio_button.clicked.connect(self.play_audio)
         self.play_audio_button.setEnabled(False)
@@ -900,6 +915,12 @@ class VideoAnnotationApp(QMainWindow):
             if self.last_video_name and self.last_video_name in basenames:
                 idx = basenames.index(self.last_video_name)
                 self.video_listbox.setCurrentRow(idx)
+            elif basenames:
+                # Auto-select the first video to streamline workflow
+                try:
+                    self.video_listbox.setCurrentRow(0)
+                except Exception:
+                    pass
             else:
                 # No matching previous selection; clear selection and current video
                 try:
