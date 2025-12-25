@@ -13,10 +13,10 @@ from pydub import AudioSegment
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QListWidget, QListWidgetItem, QLabel, QTextEdit, QMessageBox,
-    QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle
+    QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle, QSizePolicy
 )
 from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent
-from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence
+from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence, QGuiApplication
 
 from vat.audio import PYAUDIO_AVAILABLE
 from vat.audio.playback import AudioPlaybackWorker
@@ -48,6 +48,7 @@ LABELS_ALL = {
         "audio_no_annotation": "No audio annotation",
         "play_audio": "Play Audio",
         "stop_audio": "Stop Audio",
+        "video_fullscreen_tip": "Double-click the video to view it full-screen",
         "record_input_tip_mac": "Tip: Records from your system’s default microphone. Change device: System Settings → Sound → Input.",
         "record_input_tip_win": "Tip: Records from your system’s default recording device. Change device: Settings → System → Sound → Input.",
         "record_input_tip_linux": "Tip: Records from your system’s default input device. Change via OS sound settings (e.g., GNOME → Sound → Input) or pavucontrol.",
@@ -119,6 +120,7 @@ LABELS_ALL = {
         "audio_no_annotation": "Tidak ada anotasi audio",
         "play_audio": "Putar Audio",
         "stop_audio": "Hentikan Audio",
+        "video_fullscreen_tip": "Klik ganda video untuk melihat layar penuh",
         "record_input_tip_mac": "Tip: Merekam dari mikrofon bawaan sistem Anda. Ubah perangkat: Pengaturan Sistem → Suara → Input.",
         "record_input_tip_win": "Tip: Merekam dari perangkat rekaman bawaan sistem. Ubah perangkat: Pengaturan → Sistem → Suara → Input.",
         "record_input_tip_linux": "Tip: Merekam dari perangkat input bawaan sistem. Ubah melalui pengaturan suara OS (mis. GNOME → Suara → Input) atau pavucontrol.",
@@ -187,6 +189,7 @@ LABELS_ALL = {
         "audio_no_annotation": "오디오 주석 없음",
         "play_audio": "오디오 재생",
         "stop_audio": "오디오 정지",
+        "video_fullscreen_tip": "영상을 두 번 클릭하면 전체 화면으로 볼 수 있습니다",
         "record_input_tip_mac": "팁: 시스템 기본 마이크에서 녹음합니다. 변경: 시스템 설정 → 사운드 → 입력.",
         "record_input_tip_win": "팁: 시스템 기본 녹음 장치에서 녹음합니다. 변경: 설정 → 시스템 → 사운드 → 입력.",
         "record_input_tip_linux": "팁: 시스템 기본 입력 장치에서 녹음합니다. OS 사운드 설정(예: GNOME → 사운드 → 입력) 또는 pavucontrol에서 변경하세요.",
@@ -255,6 +258,7 @@ LABELS_ALL = {
         "audio_no_annotation": "Geen audio annotatie",
         "play_audio": "Audio Afspelen",
         "stop_audio": "Audio Stoppen",
+        "video_fullscreen_tip": "Dubbelklik de video om deze full‑screen te bekijken",
         "record_input_tip_mac": "Tip: Neemt op via de standaardmicrofoon van je systeem. Wijzig apparaat: Systeeminstellingen → Geluid → Invoer.",
         "record_input_tip_win": "Tip: Neemt op via het standaardopname-apparaat van je systeem. Wijzig apparaat: Instellingen → Systeem → Geluid → Invoer.",
         "record_input_tip_linux": "Tip: Neemt op via het standaard invoerapparaat van je systeem. Wijzig via OS‑geluidinstellingen (bv. GNOME → Geluid → Invoer) of pavucontrol.",
@@ -320,6 +324,7 @@ LABELS_ALL = {
         "audio_no_annotation": "Sem anotação de áudio",
         "play_audio": "Reproduzir Áudio",
         "stop_audio": "Parar Áudio",
+        "video_fullscreen_tip": "Clique duas vezes no vídeo para ver em tela cheia",
         "record_input_tip_mac": "Dica: Grava do microfone padrão do sistema. Alterar dispositivo: Ajustes do Sistema → Som → Entrada.",
         "record_input_tip_win": "Dica: Grava do dispositivo de gravação padrão do sistema. Alterar dispositivo: Configurações → Sistema → Som → Entrada.",
         "record_input_tip_linux": "Dica: Grava do dispositivo de entrada padrão do sistema. Alterar via configurações de som do SO (ex.: GNOME → Som → Entrada) ou pavucontrol.",
@@ -385,6 +390,7 @@ LABELS_ALL = {
         "audio_no_annotation": "Sin anotación de audio",
         "play_audio": "Reproducir Audio",
         "stop_audio": "Detener Audio",
+        "video_fullscreen_tip": "Haz doble clic en el video para verlo en pantalla completa",
         "record_input_tip_mac": "Consejo: Graba desde el micrófono predeterminado del sistema. Cambiar dispositivo: Configuración del sistema → Sonido → Entrada.",
         "record_input_tip_win": "Consejo: Graba desde el dispositivo de grabación predeterminado del sistema. Cambiar dispositivo: Configuración → Sistema → Sonido → Entrada.",
         "record_input_tip_linux": "Consejo: Graba desde el dispositivo de entrada predeterminado del sistema. Cambiar en la configuración de sonido del SO (p. ej., GNOME → Sonido → Entrada) o pavucontrol.",
@@ -450,6 +456,7 @@ LABELS_ALL = {
         "audio_no_annotation": "Geen klankannotasie nie",
         "play_audio": "Speel Klank",
         "stop_audio": "Stop Klank",
+        "video_fullscreen_tip": "Dubbelklik die video om dit volskerm te sien",
         "record_input_tip_mac": "Wenk: Neem op vanaf u stelsel se verstek‑mikrofoon. Verander toestel: Stelselinstellings → Klank → Invoer.",
         "record_input_tip_win": "Wenk: Neem op vanaf u stelsel se verstek‑opnametoestel. Verander toestel: Instellings → Stelsel → Klank → Invoer.",
         "record_input_tip_linux": "Wenk: Neem op vanaf u stelsel se verstek‑invoertoestel. Verander via OS‑klankinstellings (bv. GNOME → Klank → Invoer) of pavucontrol.",
@@ -536,7 +543,26 @@ class VideoAnnotationApp(QMainWindow):
         self.load_settings()
         self.init_ui()
         self.setWindowTitle(self.LABELS["app_title"])
-        self.resize(1400, 800)
+        try:
+            screen = self.screen() or QGuiApplication.primaryScreen()
+            if screen:
+                geom = screen.availableGeometry()
+                w = max(900, int(geom.width() * 0.75))
+                h = max(600, int(geom.height() * 0.75))
+                self.resize(w, h)
+            else:
+                self.resize(1200, 800)
+        except Exception:
+            self.resize(1200, 800)
+        # Deferred resize handling to avoid blurry intermediate scaling
+        self._resize_timer = QTimer(self)
+        try:
+            self._resize_timer.setSingleShot(True)
+        except Exception:
+            pass
+        self._resize_timer.timeout.connect(self._on_resize_finished)
+        self._is_resizing = False
+        self._last_qimage = None
         # Wire FolderAccessManager signals to keep UI in sync
         try:
             self.fs.folderChanged.connect(self._on_folder_changed)
@@ -588,6 +614,11 @@ class VideoAnnotationApp(QMainWindow):
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
         try:
+            main_layout.setSpacing(4)
+            main_layout.setContentsMargins(6, 4, 6, 6)
+        except Exception:
+            pass
+        try:
             self._check_icon = self.style().standardIcon(QStyle.SP_DialogApplyButton)
         except Exception:
             self._check_icon = QIcon()
@@ -601,13 +632,32 @@ class VideoAnnotationApp(QMainWindow):
         self.language_dropdown.addItems([LABELS_ALL[k]["language_name"] for k in LABELS_ALL])
         self.language_dropdown.setCurrentText(self.LABELS["language_name"])
         self.language_dropdown.currentTextChanged.connect(self.change_language)
+        try:
+            self.language_dropdown.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        except Exception:
+            pass
         main_layout.addWidget(self.language_dropdown)
         self.folder_display_label = QLabel(self.LABELS["no_folder_selected"])
         self.folder_display_label.setAlignment(Qt.AlignLeft)
         self.folder_display_label.setToolTip("")
+        try:
+            self.folder_display_label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        except Exception:
+            pass
         main_layout.addWidget(self.folder_display_label)
         splitter = QSplitter(Qt.Horizontal)
+        try:
+            splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        except Exception:
+            pass
         main_layout.addWidget(splitter)
+        try:
+            # Ensure the splitter takes remaining vertical space, avoiding gaps
+            main_layout.setStretch(0, 0)  # language
+            main_layout.setStretch(1, 0)  # folder label
+            main_layout.setStretch(2, 1)  # splitter (content)
+        except Exception:
+            pass
         left_panel = QWidget()
         left_layout = QVBoxLayout(left_panel)
         self.select_button = QPushButton(self.LABELS["select_folder"])
@@ -634,18 +684,20 @@ class VideoAnnotationApp(QMainWindow):
         self.join_wavs_button.setEnabled(False)
         left_layout.addWidget(self.join_wavs_button)
         self.video_listbox = QListWidget()
+        # Let list take available vertical space without pushing controls
+        try:
+            self.video_listbox.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+            # Remove previous cap to allow expansion within window bounds
+            self.video_listbox.setMaximumHeight(16777215)
+        except Exception:
+            pass
         self.video_listbox.currentRowChanged.connect(self.on_video_select)
         left_layout.addWidget(self.video_listbox)
-        self.metadata_label = QLabel(self.LABELS["edit_metadata"])
-        self.metadata_label.setStyleSheet("font-weight: bold; font-size: 12pt;")
-        left_layout.addWidget(self.metadata_label)
-        self.metadata_text = QTextEdit()
-        self.metadata_text.setMinimumHeight(150)
-        left_layout.addWidget(self.metadata_text)
-        self.save_metadata_btn = QPushButton(self.LABELS["save_metadata"])
-        self.save_metadata_btn.clicked.connect(self.save_metadata)
-        self.save_metadata_btn.setEnabled(False)
-        left_layout.addWidget(self.save_metadata_btn)
+        # Replace inline metadata editor with a button that opens a dialog
+        self.metadata_button = QPushButton(self.LABELS["edit_metadata"])
+        self.metadata_button.clicked.connect(self._show_metadata_dialog)
+        self.metadata_button.setEnabled(False)
+        left_layout.addWidget(self.metadata_button)
         splitter.addWidget(left_panel)
         right_panel = QTabWidget()
         videos_tab = QWidget()
@@ -655,15 +707,31 @@ class VideoAnnotationApp(QMainWindow):
             videos_layout.setContentsMargins(6, 2, 6, 4)
         except Exception:
             pass
+        # Tip above video: inform about fullscreen (localized)
+        tip_text_top = self.LABELS.get("video_fullscreen_tip", "Double-click the video to view it full-screen")
+        self.video_tip_label = QLabel(tip_text_top)
+        self.video_tip_label.setAlignment(Qt.AlignCenter)
+        try:
+            self.video_tip_label.setStyleSheet("color: #666; font-size: 11px; margin-bottom: 4px;")
+        except Exception:
+            pass
+        videos_layout.addWidget(self.video_tip_label)
         self.video_label = QLabel(self.LABELS["video_listbox_no_video"])
         self.video_label.setAlignment(Qt.AlignCenter)
         try:
             _w, _h = self._preview_size()
-            self.video_label.setMinimumSize(_w, _h)
+            # Let video area expand; keep a modest minimum
+            self.video_label.setMinimumSize(max(320, _w // 2), max(240, _h // 2))
+            self.video_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         except Exception:
-            self.video_label.setMinimumSize(640, 480)
+            self.video_label.setMinimumSize(480, 360)
+            try:
+                self.video_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            except Exception:
+                pass
         self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
-        videos_layout.addWidget(self.video_label)
+        # Give video area stretch priority so it uses remaining space
+        videos_layout.addWidget(self.video_label, 1)
         self.badge_label = QLabel(self.video_label)
         self.badge_label.setText("✓")
         self.badge_label.setAlignment(Qt.AlignCenter)
@@ -671,12 +739,21 @@ class VideoAnnotationApp(QMainWindow):
         self.badge_label.setStyleSheet("background-color: #2ecc71; color: white; border-radius: 11px;")
         self.badge_label.setVisible(False)
         self.video_label.installEventFilter(self)
-        video_controls_layout = QHBoxLayout()
+        # Wrap video controls in a widget to enforce minimum height
+        video_controls_widget = QWidget()
+        video_controls_layout = QHBoxLayout(video_controls_widget)
         try:
             video_controls_layout.setSpacing(4)
             video_controls_layout.setContentsMargins(0, 0, 0, 0)
         except Exception:
             pass
+        try:
+            video_controls_widget.setMinimumHeight(44)
+            video_controls_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        except Exception:
+            pass
+        # Center video controls
+        video_controls_layout.addStretch(1)
         self.prev_button = QToolButton()
         try:
             self.prev_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipBackward))
@@ -685,14 +762,26 @@ class VideoAnnotationApp(QMainWindow):
         self.prev_button.setToolTip("Previous video")
         self.prev_button.clicked.connect(self.go_prev)
         video_controls_layout.addWidget(self.prev_button)
+        try:
+            self.prev_button.setMinimumHeight(34)
+        except Exception:
+            pass
         self.play_video_button = QPushButton(self.LABELS["play_video"])
         self.play_video_button.clicked.connect(self.play_video)
         self.play_video_button.setEnabled(False)
         video_controls_layout.addWidget(self.play_video_button)
+        try:
+            self.play_video_button.setMinimumHeight(34)
+        except Exception:
+            pass
         self.stop_video_button = QPushButton(self.LABELS["stop_video"])
         self.stop_video_button.clicked.connect(self.stop_video)
         self.stop_video_button.setEnabled(False)
         video_controls_layout.addWidget(self.stop_video_button)
+        try:
+            self.stop_video_button.setMinimumHeight(34)
+        except Exception:
+            pass
         self.next_button = QToolButton()
         try:
             self.next_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipForward))
@@ -701,7 +790,12 @@ class VideoAnnotationApp(QMainWindow):
         self.next_button.setToolTip("Next video")
         self.next_button.clicked.connect(self.go_next)
         video_controls_layout.addWidget(self.next_button)
-        videos_layout.addLayout(video_controls_layout)
+        try:
+            self.next_button.setMinimumHeight(34)
+        except Exception:
+            pass
+        video_controls_layout.addStretch(1)
+        videos_layout.addWidget(video_controls_widget)
         self.audio_label = QLabel(self.LABELS["audio_no_annotation"])
         self.audio_label.setAlignment(Qt.AlignCenter)
         videos_layout.addWidget(self.audio_label)
@@ -710,28 +804,50 @@ class VideoAnnotationApp(QMainWindow):
             self.audio_label.setVisible(False)
         except Exception:
             pass
-        audio_controls_layout = QHBoxLayout()
+        # Wrap audio controls in a widget to enforce minimum height
+        audio_controls_widget = QWidget()
+        audio_controls_layout = QHBoxLayout(audio_controls_widget)
         try:
             audio_controls_layout.setSpacing(4)
             audio_controls_layout.setContentsMargins(0, 0, 0, 0)
         except Exception:
             pass
+        try:
+            audio_controls_widget.setMinimumHeight(44)
+            audio_controls_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        except Exception:
+            pass
+        # Center audio controls
+        audio_controls_layout.addStretch(1)
         self.play_audio_button = QPushButton(self.LABELS["play_audio"])
         self.play_audio_button.clicked.connect(self.play_audio)
         self.play_audio_button.setEnabled(False)
         audio_controls_layout.addWidget(self.play_audio_button)
+        try:
+            self.play_audio_button.setMinimumHeight(34)
+        except Exception:
+            pass
         self.stop_audio_button = QPushButton(self.LABELS["stop_audio"])
         self.stop_audio_button.clicked.connect(self.stop_audio)
         self.stop_audio_button.setEnabled(False)
         audio_controls_layout.addWidget(self.stop_audio_button)
+        try:
+            self.stop_audio_button.setMinimumHeight(34)
+        except Exception:
+            pass
         self.record_button = QPushButton(self.LABELS["record_audio"])
         self.record_button.clicked.connect(self.toggle_recording)
         self.record_button.setEnabled(False)
         audio_controls_layout.addWidget(self.record_button)
+        try:
+            self.record_button.setMinimumHeight(34)
+        except Exception:
+            pass
         self.recording_status_label = QLabel("")
         self.recording_status_label.setStyleSheet("color: red; font-weight: bold;")
         audio_controls_layout.addWidget(self.recording_status_label)
-        videos_layout.addLayout(audio_controls_layout)
+        audio_controls_layout.addStretch(1)
+        videos_layout.addWidget(audio_controls_widget)
         # Inline tip under play/record controls (platform-aware; localized with English fallbacks)
         try:
             if sys.platform == "darwin":
@@ -756,7 +872,6 @@ class VideoAnnotationApp(QMainWindow):
         self.record_tip_label.setAlignment(Qt.AlignCenter)
         self.record_tip_label.setStyleSheet("color: #666; font-size: 11px; margin-top: 6px;")
         videos_layout.addWidget(self.record_tip_label)
-        videos_layout.addStretch()
         right_panel.addTab(videos_tab, self.LABELS["videos_tab_title"])
         splitter.addWidget(right_panel)
         splitter.setSizes([400, 1000])
@@ -781,8 +896,31 @@ class VideoAnnotationApp(QMainWindow):
         self.play_audio_button.setText(self.LABELS["play_audio"])
         self.stop_audio_button.setText(self.LABELS["stop_audio"])
         self.record_button.setText(self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
-        self.metadata_label.setText(self.LABELS["edit_metadata"])
-        self.save_metadata_btn.setText(self.LABELS["save_metadata"])
+        if getattr(self, 'metadata_button', None):
+            self.metadata_button.setText(self.LABELS["edit_metadata"])
+        # Update localized tips
+        try:
+            if getattr(self, 'video_tip_label', None):
+                self.video_tip_label.setText(self.LABELS.get("video_fullscreen_tip", "Double-click the video to view it full-screen"))
+            if getattr(self, 'record_tip_label', None):
+                if sys.platform == "darwin":
+                    tip_text = self.LABELS.get(
+                        "record_input_tip_mac",
+                        "Tip: Records from your system’s default microphone. Change device: System Settings → Sound → Input."
+                    )
+                elif sys.platform.startswith("win"):
+                    tip_text = self.LABELS.get(
+                        "record_input_tip_win",
+                        "Tip: Records from your system’s default recording device. Change device: Settings → System → Sound → Input."
+                    )
+                else:
+                    tip_text = self.LABELS.get(
+                        "record_input_tip_linux",
+                        "Tip: Records from your system’s default input device. Change via OS sound settings (e.g., GNOME → Sound → Input) or pavucontrol."
+                    )
+                self.record_tip_label.setText(tip_text)
+        except Exception:
+            pass
         if not self.current_video:
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
             try:
@@ -866,7 +1004,7 @@ class VideoAnnotationApp(QMainWindow):
             self.import_wavs_button.setEnabled(False)
             self.join_wavs_button.setEnabled(False)
             self.open_ocenaudio_button.setEnabled(False)
-            self.save_metadata_btn.setEnabled(False)
+            self.metadata_button.setEnabled(False)
         except Exception:
             pass
     def select_folder(self):
@@ -898,7 +1036,7 @@ class VideoAnnotationApp(QMainWindow):
             self.import_wavs_button.setEnabled(True)
             self.join_wavs_button.setEnabled(True)
             self.open_ocenaudio_button.setEnabled(True)
-            self.save_metadata_btn.setEnabled(True)
+            self.metadata_button.setEnabled(True)
             self.save_settings()
     def load_video_files(self):
         self.video_listbox.clear()
@@ -945,6 +1083,7 @@ class VideoAnnotationApp(QMainWindow):
         self.update_media_controls()
         self.update_video_file_checks()
     def open_metadata_editor(self):
+        # Ensure metadata file exists; do not open editor automatically
         if not self.fs.current_folder:
             return
         default_content = (
@@ -956,8 +1095,7 @@ class VideoAnnotationApp(QMainWindow):
             "permissions for use given by speaker: \n"
         )
         try:
-            content = self.fs.ensure_and_read_metadata(self.fs.current_folder, default_content)
-            self.metadata_text.setPlainText(content)
+            _ = self.fs.ensure_and_read_metadata(self.fs.current_folder, default_content)
         except FolderPermissionError:
             QMessageBox.critical(self, self.LABELS["permission_denied_title"], f"You do not have permission to access the folder: {self.fs.current_folder}")
         except FolderNotFoundError:
@@ -1041,16 +1179,23 @@ class VideoAnnotationApp(QMainWindow):
                 self.video_label.setText(self.LABELS["cannot_open_video"])
                 return
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            try:
-                _w, _h = self._preview_size()
-            except Exception:
-                _w, _h = 640, 480
-            frame = cv2.resize(frame, (_w, _h))
             h, w, ch = frame.shape
             bytes_per_line = ch * w
             qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
-            pixmap = QPixmap.fromImage(qt_image)
-            self.video_label.setPixmap(pixmap)
+            # Keep last unscaled image for crisp redraw
+            self._last_qimage = qt_image
+            if not getattr(self, '_is_resizing', False):
+                pixmap = QPixmap.fromImage(qt_image)
+                try:
+                    target_size = self.video_label.size()
+                    pixmap = pixmap.scaled(target_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                except Exception:
+                    pass
+                self.video_label.setPixmap(pixmap)
+            try:
+                self._position_badge()
+            except Exception:
+                pass
         except Exception as e:
             logging.error(f"Failed to load first frame for {video_path}: {e}")
             QMessageBox.critical(self, self.LABELS["error_title"], f"{self.LABELS['unexpected_error_title']}: {e}")
@@ -1071,6 +1216,20 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             pass
         return (640, 480)
+    def _listbox_target_height(self) -> int:
+        try:
+            screen = self.screen()
+            if screen:
+                avail_h = screen.availableGeometry().height()
+                # Cap list height to keep UI compact; roughly 25% reduction
+                if avail_h < 800:
+                    return 160
+                if avail_h < 900:
+                    return 200
+                return 240
+        except Exception:
+            pass
+        return 240
     def update_media_controls(self):
         if self.current_video:
             self.play_video_button.setEnabled(True)
@@ -1189,16 +1348,24 @@ class VideoAnnotationApp(QMainWindow):
                     self.video_label.setText(self.LABELS.get("cannot_open_video", "Cannot open video file."))
                     return
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                try:
-                    _w, _h = self._preview_size()
-                except Exception:
-                    _w, _h = 640, 480
-                frame = cv2.resize(frame, (_w, _h))
                 h, w, ch = frame.shape
                 bytes_per_line = ch * w
                 qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
+                # Cache last frame image for post-resize crisp redraw
+                self._last_qimage = qt_image
+                if getattr(self, '_is_resizing', False):
+                    return
                 pixmap = QPixmap.fromImage(qt_image)
+                try:
+                    target_size = self.video_label.size()
+                    pixmap = pixmap.scaled(target_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                except Exception:
+                    pass
                 self.video_label.setPixmap(pixmap)
+                try:
+                    self._position_badge()
+                except Exception:
+                    pass
         except Exception as e:
             logging.error(f"Video frame update failed: {e}")
             self.stop_video()
@@ -1212,6 +1379,30 @@ class VideoAnnotationApp(QMainWindow):
         self.show_first_frame()
         try:
             self._position_badge()
+        except Exception:
+            pass
+    def resizeEvent(self, event):
+        try:
+            self._is_resizing = True
+            # Fire after user stops dragging for ~180ms
+            self._resize_timer.start(180)
+        except Exception:
+            pass
+        return super().resizeEvent(event)
+    def _on_resize_finished(self):
+        try:
+            self._is_resizing = False
+            if getattr(self, '_last_qimage', None) is not None and getattr(self, 'video_label', None) is not None:
+                pixmap = QPixmap.fromImage(self._last_qimage)
+                try:
+                    target_size = self.video_label.size()
+                    pixmap = pixmap.scaled(target_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                except Exception:
+                    pass
+                self.video_label.setPixmap(pixmap)
+            else:
+                # Fallback: re-render first frame at new size
+                self.show_first_frame()
         except Exception:
             pass
     def play_audio(self):
@@ -1693,7 +1884,7 @@ class VideoAnnotationApp(QMainWindow):
             self.import_wavs_button.setEnabled(has_folder)
             self.join_wavs_button.setEnabled(has_folder)
             self.open_ocenaudio_button.setEnabled(has_folder)
-            self.save_metadata_btn.setEnabled(has_folder)
+            self.metadata_button.setEnabled(has_folder)
             if has_folder:
                 self.load_video_files()
                 self.open_metadata_editor()
@@ -1793,6 +1984,54 @@ class VideoAnnotationApp(QMainWindow):
             dlg.exec()
         except Exception:
             QMessageBox.information(self, "Debug Log", "Unable to display log.")
+    def _show_metadata_dialog(self):
+        try:
+            if not self.fs.current_folder:
+                QMessageBox.information(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("no_folder_selected", "No folder selected"))
+                return
+            from PySide6.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QPushButton
+            dlg = QDialog(self)
+            dlg.setWindowTitle(self.LABELS.get("edit_metadata", "Edit Metadata"))
+            layout = QVBoxLayout(dlg)
+            text = QTextEdit(dlg)
+            default_content = (
+                "name: \n"
+                "date: \n"
+                "location: \n"
+                "researcher: \n"
+                "speaker: \n"
+                "permissions for use given by speaker: \n"
+            )
+            try:
+                content = self.fs.ensure_and_read_metadata(self.fs.current_folder, default_content)
+            except Exception:
+                content = default_content
+            text.setPlainText(content)
+            layout.addWidget(text)
+            save_btn = QPushButton("Save and Close", dlg)
+            cancel_btn = QPushButton("Cancel", dlg)
+            def _do_save():
+                try:
+                    self.fs.write_metadata(text.toPlainText())
+                    QMessageBox.information(self, self.LABELS.get("saved", "Saved"), self.LABELS.get("metadata_saved", "Metadata saved!"))
+                except FolderPermissionError:
+                    QMessageBox.critical(self, self.LABELS.get("permission_denied_title", "Permission Denied"), f"You do not have permission to write metadata in: {self.fs.current_folder}")
+                    return
+                except FolderNotFoundError:
+                    QMessageBox.critical(self, self.LABELS.get("folder_not_found_title", "Folder Not Found"), f"The selected folder no longer exists: {self.fs.current_folder}")
+                    return
+                except FolderAccessError as e:
+                    QMessageBox.critical(self, self.LABELS.get("unexpected_error_title", "An unexpected error occurred"), f"An unexpected error occurred: {e}")
+                    return
+                dlg.accept()
+            save_btn.clicked.connect(_do_save)
+            cancel_btn.clicked.connect(dlg.reject)
+            layout.addWidget(save_btn)
+            layout.addWidget(cancel_btn)
+            dlg.resize(700, 500)
+            dlg.exec()
+        except Exception:
+            QMessageBox.information(self, self.LABELS.get("error_title", "Error"), "Unable to open metadata editor.")
     def _show_ffmpeg_diagnostics(self):
         try:
             from vat.utils.resources import resolve_ff_tools
@@ -1836,11 +2075,27 @@ class VideoAnnotationApp(QMainWindow):
                     return True
             except Exception:
                 pass
+            # Rescale current pixmap when the video label is resized
+            try:
+                if event.type() == QEvent.Resize:
+                    self._rescale_video_pixmap_to_label()
+                    self._position_badge()
+            except Exception:
+                pass
             try:
                 self._position_badge()
             except Exception:
                 pass
         return super().eventFilter(obj, event)
+    def _rescale_video_pixmap_to_label(self):
+        try:
+            pm = self.video_label.pixmap()
+            if pm is not None:
+                target_size = self.video_label.size()
+                scaled = pm.scaled(target_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                self.video_label.setPixmap(scaled)
+        except Exception:
+            pass
     def _open_fullscreen_video(self):
         try:
             if not self.current_video or not self.fs.current_folder:
