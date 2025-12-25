@@ -505,6 +505,7 @@ def main():
                         ent = {
                             'com.apple.security.device.audio-input': True,
                             'com.apple.security.files.user-selected.read-write': True,
+                            'com.apple.security.cs.disable-library-validation': True,
                         }
                         with open(ent_plist, 'wb') as f:
                             plistlib.dump(ent, f)
