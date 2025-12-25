@@ -34,6 +34,7 @@ import importlib.util
 import datetime
 import json
 import plistlib
+import platform
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 ASSETS_DIR = os.path.join(ROOT, 'assets')
@@ -50,6 +51,20 @@ def require_python_311():
         print("[build_mac] ERROR: This build script must be run with Python 3.11.x.")
         print(f"[build_mac] Current Python: {sys.version.split()[0]}")
         print("[build_mac] Tip: Run with python3.11 scripts/build_mac.py ...")
+        sys.exit(1)
+
+
+def require_mac_arm64():
+    """Ensure script runs on macOS with arm64 (Apple Silicon) architecture."""
+    if sys.platform != 'darwin':
+        print("[build_mac] ERROR: This script must be run on macOS.")
+        print(f"[build_mac] Detected platform: {sys.platform}")
+        sys.exit(1)
+    machine = platform.machine().lower()
+    if machine not in ('arm64', 'aarch64'):
+        print("[build_mac] ERROR: Silicon-only build requires an arm64 macOS host.")
+        print(f"[build_mac] Detected machine: {machine}")
+        print("[build_mac] Tip: On Apple Silicon, ensure you run native arm64 Python (e.g., /opt/homebrew/bin/python3.11 or 'arch -arm64 python3.11').")
         sys.exit(1)
 
 
@@ -367,6 +382,7 @@ def discover_bundle_id_from_app(name: str) -> str | None:
 def main():
     print("[build_mac] Starting macOS build helper...")
     print(f"[build_mac] Python: {sys.version.split()[0]} @ {sys.executable}")
+    require_mac_arm64()
     require_python_311()
 
     parser = argparse.ArgumentParser()
