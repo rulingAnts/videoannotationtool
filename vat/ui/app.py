@@ -1494,7 +1494,7 @@ class VideoAnnotationApp(QMainWindow):
         if not output_file:
             return
         self.join_thread = QThread()
-        self.join_worker = JoinWavsWorker(self.fs.current_folder, output_file)
+        self.join_worker = JoinWavsWorker(None, output_file, fs=self.fs)
         self.join_worker.moveToThread(self.join_thread)
         self.join_thread.started.connect(self.join_worker.run)
         self.join_worker.finished.connect(self.join_thread.quit)
@@ -1517,7 +1517,7 @@ class VideoAnnotationApp(QMainWindow):
             channels=1
         )
     def update_video_file_checks(self):
-        if not self.folder_path:
+        if not self.fs.current_folder:
             return
         for i in range(self.video_listbox.count()):
             item = self.video_listbox.item(i)
