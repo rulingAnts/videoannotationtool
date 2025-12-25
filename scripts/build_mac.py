@@ -388,6 +388,11 @@ def main():
     parser.add_argument('--ffmpeg-bin', help='Path to ffmpeg binary or its containing directory')
     parser.add_argument('--ffprobe-bin', help='Path to ffprobe binary or its containing directory')
     parser.add_argument('--no-clean', action='store_true', help='Do not pass --clean to PyInstaller')
+    # Codesigning options for enabling microphone access under Hardened Runtime
+    parser.add_argument('--codesign-ad-hoc', action='store_true', help='Codesign the built app with ad-hoc identity and Hardened Runtime')
+    parser.add_argument('--codesign-identity', help='Codesign identity to use (e.g., "Developer ID Application: ..."). Defaults to ad-hoc if --codesign-ad-hoc is set.')
+    parser.add_argument('--enable-microphone-entitlement', action='store_true', help='Add com.apple.security.device.audio-input entitlement when codesigning')
+    parser.add_argument('--entitlements-file', help='Path to a custom entitlements plist to use during codesign')
     args = parser.parse_args()
 
     did_anything = False
@@ -481,6 +486,42 @@ def main():
                     print("[build_mac] WARNING: Could not chmod +x on ffprobe:", e)
                 if not is_universal_binary(ffprobe_inside):
                     print("[build_mac] WARNING: ffprobe in bundle is not a universal binary.")
+
+        # Optional codesign step to enable Hardened Runtime with microphone entitlement
+        if args.codesign_ad_hoc or args.codesign_identity:
+            identity = args.codesign_identity if args.codesign_identity else "-"
+            app_path = os.path.join(ROOT, 'dist', f'{args.name}.app')
+            if os.path.exists(app_path):
+                ent_plist = None
+                if args.entitlements_file and os.path.exists(args.entitlements_file):
+                    ent_plist = args.entitlements_file
+                elif args.enable_microphone_entitlement:
+                    # Generate a minimal entitlements file in a temp dir
+                    try:
+                        import tempfile
+                        ent_plist = os.path.join(tempfile.gettempdir(), 'vat-entitlements.plist')
+                        ent = {
+                            'com.apple.security.device.audio-input': True,
+                            'com.apple.security.files.user-selected.read-write': True,
+                        }
+                        with open(ent_plist, 'wb') as f:
+                            plistlib.dump(ent, f)
+                        print('[build_mac] Generated entitlements:', ent_plist)
+                    except Exception as e:
+                        print('[build_mac] WARNING: Failed to generate entitlements plist:', e)
+                        ent_plist = None
+                try:
+                    cmd = ['codesign', '--force', '--deep', '--options', 'runtime']
+                    if ent_plist:
+                        cmd += ['--entitlements', ent_plist]
+                    cmd += ['--sign', identity, app_path]
+                    print('[build_mac] Codesigning app with identity:', identity)
+                    run(cmd)
+                    # Verify
+                    run(['codesign', '-dv', '--verbose=4', app_path])
+                    print('[build_mac] Codesign completed.')
+                except Exception as e:
+                    print('[build_mac] WARNING: Codesign failed:', e)
 
     # Post-build packaging
     if args.dmg:
