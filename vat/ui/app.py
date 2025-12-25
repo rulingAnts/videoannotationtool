@@ -651,13 +651,17 @@ class VideoAnnotationApp(QMainWindow):
         videos_tab = QWidget()
         videos_layout = QVBoxLayout(videos_tab)
         try:
-            videos_layout.setSpacing(6)
-            videos_layout.setContentsMargins(8, 4, 8, 6)
+            videos_layout.setSpacing(4)
+            videos_layout.setContentsMargins(6, 2, 6, 4)
         except Exception:
             pass
         self.video_label = QLabel(self.LABELS["video_listbox_no_video"])
         self.video_label.setAlignment(Qt.AlignCenter)
-        self.video_label.setMinimumSize(640, 480)
+        try:
+            _w, _h = self._preview_size()
+            self.video_label.setMinimumSize(_w, _h)
+        except Exception:
+            self.video_label.setMinimumSize(640, 480)
         self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
         videos_layout.addWidget(self.video_label)
         self.badge_label = QLabel(self.video_label)
@@ -1037,7 +1041,11 @@ class VideoAnnotationApp(QMainWindow):
                 self.video_label.setText(self.LABELS["cannot_open_video"])
                 return
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame = cv2.resize(frame, (640, 480))
+            try:
+                _w, _h = self._preview_size()
+            except Exception:
+                _w, _h = 640, 480
+            frame = cv2.resize(frame, (_w, _h))
             h, w, ch = frame.shape
             bytes_per_line = ch * w
             qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
@@ -1050,6 +1058,19 @@ class VideoAnnotationApp(QMainWindow):
         finally:
             if cap is not None:
                 cap.release()
+    def _preview_size(self):
+        try:
+            screen = self.screen()
+            if screen:
+                avail_h = screen.availableGeometry().height()
+                # Slightly compact sizes for shorter screens
+                if avail_h < 800:
+                    return (480, 360)
+                if avail_h < 900:
+                    return (560, 420)
+        except Exception:
+            pass
+        return (640, 480)
     def update_media_controls(self):
         if self.current_video:
             self.play_video_button.setEnabled(True)
@@ -1168,7 +1189,11 @@ class VideoAnnotationApp(QMainWindow):
                     self.video_label.setText(self.LABELS.get("cannot_open_video", "Cannot open video file."))
                     return
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frame = cv2.resize(frame, (640, 480))
+                try:
+                    _w, _h = self._preview_size()
+                except Exception:
+                    _w, _h = 640, 480
+                frame = cv2.resize(frame, (_w, _h))
                 h, w, ch = frame.shape
                 bytes_per_line = ch * w
                 qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
