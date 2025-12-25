@@ -93,6 +93,7 @@ class AudioRecordingWorker(QObject):
                 default_info = p.get_default_input_device_info()
                 _rec_logger.info("Default input device: %s", default_info)
             except Exception as e:
+                default_info = None
                 _rec_logger.error("No default input device info: %s", e)
 
             # Open input stream (explicitly target default input device index)
@@ -100,14 +101,23 @@ class AudioRecordingWorker(QObject):
                 default_idx = p.get_default_input_device_info().get('index')
             except Exception:
                 default_idx = None
+            # Align stream rate with device default sample rate when available
+            rate = 44100
+            if default_info and 'defaultSampleRate' in default_info:
+                try:
+                    rate = int(float(default_info['defaultSampleRate']))
+                    _rec_logger.info("Using device default sample rate: %d", rate)
+                except Exception as e:
+                    _rec_logger.warning("Failed to parse defaultSampleRate; using 44100: %s", e)
             _rec_logger.info(
-                "Opening PyAudio stream: format=paInt16, channels=1, rate=44100, frames_per_buffer=1024, input=True, input_device_index=%s",
+                "Opening PyAudio stream: format=paInt16, channels=1, rate=%d, frames_per_buffer=1024, input=True, input_device_index=%s",
+                rate,
                 default_idx if default_idx is not None else 'auto'
             )
             stream = p.open(
                 format=pyaudio.paInt16,
                 channels=1,
-                rate=44100,
+                rate=rate,
                 input=True,
                 input_device_index=default_idx if default_idx is not None else None,
                 frames_per_buffer=1024
