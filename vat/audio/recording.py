@@ -126,9 +126,9 @@ class AudioRecordingWorker(QObject):
             start_ts = time.time()
             while not self.should_stop:
                 try:
-                    data = stream.read(1024, exception_on_overflow=True)
+                    data = stream.read(1024, exception_on_overflow=False)
                 except Exception as e:
-                    _rec_logger.error("stream.read error (overflow or device issue): %s", e)
+                    _rec_logger.error("stream.read error: %s", e)
                     break
                 self._total_chunks += 1
                 # Compute RMS to detect silence
@@ -153,7 +153,7 @@ class AudioRecordingWorker(QObject):
                 wf = wave.open(self.wav_path, 'wb')
                 wf.setnchannels(1)
                 wf.setsampwidth(2)
-                wf.setframerate(44100)
+                wf.setframerate(rate)
                 wf.writeframes(b''.join(self.frames))
                 wf.close()
                 _rec_logger.info("Wrote WAV: %s (frames=%d, bytes=%d)", self.wav_path, len(self.frames), sum(len(f) for f in self.frames))

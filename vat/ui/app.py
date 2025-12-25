@@ -896,13 +896,13 @@ class VideoAnnotationApp(QMainWindow):
         self.play_audio_button.setText(self.LABELS["play_audio"])
         self.stop_audio_button.setText(self.LABELS["stop_audio"])
         self.record_button.setText(self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
-        if getattr(self, 'metadata_button', None):
+        if hasattr(self, 'metadata_button') and self.metadata_button is not None:
             self.metadata_button.setText(self.LABELS["edit_metadata"])
         # Update localized tips
         try:
-            if getattr(self, 'video_tip_label', None):
+            if hasattr(self, 'video_tip_label') and self.video_tip_label is not None:
                 self.video_tip_label.setText(self.LABELS.get("video_fullscreen_tip", "Double-click the video to view it full-screen"))
-            if getattr(self, 'record_tip_label', None):
+            if hasattr(self, 'record_tip_label') and self.record_tip_label is not None:
                 if sys.platform == "darwin":
                     tip_text = self.LABELS.get(
                         "record_input_tip_mac",
@@ -930,7 +930,7 @@ class VideoAnnotationApp(QMainWindow):
                 pass
         self.update_folder_display()
     def update_folder_display(self):
-        if getattr(self, 'folder_display_label', None) is None:
+        if not hasattr(self, 'folder_display_label') or self.folder_display_label is None:
             return
         folder = self.fs.current_folder
         if folder:
@@ -2089,6 +2089,9 @@ class VideoAnnotationApp(QMainWindow):
         return super().eventFilter(obj, event)
     def _rescale_video_pixmap_to_label(self):
         try:
+            # Avoid redundant rescaling operations while a resize is in progress
+            if getattr(self, "_is_resizing", False):
+                return
             pm = self.video_label.pixmap()
             if pm is not None:
                 target_size = self.video_label.size()
