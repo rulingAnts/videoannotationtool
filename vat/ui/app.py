@@ -691,6 +691,11 @@ class VideoAnnotationApp(QMainWindow):
         self.audio_label = QLabel(self.LABELS["audio_no_annotation"])
         self.audio_label.setAlignment(Qt.AlignCenter)
         videos_layout.addWidget(self.audio_label)
+        # Hide audio annotation label by default; visual cues (check + border) are sufficient
+        try:
+            self.audio_label.setVisible(False)
+        except Exception:
+            pass
         audio_controls_layout = QHBoxLayout()
         self.play_audio_button = QPushButton(self.LABELS["play_audio"])
         self.play_audio_button.clicked.connect(self.play_audio)
@@ -761,7 +766,11 @@ class VideoAnnotationApp(QMainWindow):
         self.save_metadata_btn.setText(self.LABELS["save_metadata"])
         if not self.current_video:
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
-            self.audio_label.setText(self.LABELS["audio_no_annotation"])
+            try:
+                self.audio_label.setVisible(False)
+                self.audio_label.setText("")
+            except Exception:
+                pass
         self.update_folder_display()
     def update_folder_display(self):
         if getattr(self, 'folder_display_label', None) is None:
@@ -891,6 +900,13 @@ class VideoAnnotationApp(QMainWindow):
             if self.last_video_name and self.last_video_name in basenames:
                 idx = basenames.index(self.last_video_name)
                 self.video_listbox.setCurrentRow(idx)
+            else:
+                # No matching previous selection; clear selection and current video
+                try:
+                    self.video_listbox.clearSelection()
+                except Exception:
+                    pass
+                self.current_video = None
             if not self.video_files:
                 QMessageBox.information(self, self.LABELS["no_videos_found"], f"{self.LABELS['no_videos_found']} {self.fs.current_folder}")
         except PermissionError:
@@ -1022,14 +1038,23 @@ class VideoAnnotationApp(QMainWindow):
             self.update_recording_indicator()
             wav_path = self.fs.wav_path_for(self.current_video)
             if os.path.exists(wav_path):
-                self.audio_label.setText(f"{self.LABELS['audio_label_prefix']}{os.path.splitext(self.current_video)[0]}.wav")
+                # Hide audio annotation label; recorded state indicated by visual cues
+                try:
+                    self.audio_label.setVisible(False)
+                    self.audio_label.setText("")
+                except Exception:
+                    pass
                 self.play_audio_button.setEnabled(True)
                 self.stop_audio_button.setEnabled(True)
                 self.video_label.setStyleSheet("background-color: black; color: white; border: 3px solid #2ecc71;")
                 if getattr(self, 'badge_label', None):
                     self.badge_label.setVisible(True)
             else:
-                self.audio_label.setText(self.LABELS["audio_no_annotation"])
+                try:
+                    self.audio_label.setVisible(False)
+                    self.audio_label.setText("")
+                except Exception:
+                    pass
                 self.play_audio_button.setEnabled(False)
                 self.stop_audio_button.setEnabled(False)
                 self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
@@ -1039,7 +1064,11 @@ class VideoAnnotationApp(QMainWindow):
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
             self.play_video_button.setEnabled(False)
             self.stop_video_button.setEnabled(False)
-            self.audio_label.setText(self.LABELS["audio_no_annotation"])
+            try:
+                self.audio_label.setVisible(False)
+                self.audio_label.setText("")
+            except Exception:
+                pass
             self.play_audio_button.setEnabled(False)
             self.stop_audio_button.setEnabled(False)
             self.record_button.setEnabled(False)
@@ -1577,6 +1606,40 @@ class VideoAnnotationApp(QMainWindow):
     # FolderAccessManager signal handlers
     def _on_folder_changed(self, path: str):
         try:
+            # Reset transient state and clear selection to avoid stale files
+            try:
+                self.stop_audio()
+            except Exception:
+                pass
+            try:
+                if getattr(self, 'playing_video', False):
+                    self.stop_video()
+            except Exception:
+                pass
+            try:
+                if getattr(self, 'is_recording', False):
+                    self.is_recording = False
+                    if getattr(self, 'recording_worker', None):
+                        try:
+                            self.recording_worker.stop()
+                        except RuntimeError:
+                            pass
+                    if getattr(self, 'recording_thread', None):
+                        try:
+                            if self.recording_thread.isRunning():
+                                self.recording_thread.quit()
+                                self.recording_thread.wait()
+                        except RuntimeError:
+                            pass
+                        finally:
+                            self.recording_thread = None
+                            self.recording_worker = None
+                    self.update_recording_indicator()
+            except Exception:
+                pass
+            self.current_video = None
+            self.last_video_name = None
+            self.update_media_controls()
             self.update_folder_display()
             has_folder = bool(self.fs.current_folder)
             self.export_wavs_button.setEnabled(has_folder)
