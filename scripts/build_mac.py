@@ -258,9 +258,16 @@ def build_with_pyinstaller(name: str, onedir: bool, windowed: bool, clean: bool,
                 # Update version fields
                 info['CFBundleShortVersionString'] = version
                 info['CFBundleVersion'] = version
+                # Ensure privacy usage descriptions are present to allow mic/files access prompts
+                info.setdefault('NSMicrophoneUsageDescription', 'Video Annotation Tool needs microphone access to record annotations.')
+                info.setdefault('NSDesktopFolderUsageDescription', 'Allow access to Desktop to open and save annotated videos and audio.')
+                info.setdefault('NSDocumentsFolderUsageDescription', 'Allow access to Documents to manage project folders, metadata, and recordings.')
+                info.setdefault('NSDownloadsFolderUsageDescription', 'Allow access to Downloads to open videos for annotation.')
+                info.setdefault('NSNetworkVolumesUsageDescription', 'Allow access to files on network volumes for annotation projects.')
+                info.setdefault('NSRemovableVolumesUsageDescription', 'Allow access to external drives (USB/SD) to read/write project media.')
                 with open(info_plist, 'wb') as f:
                     plistlib.dump(info, f)
-                print(f"[build_mac] Set CFBundleShortVersionString/CFBundleVersion to {version}")
+                print(f"[build_mac] Set version to {version} and ensured privacy keys in Info.plist")
     except Exception as e:
         print('[build_mac] WARNING: Failed to patch Info.plist version:', e)
 

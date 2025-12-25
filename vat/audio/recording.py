@@ -95,22 +95,30 @@ class AudioRecordingWorker(QObject):
             except Exception as e:
                 _rec_logger.error("No default input device info: %s", e)
 
-            # Open input stream
-            _rec_logger.info("Opening PyAudio stream: format=paInt16, channels=1, rate=44100, frames_per_buffer=1024, input=True")
+            # Open input stream (explicitly target default input device index)
+            try:
+                default_idx = p.get_default_input_device_info().get('index')
+            except Exception:
+                default_idx = None
+            _rec_logger.info(
+                "Opening PyAudio stream: format=paInt16, channels=1, rate=44100, frames_per_buffer=1024, input=True, input_device_index=%s",
+                default_idx if default_idx is not None else 'auto'
+            )
             stream = p.open(
                 format=pyaudio.paInt16,
                 channels=1,
                 rate=44100,
                 input=True,
+                input_device_index=default_idx if default_idx is not None else None,
                 frames_per_buffer=1024
             )
             _rec_logger.info("Stream opened successfully")
             start_ts = time.time()
             while not self.should_stop:
                 try:
-                    data = stream.read(1024, exception_on_overflow=False)
+                    data = stream.read(1024, exception_on_overflow=True)
                 except Exception as e:
-                    _rec_logger.error("stream.read error: %s", e)
+                    _rec_logger.error("stream.read error (overflow or device issue): %s", e)
                     break
                 self._total_chunks += 1
                 # Compute RMS to detect silence
