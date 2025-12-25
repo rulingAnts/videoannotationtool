@@ -24,6 +24,12 @@ from vat.audio.recording import AudioRecordingWorker
 from vat.audio.joiner import JoinWavsWorker
 from vat.utils.resources import resource_path
 from vat.ui.fullscreen import FullscreenVideoViewer
+from vat.utils.fs_access import (
+    FolderAccessManager,
+    FolderAccessError,
+    FolderPermissionError,
+    FolderNotFoundError,
+)
 
 # UI labels for easy translation, with language names in their own language
 LABELS_ALL = {
@@ -481,6 +487,8 @@ class VideoAnnotationApp(QMainWindow):
         self.language = "English"
         self.LABELS = LABELS_ALL[self.language]
         self.folder_path = None
+        self._pending_inaccessible_folder = None
+        self.fs = FolderAccessManager()
         self.video_files = []
         self.current_video = None
         self.last_video_name = None
@@ -520,6 +528,11 @@ class VideoAnnotationApp(QMainWindow):
         self.ui_info.connect(self._show_info)
         self.ui_warning.connect(self._show_warning)
         self.ui_error.connect(self._show_error)
+        # If a saved folder exists but is not accessible, prompt the user
+        if self.folder_path and not self._is_folder_accessible(self.folder_path):
+            self._handle_inaccessible_last_folder(self.folder_path)
+        elif getattr(self, '_pending_inaccessible_folder', None):
+            self._handle_inaccessible_last_folder(self._pending_inaccessible_folder)
         if self.folder_path:
             self.update_folder_display()
             self.export_wavs_button.setEnabled(True)
@@ -720,7 +733,11 @@ class VideoAnnotationApp(QMainWindow):
                         self.LABELS = LABELS_ALL[self.language]
                     last_folder = settings.get('last_folder')
                     if last_folder and os.path.isdir(last_folder):
-                        self.folder_path = last_folder
+                        if self.fs.set_folder(last_folder):
+                            self.folder_path = last_folder
+                        else:
+                            # Defer prompt until UI is ready
+                            self._pending_inaccessible_folder = last_folder
                     last_video = settings.get('last_video')
                     if last_video:
                         self.last_video_name = last_video
@@ -744,10 +761,43 @@ class VideoAnnotationApp(QMainWindow):
                 }, f)
         except Exception as e:
             logging.warning(f"Failed to save settings: {e}")
+    def _is_folder_accessible(self, path: str) -> bool:
+        try:
+            return self.fs.is_accessible(path)
+        except Exception:
+            return False
+    def _handle_inaccessible_last_folder(self, path: str):
+        try:
+            QMessageBox.warning(
+                self,
+                self.LABELS.get("permission_denied_title", "Permission Denied"),
+                f"You do not have permission to access the folder:\n{path}\n\nPlease select a different folder."
+            )
+        except Exception:
+            pass
+        self.folder_path = None
+        self._pending_inaccessible_folder = None
+        self.update_folder_display()
+        try:
+            self.export_wavs_button.setEnabled(False)
+            self.clear_wavs_button.setEnabled(False)
+            self.import_wavs_button.setEnabled(False)
+            self.join_wavs_button.setEnabled(False)
+            self.open_ocenaudio_button.setEnabled(False)
+            self.save_metadata_btn.setEnabled(False)
+        except Exception:
+            pass
     def select_folder(self):
         initial_dir = self.folder_path or os.path.expanduser("~")
         folder = QFileDialog.getExistingDirectory(self, self.LABELS["select_folder_dialog"], initial_dir)
         if folder:
+            if not self.fs.set_folder(folder):
+                QMessageBox.critical(
+                    self,
+                    self.LABELS.get("permission_denied_title", "Permission Denied"),
+                    f"Cannot access folder: {folder}\n\nPlease select a different folder."
+                )
+                return
             self.folder_path = folder
             self.update_folder_display()
             if sys.platform == "win32":
@@ -772,15 +822,11 @@ class VideoAnnotationApp(QMainWindow):
     def load_video_files(self):
         self.video_listbox.clear()
         self.video_files = []
-        extensions = ('.mpg', '.mpeg', '.mp4', '.avi', '.mkv', '.mov')
         if not self.folder_path:
             QMessageBox.information(self, self.LABELS["no_folder_selected"], self.LABELS["no_folder_selected"])
             return
         try:
-            for filename in os.listdir(self.folder_path):
-                full_path = os.path.join(self.folder_path, filename)
-                if os.path.isfile(full_path) and filename.lower().endswith(extensions):
-                    self.video_files.append(full_path)
+            self.video_files = self.fs.list_videos(self.folder_path)
             self.video_files.sort()
             basenames = [os.path.basename(vp) for vp in self.video_files]
             for name in basenames:
