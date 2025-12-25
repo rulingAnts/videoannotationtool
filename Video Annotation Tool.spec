@@ -4,7 +4,7 @@
 a = Analysis(
     ['/Users/Seth/GIT/videoannotationtool/videoannotation.py'],
     pathex=[],
-    binaries=[('/Users/Seth/GIT/videoannotationtool/assets/ffmpeg-bin/macos/ffmpeg', 'ffmpeg/bin'), ('/Users/Seth/GIT/videoannotationtool/assets/ffmpeg-bin/macos/ffprobe', 'ffmpeg/bin')],
+    binaries=[('/opt/homebrew/bin/ffmpeg', 'ffmpeg/bin'), ('/opt/homebrew/bin/ffprobe', 'ffmpeg/bin')],
     datas=[],
     hiddenimports=['PySide6.QtCore', 'PySide6.QtGui', 'PySide6.QtWidgets'],
     hookspath=[],
@@ -48,12 +48,4 @@ app = BUNDLE(
     name='Video Annotation Tool.app',
     icon='/Users/Seth/GIT/videoannotationtool/assets/icon.icns',
     bundle_identifier=None,
-    info_plist={
-        'NSMicrophoneUsageDescription': 'Video Annotation Tool needs microphone access to record annotations.',
-        'NSDesktopFolderUsageDescription': 'Allow access to Desktop to open and save annotated videos and audio.',
-        'NSDocumentsFolderUsageDescription': 'Allow access to Documents to manage project folders, metadata, and recordings.',
-        'NSDownloadsFolderUsageDescription': 'Allow access to Downloads to open videos for annotation.',
-        'NSNetworkVolumesUsageDescription': 'Allow access to files on network volumes for annotation projects.',
-        'NSRemovableVolumesUsageDescription': 'Allow access to external drives (USB/SD) to read/write project media.',
-    },
 )
