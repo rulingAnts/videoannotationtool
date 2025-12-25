@@ -199,6 +199,8 @@ def build_with_pyinstaller(name: str, onedir: bool, windowed: bool, clean: bool,
     cmd = [sys.executable, '-m', 'PyInstaller']
     if clean:
         cmd.append('--clean')
+    # Avoid interactive prompts
+    cmd.append('--noconfirm')
     cmd += ['--name', name]
     if onedir:
         cmd.append('--onedir')
