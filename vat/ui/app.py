@@ -540,8 +540,8 @@ class VideoAnnotationApp(QMainWindow):
         self.ui_warning.connect(self._show_warning)
         self.ui_error.connect(self._show_error)
         # If a saved folder exists but is not accessible, prompt the user
-        if self.folder_path and not self._is_folder_accessible(self.folder_path):
-            self._handle_inaccessible_last_folder(self.folder_path)
+        if self.fs.current_folder and not self._is_folder_accessible(self.fs.current_folder):
+            self._handle_inaccessible_last_folder(self.fs.current_folder)
         elif getattr(self, '_pending_inaccessible_folder', None):
             self._handle_inaccessible_last_folder(self._pending_inaccessible_folder)
         # Sync UI state with current folder
@@ -718,10 +718,11 @@ class VideoAnnotationApp(QMainWindow):
     def update_folder_display(self):
         if getattr(self, 'folder_display_label', None) is None:
             return
-        if self.folder_path:
-            base = os.path.basename(self.folder_path.rstrip(os.sep)) or self.folder_path
+        folder = self.fs.current_folder
+        if folder:
+            base = os.path.basename(folder.rstrip(os.sep)) or folder
             self.folder_display_label.setText(base)
-            self.folder_display_label.setToolTip(self.folder_path)
+            self.folder_display_label.setToolTip(folder)
         else:
             self.folder_display_label.setText(self.LABELS["no_folder_selected"])
             self.folder_display_label.setToolTip("")
@@ -737,9 +738,7 @@ class VideoAnnotationApp(QMainWindow):
                         self.LABELS = LABELS_ALL[self.language]
                     last_folder = settings.get('last_folder')
                     if last_folder and os.path.isdir(last_folder):
-                        if self.fs.set_folder(last_folder):
-                            self.folder_path = last_folder
-                        else:
+                        if not self.fs.set_folder(last_folder):
                             # Defer prompt until UI is ready
                             self._pending_inaccessible_folder = last_folder
                     last_video = settings.get('last_video')
@@ -758,7 +757,7 @@ class VideoAnnotationApp(QMainWindow):
                 json.dump({
                     'ocenaudio_path': self.ocenaudio_path,
                     'language': self.language,
-                    'last_folder': self.folder_path,
+                    'last_folder': self.fs.current_folder,
                     'last_video': self.current_video,
                     # Persist the last used fullscreen zoom if set
                     'fullscreen_zoom': self.fullscreen_zoom if isinstance(self.fullscreen_zoom, (int, float)) else None,
@@ -779,7 +778,10 @@ class VideoAnnotationApp(QMainWindow):
             )
         except Exception:
             pass
-        self.folder_path = None
+        try:
+            self.fs.clear_folder()
+        except Exception:
+            pass
         self._pending_inaccessible_folder = None
         self.update_folder_display()
         try:
@@ -792,7 +794,7 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             pass
     def select_folder(self):
-        initial_dir = self.folder_path or os.path.expanduser("~")
+        initial_dir = self.fs.current_folder or os.path.expanduser("~")
         folder = QFileDialog.getExistingDirectory(self, self.LABELS["select_folder_dialog"], initial_dir)
         if folder:
             if not self.fs.set_folder(folder):
@@ -802,15 +804,13 @@ class VideoAnnotationApp(QMainWindow):
                     f"Cannot access folder: {folder}\n\nPlease select a different folder."
                 )
                 return
-            # Mirror shared state locally for now (legacy UI code)
-            self.folder_path = folder
             self.update_folder_display()
             if sys.platform == "win32":
-                hidden_files = [f for f in os.listdir(self.folder_path) if f.startswith('.')]
+                hidden_files = [f for f in os.listdir(self.fs.current_folder) if f.startswith('.')]
                 errors = []
                 for f in hidden_files:
                     try:
-                        os.remove(os.path.join(self.folder_path, f))
+                        os.remove(os.path.join(self.fs.current_folder, f))
                     except Exception as e:
                         errors.append(f"Delete {f}: {e}")
                 if errors:
@@ -827,28 +827,28 @@ class VideoAnnotationApp(QMainWindow):
     def load_video_files(self):
         self.video_listbox.clear()
         self.video_files = []
-        if not self.folder_path:
+        if not self.fs.current_folder:
             QMessageBox.information(self, self.LABELS["no_folder_selected"], self.LABELS["no_folder_selected"])
             return
         try:
             # Prefer centralized listing
-            self.video_files = self.fs.list_videos(self.folder_path)
+            self.video_files = self.fs.list_videos(self.fs.current_folder)
             self.video_files.sort()
             basenames = [os.path.basename(vp) for vp in self.video_files]
             for name in basenames:
                 item = QListWidgetItem(name)
-                wav_exists = os.path.exists(os.path.join(self.folder_path, os.path.splitext(name)[0] + '.wav'))
+                wav_exists = os.path.exists(self.fs.wav_path_for(name))
                 item.setIcon(self._check_icon if wav_exists else self._empty_icon)
                 self.video_listbox.addItem(item)
             if self.last_video_name and self.last_video_name in basenames:
                 idx = basenames.index(self.last_video_name)
                 self.video_listbox.setCurrentRow(idx)
             if not self.video_files:
-                QMessageBox.information(self, self.LABELS["no_videos_found"], f"{self.LABELS['no_videos_found']} {self.folder_path}")
+                QMessageBox.information(self, self.LABELS["no_videos_found"], f"{self.LABELS['no_videos_found']} {self.fs.current_folder}")
         except PermissionError:
-            QMessageBox.critical(self, self.LABELS["permission_denied_title"], f"You do not have permission to access the folder: {self.folder_path}")
+            QMessageBox.critical(self, self.LABELS["permission_denied_title"], f"You do not have permission to access the folder: {self.fs.current_folder}")
         except FileNotFoundError:
-            QMessageBox.critical(self, self.LABELS["folder_not_found_title"], f"The selected folder no longer exists: {self.folder_path}")
+            QMessageBox.critical(self, self.LABELS["folder_not_found_title"], f"The selected folder no longer exists: {self.fs.current_folder}")
         except Exception as e:
             QMessageBox.critical(self, self.LABELS["unexpected_error_title"], f"An unexpected error occurred: {e}")
         if not self.video_files:
@@ -856,7 +856,7 @@ class VideoAnnotationApp(QMainWindow):
         self.update_media_controls()
         self.update_video_file_checks()
     def open_metadata_editor(self):
-        if not self.folder_path:
+        if not self.fs.current_folder:
             return
         default_content = (
             "name: \n"
@@ -867,25 +867,25 @@ class VideoAnnotationApp(QMainWindow):
             "permissions for use given by speaker: \n"
         )
         try:
-            content = self.fs.ensure_and_read_metadata(self.folder_path, default_content)
+            content = self.fs.ensure_and_read_metadata(self.fs.current_folder, default_content)
             self.metadata_text.setPlainText(content)
         except FolderPermissionError:
-            QMessageBox.critical(self, self.LABELS["permission_denied_title"], f"You do not have permission to access the folder: {self.folder_path}")
+            QMessageBox.critical(self, self.LABELS["permission_denied_title"], f"You do not have permission to access the folder: {self.fs.current_folder}")
         except FolderNotFoundError:
-            QMessageBox.critical(self, self.LABELS["folder_not_found_title"], f"The selected folder no longer exists: {self.folder_path}")
+            QMessageBox.critical(self, self.LABELS["folder_not_found_title"], f"The selected folder no longer exists: {self.fs.current_folder}")
         except FolderAccessError as e:
             QMessageBox.critical(self, self.LABELS["unexpected_error_title"], f"An unexpected error occurred: {e}")
     def save_metadata(self):
-        if not self.folder_path:
+        if not self.fs.current_folder:
             return
         content = self.metadata_text.toPlainText()
         try:
             self.fs.write_metadata(content)
             QMessageBox.information(self, self.LABELS["saved"], self.LABELS["metadata_saved"])
         except FolderPermissionError:
-            QMessageBox.critical(self, self.LABELS["permission_denied_title"], f"You do not have permission to write metadata in: {self.folder_path}")
+            QMessageBox.critical(self, self.LABELS["permission_denied_title"], f"You do not have permission to write metadata in: {self.fs.current_folder}")
         except FolderNotFoundError:
-            QMessageBox.critical(self, self.LABELS["folder_not_found_title"], f"The selected folder no longer exists: {self.folder_path}")
+            QMessageBox.critical(self, self.LABELS["folder_not_found_title"], f"The selected folder no longer exists: {self.fs.current_folder}")
         except FolderAccessError as e:
             QMessageBox.critical(self, self.LABELS["unexpected_error_title"], f"An unexpected error occurred: {e}")
     def on_video_select(self, current_row):
@@ -934,7 +934,7 @@ class VideoAnnotationApp(QMainWindow):
         if not self.current_video:
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
             return
-        video_path = os.path.join(self.folder_path, self.current_video)
+        video_path = os.path.join(self.fs.current_folder or "", self.current_video)
         if not os.path.exists(video_path):
             QMessageBox.critical(self, self.LABELS["error_title"], f"{self.LABELS['cannot_open_video']}\n{video_path}")
             self.video_label.setText(self.LABELS["cannot_open_video"])
@@ -1012,7 +1012,7 @@ class VideoAnnotationApp(QMainWindow):
         if not self.current_video:
             return
         self.stop_video()
-        video_path = os.path.join(self.folder_path, self.current_video)
+        video_path = os.path.join(self.fs.current_folder or "", self.current_video)
         self.cap = cv2.VideoCapture(video_path)
         if not self.cap.isOpened():
             QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["cannot_open_video"])
@@ -1393,7 +1393,7 @@ class VideoAnnotationApp(QMainWindow):
         errors = []
         for wav in wav_files:
             try:
-                os.remove(os.path.join(self.folder_path, wav))
+                os.remove(os.path.join(self.fs.current_folder, wav))
             except Exception as e:
                 errors.append(f"Delete {wav}: {e}")
         import_dir = QFileDialog.getExistingDirectory(self, self.LABELS["import_select_folder_dialog"]) 
@@ -1529,9 +1529,8 @@ class VideoAnnotationApp(QMainWindow):
     # FolderAccessManager signal handlers
     def _on_folder_changed(self, path: str):
         try:
-            self.folder_path = path or None
             self.update_folder_display()
-            has_folder = bool(self.folder_path)
+            has_folder = bool(self.fs.current_folder)
             self.export_wavs_button.setEnabled(has_folder)
             self.clear_wavs_button.setEnabled(has_folder)
             self.import_wavs_button.setEnabled(has_folder)
@@ -1675,7 +1674,7 @@ class VideoAnnotationApp(QMainWindow):
     def eventFilter(self, obj, event):
         if obj is self.video_label:
             try:
-                if event.type() == QEvent.MouseButtonDblClick and self.current_video and self.folder_path:
+                if event.type() == QEvent.MouseButtonDblClick and self.current_video and self.fs.current_folder:
                     self._open_fullscreen_video()
                     return True
             except Exception:
@@ -1687,7 +1686,7 @@ class VideoAnnotationApp(QMainWindow):
         return super().eventFilter(obj, event)
     def _open_fullscreen_video(self):
         try:
-            if not self.current_video or not self.folder_path:
+            if not self.current_video or not self.fs.current_folder:
                 return
             # Safeguard: if already open, bring to front
             if getattr(self, '_fullscreen_viewer', None) is not None:
@@ -1699,7 +1698,7 @@ class VideoAnnotationApp(QMainWindow):
                         return
                 except Exception:
                     pass
-            video_path = os.path.join(self.folder_path, self.current_video)
+            video_path = os.path.join(self.fs.current_folder or "", self.current_video)
             # Create as top-level window (no parent) so it truly fullscreen
             viewer = FullscreenVideoViewer(video_path, initial_scale=self.fullscreen_zoom)
             self._fullscreen_viewer = viewer
