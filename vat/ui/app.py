@@ -48,6 +48,12 @@ LABELS_ALL = {
         "audio_no_annotation": "No audio annotation",
         "play_audio": "Play Audio",
         "stop_audio": "Stop Audio",
+        "record_input_tip_mac": "Tip: Records from your system’s default microphone. Change device: System Settings → Sound → Input.",
+        "record_input_tip_win": "Tip: Records from your system’s default recording device. Change device: Settings → System → Sound → Input.",
+        "record_input_tip_linux": "Tip: Records from your system’s default input device. Change via OS sound settings (e.g., GNOME → Sound → Input) or pavucontrol.",
+        "record_tooltip_mac": "Records from your system’s default microphone.\nChange device: System Settings → Sound → Input.",
+        "record_tooltip_win": "Records from your system’s default recording device.\nChange device: Settings → System → Sound → Input.",
+        "record_tooltip_linux": "Records from your system’s default input device.\nChange via OS sound settings (e.g., GNOME → Sound → Input) or pavucontrol.",
         "record_audio": "Record Audio",
         "stop_recording": "Stop Recording",
         "edit_metadata": "Edit Metadata",
@@ -113,6 +119,9 @@ LABELS_ALL = {
         "audio_no_annotation": "Tidak ada anotasi audio",
         "play_audio": "Putar Audio",
         "stop_audio": "Hentikan Audio",
+        "record_input_tip_mac": "Tip: Merekam dari mikrofon bawaan sistem Anda. Ubah perangkat: Pengaturan Sistem → Suara → Input.",
+        "record_input_tip_win": "Tip: Merekam dari perangkat rekaman bawaan sistem. Ubah perangkat: Pengaturan → Sistem → Suara → Input.",
+        "record_input_tip_linux": "Tip: Merekam dari perangkat input bawaan sistem. Ubah melalui pengaturan suara OS (mis. GNOME → Suara → Input) atau pavucontrol.",
         "record_audio": "Rekam Audio",
         "stop_recording": "Hentikan Rekaman",
         "edit_metadata": "Edit Metadata",
@@ -178,6 +187,9 @@ LABELS_ALL = {
         "audio_no_annotation": "오디오 주석 없음",
         "play_audio": "오디오 재생",
         "stop_audio": "오디오 정지",
+        "record_input_tip_mac": "팁: 시스템 기본 마이크에서 녹음합니다. 변경: 시스템 설정 → 사운드 → 입력.",
+        "record_input_tip_win": "팁: 시스템 기본 녹음 장치에서 녹음합니다. 변경: 설정 → 시스템 → 사운드 → 입력.",
+        "record_input_tip_linux": "팁: 시스템 기본 입력 장치에서 녹음합니다. OS 사운드 설정(예: GNOME → 사운드 → 입력) 또는 pavucontrol에서 변경하세요.",
         "record_audio": "오디오 녹음",
         "stop_recording": "녹음 중지",
         "edit_metadata": "메타데이터 편집",
@@ -243,6 +255,9 @@ LABELS_ALL = {
         "audio_no_annotation": "Geen audio annotatie",
         "play_audio": "Audio Afspelen",
         "stop_audio": "Audio Stoppen",
+        "record_input_tip_mac": "Tip: Neemt op via de standaardmicrofoon van je systeem. Wijzig apparaat: Systeeminstellingen → Geluid → Invoer.",
+        "record_input_tip_win": "Tip: Neemt op via het standaardopname-apparaat van je systeem. Wijzig apparaat: Instellingen → Systeem → Geluid → Invoer.",
+        "record_input_tip_linux": "Tip: Neemt op via het standaard invoerapparaat van je systeem. Wijzig via OS‑geluidinstellingen (bv. GNOME → Geluid → Invoer) of pavucontrol.",
         "record_audio": "Audio Opnemen",
         "stop_recording": "Opname Stoppen",
         "edit_metadata": "Metadata Bewerken",
@@ -305,6 +320,9 @@ LABELS_ALL = {
         "audio_no_annotation": "Sem anotação de áudio",
         "play_audio": "Reproduzir Áudio",
         "stop_audio": "Parar Áudio",
+        "record_input_tip_mac": "Dica: Grava do microfone padrão do sistema. Alterar dispositivo: Ajustes do Sistema → Som → Entrada.",
+        "record_input_tip_win": "Dica: Grava do dispositivo de gravação padrão do sistema. Alterar dispositivo: Configurações → Sistema → Som → Entrada.",
+        "record_input_tip_linux": "Dica: Grava do dispositivo de entrada padrão do sistema. Alterar via configurações de som do SO (ex.: GNOME → Som → Entrada) ou pavucontrol.",
         "record_audio": "Gravar Áudio",
         "stop_recording": "Parar Gravação",
         "edit_metadata": "Editar Metadados",
@@ -367,6 +385,9 @@ LABELS_ALL = {
         "audio_no_annotation": "Sin anotación de audio",
         "play_audio": "Reproducir Audio",
         "stop_audio": "Detener Audio",
+        "record_input_tip_mac": "Consejo: Graba desde el micrófono predeterminado del sistema. Cambiar dispositivo: Configuración del sistema → Sonido → Entrada.",
+        "record_input_tip_win": "Consejo: Graba desde el dispositivo de grabación predeterminado del sistema. Cambiar dispositivo: Configuración → Sistema → Sonido → Entrada.",
+        "record_input_tip_linux": "Consejo: Graba desde el dispositivo de entrada predeterminado del sistema. Cambiar en la configuración de sonido del SO (p. ej., GNOME → Sonido → Entrada) o pavucontrol.",
         "record_audio": "Grabar Audio",
         "stop_recording": "Detener Grabación",
         "edit_metadata": "Editar Metadatos",
@@ -429,6 +450,9 @@ LABELS_ALL = {
         "audio_no_annotation": "Geen klankannotasie nie",
         "play_audio": "Speel Klank",
         "stop_audio": "Stop Klank",
+        "record_input_tip_mac": "Wenk: Neem op vanaf u stelsel se verstek‑mikrofoon. Verander toestel: Stelselinstellings → Klank → Invoer.",
+        "record_input_tip_win": "Wenk: Neem op vanaf u stelsel se verstek‑opnametoestel. Verander toestel: Instellings → Stelsel → Klank → Invoer.",
+        "record_input_tip_linux": "Wenk: Neem op vanaf u stelsel se verstek‑invoertoestel. Verander via OS‑klankinstellings (bv. GNOME → Klank → Invoer) of pavucontrol.",
         "record_audio": "Neem Klank op",
         "stop_recording": "Stop Opname",
         "edit_metadata": "Redigeer Metadata",
@@ -684,6 +708,30 @@ class VideoAnnotationApp(QMainWindow):
         self.recording_status_label.setStyleSheet("color: red; font-weight: bold;")
         audio_controls_layout.addWidget(self.recording_status_label)
         videos_layout.addLayout(audio_controls_layout)
+        # Inline tip under play/record controls (platform-aware; localized with English fallbacks)
+        try:
+            if sys.platform == "darwin":
+                tip_text = self.LABELS.get(
+                    "record_input_tip_mac",
+                    "Tip: Records from your system’s default microphone. Change device: System Settings → Sound → Input."
+                )
+            elif sys.platform.startswith("win"):
+                tip_text = self.LABELS.get(
+                    "record_input_tip_win",
+                    "Tip: Records from your system’s default recording device. Change device: Settings → System → Sound → Input."
+                )
+            else:
+                tip_text = self.LABELS.get(
+                    "record_input_tip_linux",
+                    "Tip: Records from your system’s default input device. Change via OS sound settings (e.g., GNOME → Sound → Input) or pavucontrol."
+                )
+        except Exception:
+            tip_text = "Tip: Records from the system’s default input device."
+        self.record_tip_label = QLabel(tip_text)
+        self.record_tip_label.setWordWrap(True)
+        self.record_tip_label.setAlignment(Qt.AlignCenter)
+        self.record_tip_label.setStyleSheet("color: #666; font-size: 11px; margin-top: 6px;")
+        videos_layout.addWidget(self.record_tip_label)
         videos_layout.addStretch()
         right_panel.addTab(videos_tab, self.LABELS["videos_tab_title"])
         splitter.addWidget(right_panel)
