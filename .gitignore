@@ -29,6 +29,7 @@ __pycache__/
 build/
 develop-eggs/
 dist/
+dist*/
 downloads/
 eggs/
 .eggs/
@@ -156,7 +157,8 @@ celerybeat.pid
 # Environments
 .env
 .envrc
-.venv
+.venv/
+.venv*/
 env/
 venv/
 ENV/
@@ -244,6 +246,7 @@ release.properties
 # Gradle artifacts
 .gradle/
 build/
+build*/
 out/
 gradlew.bat
 gradlew
