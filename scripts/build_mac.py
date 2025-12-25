@@ -151,6 +151,16 @@ def is_universal_binary(path: str) -> bool:
     except Exception:
         return False
 
+def is_arm64_binary(path: str) -> bool:
+    """Check whether a macOS binary contains arm64 architecture (silicon-only expectation)."""
+    try:
+        if not validate_executable(path):
+            return False
+        out = subprocess.check_output(['lipo', '-info', path], text=True)
+        return 'arm64' in out
+    except Exception:
+        return False
+
 
 def ensure_png_icon():
     os.makedirs(ASSETS_DIR, exist_ok=True)
@@ -462,9 +472,9 @@ def main():
                     print("[build_mac] Ensured execute permissions on:", ffmpeg_inside)
                 except Exception as e:
                     print("[build_mac] WARNING: Could not chmod +x on ffmpeg:", e)
-                # Check universal fat binary
-                if not is_universal_binary(ffmpeg_inside):
-                    print("[build_mac] WARNING: ffmpeg in bundle is not a universal binary (arm64 + x86_64).")
+                # Ensure arm64 architecture (silicon-only build)
+                if not is_arm64_binary(ffmpeg_inside):
+                    print("[build_mac] WARNING: ffmpeg in bundle does not contain arm64 architecture.")
             if os.path.exists(ffprobe_inside):
                 try:
                     st = os.stat(ffprobe_inside)
@@ -472,8 +482,8 @@ def main():
                     print("[build_mac] Ensured execute permissions on:", ffprobe_inside)
                 except Exception as e:
                     print("[build_mac] WARNING: Could not chmod +x on ffprobe:", e)
-                if not is_universal_binary(ffprobe_inside):
-                    print("[build_mac] WARNING: ffprobe in bundle is not a universal binary.")
+                if not is_arm64_binary(ffprobe_inside):
+                    print("[build_mac] WARNING: ffprobe in bundle does not contain arm64 architecture.")
 
     # Post-build packaging
     if args.dmg:
