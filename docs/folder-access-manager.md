@@ -101,4 +101,7 @@ Add small, focused helpers to keep UI logic clean:
 - Missing folders clear state without crashes
 - Video listing identical across tabs (order, extensions)
 - Metadata create/read/write consistent across tabs
+
+## Future Centralization Reminder
+Investigate any other parts of our app that should be centralized this way for consistency across the app, instead of individual UI elements, objects, and functions instantiating things that should be shared app‑wide. Capture candidates (e.g., audio device selection, ffmpeg path/diagnostics, metadata lifecycle, import/export flows) and move them into shared managers with clear APIs and, where useful, signals.
 ```
