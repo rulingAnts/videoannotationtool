@@ -1,14 +1,19 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_all
 
-# DEPRECATED: macOS bundle spec. macOS builds are not officially supported.
+datas = []
+binaries = [('C:\\Users\\Seth\\Windows File System Folder\\GIT\\videoannotationtool\\videoannotationtool\\assets\\ffmpeg-bin\\windows\\ffmpeg.exe', 'ffmpeg\\bin'), ('C:\\Users\\Seth\\Windows File System Folder\\GIT\\videoannotationtool\\videoannotationtool\\assets\\ffmpeg-bin\\windows\\ffprobe.exe', 'ffmpeg\\bin')]
+hiddenimports = ['PySide6.QtCore', 'PySide6.QtGui', 'PySide6.QtWidgets']
+tmp_ret = collect_all('PySide6')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
-    ['/Users/Seth/GIT/videoannotationtool/videoannotation.py'],
+    ['C:\\Users\\Seth\\Windows File System Folder\\GIT\\videoannotationtool\\videoannotationtool\\videoannotation.py'],
     pathex=[],
-    binaries=[('/opt/homebrew/bin/ffmpeg', 'ffmpeg/bin'), ('/opt/homebrew/bin/ffprobe', 'ffmpeg/bin')],
-    datas=[],
-    hiddenimports=['PySide6.QtCore', 'PySide6.QtGui', 'PySide6.QtWidgets'],
+    binaries=binaries,
+    datas=datas,
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -21,33 +26,21 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
+    a.binaries,
+    a.datas,
     [],
-    exclude_binaries=True,
     name='Video Annotation Tool',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
-    target_arch='arm64',
+    target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['/Users/Seth/GIT/videoannotationtool/assets/icon.icns'],
-)
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='Video Annotation Tool',
-)
-app = BUNDLE(
-    coll,
-    name='Video Annotation Tool.app',
-    icon='/Users/Seth/GIT/videoannotationtool/assets/icon.icns',
-    bundle_identifier=None,
+    icon=['C:\\Users\\Seth\\Windows File System Folder\\GIT\\videoannotationtool\\videoannotationtool\\assets\\icon.ico'],
 )

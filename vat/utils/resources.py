@@ -65,6 +65,21 @@ def resolve_ff_tools():
         chosen_ffprobe = ffprobe_path
     elif os.path.exists(ffprobe_exe):
         chosen_ffprobe = ffprobe_exe
+    # Dev-mode fallback: on Windows, check assets/ffmpeg-bin/windows
+    # This helps when running from source without a bundled ffmpeg/ffprobe
+    try:
+        if sys.platform.startswith('win') and (not getattr(sys, 'frozen', False)):
+            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+            assets_ff_win = os.path.join(repo_root, 'assets', 'ffmpeg-bin', 'windows')
+            ffm_assets = os.path.join(assets_ff_win, 'ffmpeg.exe')
+            ffp_assets = os.path.join(assets_ff_win, 'ffprobe.exe')
+            if not chosen_ffmpeg and os.path.exists(ffm_assets):
+                chosen_ffmpeg = ffm_assets
+            if not chosen_ffprobe and os.path.exists(ffp_assets):
+                chosen_ffprobe = ffp_assets
+    except Exception:
+        # Non-fatal; continue with other resolution strategies
+        pass
     # If bundled not found, fall back to system PATH
     if not chosen_ffmpeg:
         sys_ffmpeg = shutil.which("ffmpeg")

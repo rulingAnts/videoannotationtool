@@ -147,6 +147,31 @@
 			"isBackground": false,
 			"problemMatcher": [],
 			"group": "none"
+		},
+		{
+			"label": "Build: Windows (PyInstaller onedir)",
+			"type": "shell",
+			"command": "C:/Users/Seth/Windows File System Folder/GIT/videoannotationtool/videoannotationtool/.venv/Scripts/python.exe",
+			"args": [
+				"scripts/build_windows.py",
+				"--pyinstaller",
+				"--onedir"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Build: Windows (PyInstaller onefile + NSIS)",
+			"type": "shell",
+			"command": "C:/Users/Seth/Windows File System Folder/GIT/videoannotationtool/videoannotationtool/.venv/Scripts/python.exe",
+			"args": [
+				"scripts/build_windows.py",
+				"--pyinstaller",
+				"--onefile",
+				"--nsis"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

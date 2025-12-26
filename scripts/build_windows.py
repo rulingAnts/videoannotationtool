@@ -105,7 +105,8 @@ def ensure_icon():
 
 
 def build_with_pyinstaller(name: str, onefile: bool, windowed: bool, clean: bool, extra_args: list[str] | None = None):
-    cmd = ['pyinstaller']
+    # Use Python module invocation for PyInstaller to avoid PATH issues on Windows
+    cmd = [sys.executable, '-m', 'PyInstaller']
     if clean:
         cmd.append('--clean')
     cmd += ['--name', name]
@@ -176,8 +177,9 @@ def main():
         ensure_icon()
 
     if args.pyinstaller:
-        onefile = True if args.onefile else False
-        if args.onedir:
+        # Default to onefile builds; force onefile if NSIS packaging is requested
+        onefile = True if args.onefile or args.nsis else False
+        if args.onedir and not args.nsis:
             onefile = False
         windowed = True if args.windowed else True  # default windowed
         if args.console:
@@ -206,10 +208,21 @@ def main():
 
     if args.nsis:
         nsis = os.path.join(ROOT, 'installer', 'videoannotation_installer.nsi')
-        if os.path.exists(nsis):
-            print('[build_windows] NSIS script ready:', nsis)
-        else:
+        if not os.path.exists(nsis):
             print('[build_windows] No NSIS script found at', nsis)
+            sys.exit(2)
+        makensis = which('makensis')
+        if not makensis:
+            print('[build_windows] ERROR: NSIS (makensis) not found on PATH. Please install NSIS and ensure makensis is available.')
+            sys.exit(3)
+        print('[build_windows] Running NSIS packager...')
+        try:
+            # Allow NSIS script to detect files via relative paths; pass common defines if needed
+            run([makensis, nsis], cwd=ROOT)
+            print('[build_windows] NSIS packaging completed.')
+        except subprocess.CalledProcessError as e:
+            print('[build_windows] NSIS packaging failed with exit code', e.returncode)
+            sys.exit(e.returncode)
 
 
 if __name__ == '__main__':

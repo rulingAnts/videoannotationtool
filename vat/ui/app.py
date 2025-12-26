@@ -1481,8 +1481,11 @@ class VideoAnnotationApp(QMainWindow):
         if not wav_files:
             QMessageBox.information(self, self.LABELS["no_files"], self.LABELS["no_wavs_found"]) 
             return
-        ffmpeg_path = resource_path(os.path.join("ffmpeg", "bin", "ffmpeg"))
-        if not os.path.exists(ffmpeg_path):
+        # Verify FFmpeg availability using the resolver which handles Windows .exe/dev/bundled/system
+        from vat.utils.resources import resolve_ff_tools
+        info = resolve_ff_tools()
+        ffmpeg_path = info.get('ffmpeg')
+        if not ffmpeg_path or not os.path.exists(ffmpeg_path):
             QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["ffmpeg_not_found_msg"]) 
             return
         output_file, _ = QFileDialog.getSaveFileName(
