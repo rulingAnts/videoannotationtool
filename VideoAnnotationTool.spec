@@ -1,6 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
 # PyInstaller spec for PySide6-based Video Annotation Tool (macOS)
 
+# DEPRECATED: macOS bundle spec. macOS builds are not officially supported.
+
 from PyInstaller.utils.hooks import collect_data_files
 
 a = Analysis(

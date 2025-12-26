@@ -13,6 +13,7 @@ import subprocess
 import sys
 import os
 import shutil
+import platform
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 ENTRY = os.path.join(ROOT, 'videoannotation.py')
@@ -144,6 +145,17 @@ def build_with_pyinstaller(name: str, onefile: bool, windowed: bool, clean: bool
 
 
 def main():
+    # Platform guard: Windows-only, 64-bit Python recommended
+    if not sys.platform.startswith('win'):
+        print('[build_windows] ERROR: This script must be run on Windows.')
+        print(f"[build_windows] Detected platform: {sys.platform}")
+        sys.exit(1)
+    bits = platform.architecture()[0]
+    if bits != '64bit':
+        print('[build_windows] ERROR: Please use 64-bit Python to build the Windows app (PyInstaller expects 64-bit).')
+        print(f"[build_windows] Detected Python architecture: {bits}")
+        sys.exit(1)
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--icon', action='store_true', help='Generate assets/icon.png and .ico')
     parser.add_argument('--pyinstaller', action='store_true', help='Run PyInstaller to produce build')
