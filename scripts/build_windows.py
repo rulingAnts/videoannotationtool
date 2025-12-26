@@ -14,6 +14,7 @@ import sys
 import os
 import shutil
 import platform
+import winreg
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 ENTRY = os.path.join(ROOT, 'videoannotation.py')
@@ -97,6 +98,37 @@ def get_assets_ffmpeg_bins_win() -> dict:
     return result
 
 
+def find_makensis() -> str | None:
+    """Try to locate makensis.exe via PATH, registry, or common install dirs."""
+    # PATH first
+    mk = which('makensis')
+    if mk and validate_executable(mk):
+        return mk
+    # Registry-based discovery
+    reg_paths = [
+        (winreg.HKEY_LOCAL_MACHINE, r"Software\NSIS"),
+        (winreg.HKEY_LOCAL_MACHINE, r"Software\NSIS\Unicode"),
+        (winreg.HKEY_LOCAL_MACHINE, r"Software\WOW6432Node\NSIS"),
+    ]
+    for hive, subkey in reg_paths:
+        try:
+            with winreg.OpenKey(hive, subkey) as key:
+                install_dir, _ = winreg.QueryValueEx(key, 'InstallDir')
+                cand = os.path.join(install_dir, 'makensis.exe')
+                if validate_executable(cand):
+                    return cand
+        except OSError:
+            pass
+    # Common install dirs
+    pf = os.environ.get('ProgramFiles') or r"C:\\Program Files"
+    pfx86 = os.environ.get('ProgramFiles(x86)') or r"C:\\Program Files (x86)"
+    for base in (os.path.join(pf, 'NSIS'), os.path.join(pfx86, 'NSIS')):
+        cand = os.path.join(base, 'makensis.exe')
+        if validate_executable(cand):
+            return cand
+    return None
+
+
 def ensure_icon():
     os.makedirs(ASSETS_DIR, exist_ok=True)
     # Generate PNG/ICO if missing using existing script
@@ -169,6 +201,7 @@ def main():
     # FFmpeg bundling is now default from assets/ffmpeg-bin/windows
     parser.add_argument('--ffmpeg-bin', help='Override path to ffmpeg.exe or containing directory (optional)')
     parser.add_argument('--ffprobe-bin', help='Override path to ffprobe.exe or containing directory (optional)')
+    parser.add_argument('--makensis', help='Override path to makensis.exe for NSIS packaging (optional)')
     # NSIS
     parser.add_argument('--nsis', action='store_true', help='Validate NSIS script presence')
     args = parser.parse_args()
@@ -211,14 +244,25 @@ def main():
         if not os.path.exists(nsis):
             print('[build_windows] No NSIS script found at', nsis)
             sys.exit(2)
-        makensis = which('makensis')
+        makensis = args.makensis or find_makensis()
         if not makensis:
-            print('[build_windows] ERROR: NSIS (makensis) not found on PATH. Please install NSIS and ensure makensis is available.')
+            print('[build_windows] ERROR: NSIS (makensis) not found.')
+            print('[build_windows] Hint: Install NSIS or provide --makensis "C:\\Program Files\\NSIS\\makensis.exe" (or x86 path).')
+            print('[build_windows] You can also add NSIS to PATH so makensis is discoverable.')
             sys.exit(3)
         print('[build_windows] Running NSIS packager...')
         try:
-            # Allow NSIS script to detect files via relative paths; pass common defines if needed
-            run([makensis, nsis], cwd=ROOT)
+            # Pass VERSION and ICON as absolute paths/values to avoid relative resolution issues
+            version = '1.3.0'
+            ver_file = os.path.join(ROOT, 'VERSION')
+            try:
+                with open(ver_file, 'r', encoding='utf-8') as vf:
+                    version = vf.read().strip() or version
+            except Exception:
+                pass
+            icon_abs = os.path.join(ROOT, 'assets', 'icon.ico')
+            args = [makensis, f"/DVERSION={version}", f"/DICON={icon_abs}", nsis]
+            run(args, cwd=ROOT)
             print('[build_windows] NSIS packaging completed.')
         except subprocess.CalledProcessError as e:
             print('[build_windows] NSIS packaging failed with exit code', e.returncode)

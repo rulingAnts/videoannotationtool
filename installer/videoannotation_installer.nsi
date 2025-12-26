@@ -19,7 +19,8 @@ Unicode true
   !define VERSION  "1.3.0"
 !endif
 !ifndef ICON
-  !define ICON     "assets\\icon.ico"
+  ; Use path relative to this script's directory
+  !define ICON     "${__FILEDIR}\\..\\assets\\icon.ico"
 !endif
 !define COMPANY    "Acme"
 ; Stable GUID used to identify this app's uninstall entry (do not change once released)

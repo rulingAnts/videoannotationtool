@@ -172,6 +172,64 @@
 			],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Build: Windows (PyInstaller onefile + NSIS, autodetect makensis)",
+			"type": "shell",
+			"command": "C:/Users/Seth/Windows File System Folder/GIT/videoannotationtool/videoannotationtool/.venv/Scripts/python.exe",
+			"args": [
+				"scripts/build_windows.py",
+				"--pyinstaller",
+				"--onefile",
+				"--nsis"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Build: Windows (PyInstaller onefile)",
+			"type": "shell",
+			"command": "C:/Users/Seth/Windows File System Folder/GIT/videoannotationtool/videoannotationtool/.venv/Scripts/python.exe",
+			"args": [
+				"scripts/build_windows.py",
+				"--pyinstaller",
+				"--onefile"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Build: NSIS only",
+			"type": "shell",
+			"command": "C:/Users/Seth/Windows File System Folder/GIT/videoannotationtool/videoannotationtool/.venv/Scripts/python.exe",
+			"args": [
+				"scripts/build_windows.py",
+				"--nsis"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Build: NSIS only (fixed icon path)",
+			"type": "shell",
+			"command": "C:/Users/Seth/Windows File System Folder/GIT/videoannotationtool/videoannotationtool/.venv/Scripts/python.exe",
+			"args": [
+				"scripts/build_windows.py",
+				"--nsis"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Build: NSIS only (override defines)",
+			"type": "shell",
+			"command": "C:/Users/Seth/Windows File System Folder/GIT/videoannotationtool/videoannotationtool/.venv/Scripts/python.exe",
+			"args": [
+				"scripts/build_windows.py",
+				"--nsis"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }
