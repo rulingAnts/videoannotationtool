@@ -34,7 +34,6 @@ import importlib.util
 import datetime
 import json
 import plistlib
-import platform
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 ASSETS_DIR = os.path.join(ROOT, 'assets')
@@ -51,20 +50,6 @@ def require_python_311():
         print("[build_mac] ERROR: This build script must be run with Python 3.11.x.")
         print(f"[build_mac] Current Python: {sys.version.split()[0]}")
         print("[build_mac] Tip: Run with python3.11 scripts/build_mac.py ...")
-        sys.exit(1)
-
-
-def require_mac_arm64():
-    """Ensure script runs on macOS with arm64 (Apple Silicon) architecture."""
-    if sys.platform != 'darwin':
-        print("[build_mac] ERROR: This script must be run on macOS.")
-        print(f"[build_mac] Detected platform: {sys.platform}")
-        sys.exit(1)
-    machine = platform.machine().lower()
-    if machine not in ('arm64', 'aarch64'):
-        print("[build_mac] ERROR: Silicon-only build requires an arm64 macOS host.")
-        print(f"[build_mac] Detected machine: {machine}")
-        print("[build_mac] Tip: On Apple Silicon, ensure you run native arm64 Python (e.g., /opt/homebrew/bin/python3.11 or 'arch -arm64 python3.11').")
         sys.exit(1)
 
 
@@ -166,16 +151,6 @@ def is_universal_binary(path: str) -> bool:
     except Exception:
         return False
 
-def is_arm64_binary(path: str) -> bool:
-    """Check whether a macOS binary contains arm64 architecture (silicon-only expectation)."""
-    try:
-        if not validate_executable(path):
-            return False
-        out = subprocess.check_output(['lipo', '-info', path], text=True)
-        return 'arm64' in out
-    except Exception:
-        return False
-
 
 def ensure_png_icon():
     os.makedirs(ASSETS_DIR, exist_ok=True)
@@ -224,7 +199,7 @@ def build_with_pyinstaller(name: str, onedir: bool, windowed: bool, clean: bool,
     cmd = [sys.executable, '-m', 'PyInstaller']
     if clean:
         cmd.append('--clean')
-    # Avoid interactive prompts (e.g., removing existing dist outputs)
+    # Avoid interactive prompts
     cmd.append('--noconfirm')
     cmd += ['--name', name]
     if onedir:
@@ -285,9 +260,16 @@ def build_with_pyinstaller(name: str, onedir: bool, windowed: bool, clean: bool,
                 # Update version fields
                 info['CFBundleShortVersionString'] = version
                 info['CFBundleVersion'] = version
+                # Ensure privacy usage descriptions are present to allow mic/files access prompts
+                info.setdefault('NSMicrophoneUsageDescription', 'Video Annotation Tool needs microphone access to record annotations.')
+                info.setdefault('NSDesktopFolderUsageDescription', 'Allow access to Desktop to open and save annotated videos and audio.')
+                info.setdefault('NSDocumentsFolderUsageDescription', 'Allow access to Documents to manage project folders, metadata, and recordings.')
+                info.setdefault('NSDownloadsFolderUsageDescription', 'Allow access to Downloads to open videos for annotation.')
+                info.setdefault('NSNetworkVolumesUsageDescription', 'Allow access to files on network volumes for annotation projects.')
+                info.setdefault('NSRemovableVolumesUsageDescription', 'Allow access to external drives (USB/SD) to read/write project media.')
                 with open(info_plist, 'wb') as f:
                     plistlib.dump(info, f)
-                print(f"[build_mac] Set CFBundleShortVersionString/CFBundleVersion to {version}")
+                print(f"[build_mac] Set version to {version} and ensured privacy keys in Info.plist")
     except Exception as e:
         print('[build_mac] WARNING: Failed to patch Info.plist version:', e)
 
@@ -384,7 +366,6 @@ def discover_bundle_id_from_app(name: str) -> str | None:
 def main():
     print("[build_mac] Starting macOS build helper...")
     print(f"[build_mac] Python: {sys.version.split()[0]} @ {sys.executable}")
-    require_mac_arm64()
     require_python_311()
 
     parser = argparse.ArgumentParser()
@@ -409,6 +390,11 @@ def main():
     parser.add_argument('--ffmpeg-bin', help='Path to ffmpeg binary or its containing directory')
     parser.add_argument('--ffprobe-bin', help='Path to ffprobe binary or its containing directory')
     parser.add_argument('--no-clean', action='store_true', help='Do not pass --clean to PyInstaller')
+    # Codesigning options for enabling microphone access under Hardened Runtime
+    parser.add_argument('--codesign-ad-hoc', action='store_true', help='Codesign the built app with ad-hoc identity and Hardened Runtime')
+    parser.add_argument('--codesign-identity', help='Codesign identity to use (e.g., "Developer ID Application: ..."). Defaults to ad-hoc if --codesign-ad-hoc is set.')
+    parser.add_argument('--enable-microphone-entitlement', action='store_true', help='Add com.apple.security.device.audio-input entitlement when codesigning')
+    parser.add_argument('--entitlements-file', help='Path to a custom entitlements plist to use during codesign')
     args = parser.parse_args()
 
     did_anything = False
@@ -490,9 +476,9 @@ def main():
                     print("[build_mac] Ensured execute permissions on:", ffmpeg_inside)
                 except Exception as e:
                     print("[build_mac] WARNING: Could not chmod +x on ffmpeg:", e)
-                # Ensure arm64 architecture (silicon-only build)
-                if not is_arm64_binary(ffmpeg_inside):
-                    print("[build_mac] WARNING: ffmpeg in bundle does not contain arm64 architecture.")
+                # Check universal fat binary
+                if not is_universal_binary(ffmpeg_inside):
+                    print("[build_mac] WARNING: ffmpeg in bundle is not a universal binary (arm64 + x86_64).")
             if os.path.exists(ffprobe_inside):
                 try:
                     st = os.stat(ffprobe_inside)
@@ -500,8 +486,45 @@ def main():
                     print("[build_mac] Ensured execute permissions on:", ffprobe_inside)
                 except Exception as e:
                     print("[build_mac] WARNING: Could not chmod +x on ffprobe:", e)
-                if not is_arm64_binary(ffprobe_inside):
-                    print("[build_mac] WARNING: ffprobe in bundle does not contain arm64 architecture.")
+                if not is_universal_binary(ffprobe_inside):
+                    print("[build_mac] WARNING: ffprobe in bundle is not a universal binary.")
+
+        # Optional codesign step to enable Hardened Runtime with microphone entitlement
+        if args.codesign_ad_hoc or args.codesign_identity:
+            identity = args.codesign_identity if args.codesign_identity else "-"
+            app_path = os.path.join(ROOT, 'dist', f'{args.name}.app')
+            if os.path.exists(app_path):
+                ent_plist = None
+                if args.entitlements_file and os.path.exists(args.entitlements_file):
+                    ent_plist = args.entitlements_file
+                elif args.enable_microphone_entitlement:
+                    # Generate a minimal entitlements file in a temp dir
+                    try:
+                        import tempfile
+                        ent_plist = os.path.join(tempfile.gettempdir(), 'vat-entitlements.plist')
+                        ent = {
+                            'com.apple.security.device.audio-input': True,
+                            'com.apple.security.files.user-selected.read-write': True,
+                            'com.apple.security.cs.disable-library-validation': True,
+                        }
+                        with open(ent_plist, 'wb') as f:
+                            plistlib.dump(ent, f)
+                        print('[build_mac] Generated entitlements:', ent_plist)
+                    except Exception as e:
+                        print('[build_mac] WARNING: Failed to generate entitlements plist:', e)
+                        ent_plist = None
+                try:
+                    cmd = ['codesign', '--force', '--deep', '--options', 'runtime']
+                    if ent_plist:
+                        cmd += ['--entitlements', ent_plist]
+                    cmd += ['--sign', identity, app_path]
+                    print('[build_mac] Codesigning app with identity:', identity)
+                    run(cmd)
+                    # Verify
+                    run(['codesign', '-dv', '--verbose=4', app_path])
+                    print('[build_mac] Codesign completed.')
+                except Exception as e:
+                    print('[build_mac] WARNING: Codesign failed:', e)
 
     # Post-build packaging
     if args.dmg:
