@@ -16,7 +16,7 @@ Unicode true
 !define APP_NAME   "Video Annotation Tool"
 !define APP_EXE    "Video Annotation Tool.exe"
 !ifndef VERSION
-  !define VERSION  "1.2.1"
+  !define VERSION  "1.3.0"
 !endif
 !ifndef ICON
   !define ICON     "assets\\icon.ico"

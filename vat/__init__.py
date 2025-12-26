@@ -2,4 +2,4 @@
 __all__ = ["audio", "ui", "utils"]
 
 # Package version (synced with repository VERSION file by build scripts)
-__version__ = "1.2.1"
+__version__ = "1.3.0"
