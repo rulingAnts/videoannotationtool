@@ -1,5 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+# DEPRECATED: macOS bundle spec. macOS builds are not officially supported.
+
 
 a = Analysis(
     ['/Users/Seth/GIT/videoannotationtool/videoannotation.py'],

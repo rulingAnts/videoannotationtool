@@ -32,6 +32,11 @@ def main():
     logging.info("Starting Video Annotation Tool (PySide6 version)")
     configure_opencv_ffmpeg()
     configure_pydub_ffmpeg()
+    # Graceful exit on macOS: project does not officially support macOS runtime
+    if sys.platform == "darwin" and os.environ.get("VAT_ALLOW_MAC") != "1":
+        logging.error("macOS is not officially supported. Please use Windows (recommended) or Linux.")
+        print("Video Annotation Tool: macOS is not officially supported. Set VAT_ALLOW_MAC=1 to run anyway.")
+        sys.exit(64)
     app = QApplication(sys.argv)
     app.setApplicationName("Video Annotation Tool")
     window = VideoAnnotationApp()
