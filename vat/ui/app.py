@@ -804,6 +804,8 @@ class VideoAnnotationApp(QMainWindow):
                     f"Cannot access folder: {folder}\n\nPlease select a different folder."
                 )
                 return
+            # Reset current selection to avoid attempting to open a video from the previous folder
+            self.current_video = None
             self.update_folder_display()
             if sys.platform == "win32":
                 hidden_files = [f for f in os.listdir(self.fs.current_folder) if f.startswith('.')]
@@ -840,8 +842,13 @@ class VideoAnnotationApp(QMainWindow):
                 wav_exists = os.path.exists(self.fs.wav_path_for(name))
                 item.setIcon(self._check_icon if wav_exists else self._empty_icon)
                 self.video_listbox.addItem(item)
-            if self.last_video_name and self.last_video_name in basenames:
-                idx = basenames.index(self.last_video_name)
+            # Auto-select: prefer last selected name if present, otherwise the first video
+            if basenames:
+                if self.last_video_name and self.last_video_name in basenames:
+                    idx = basenames.index(self.last_video_name)
+                else:
+                    idx = 0
+                # Setting the current row triggers on_video_select, which updates current_video and preview
                 self.video_listbox.setCurrentRow(idx)
             if not self.video_files:
                 QMessageBox.information(self, self.LABELS["no_videos_found"], f"{self.LABELS['no_videos_found']} {self.fs.current_folder}")
@@ -936,20 +943,22 @@ class VideoAnnotationApp(QMainWindow):
             return
         video_path = os.path.join(self.fs.current_folder or "", self.current_video)
         if not os.path.exists(video_path):
-            QMessageBox.critical(self, self.LABELS["error_title"], f"{self.LABELS['cannot_open_video']}\n{video_path}")
-            self.video_label.setText(self.LABELS["cannot_open_video"])
+            # Avoid noisy popup during folder transitions; just update the label
+            logging.info(f"Video path does not exist for preview: {video_path}")
+            self.video_label.setText(self.LABELS["video_listbox_no_video"])
             return
         cap = None
         try:
             cap = cv2.VideoCapture(video_path)
             if not cap.isOpened():
-                QMessageBox.critical(self, self.LABELS["error_title"], f"{self.LABELS['cannot_open_video']}\n{video_path}")
-                self.video_label.setText(self.LABELS["cannot_open_video"])
+                # Suppress popup here; selection handler will display valid content shortly
+                logging.warning(f"Failed to open video for preview: {video_path}")
+                self.video_label.setText(self.LABELS["video_listbox_no_video"])
                 return
             ret, frame = cap.read()
             if not ret:
-                QMessageBox.warning(self, self.LABELS["unexpected_error_title"], f"{self.LABELS['cannot_open_video']}\n{video_path}")
-                self.video_label.setText(self.LABELS["cannot_open_video"])
+                logging.warning(f"Failed to read first frame: {video_path}")
+                self.video_label.setText(self.LABELS["video_listbox_no_video"])
                 return
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame = cv2.resize(frame, (640, 480))
@@ -1532,6 +1541,13 @@ class VideoAnnotationApp(QMainWindow):
     # FolderAccessManager signal handlers
     def _on_folder_changed(self, path: str):
         try:
+            # Clear selection and stop any active playback before rebuilding the list
+            try:
+                if self.playing_video:
+                    self.stop_video()
+            except Exception:
+                pass
+            self.current_video = None
             self.update_folder_display()
             has_folder = bool(self.fs.current_folder)
             self.export_wavs_button.setEnabled(has_folder)
