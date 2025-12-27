@@ -13,7 +13,7 @@ from pydub import AudioSegment
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QListWidget, QListWidgetItem, QLabel, QTextEdit, QMessageBox,
-    QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle
+    QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle, QDialog, QSizePolicy
 )
 from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent
 from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence
@@ -564,6 +564,12 @@ class VideoAnnotationApp(QMainWindow):
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
         try:
+            # Make header-to-content gap minimal
+            main_layout.setContentsMargins(4, 2, 4, 2)
+            main_layout.setSpacing(0)
+        except Exception:
+            pass
+        try:
             self._check_icon = self.style().standardIcon(QStyle.SP_DialogApplyButton)
         except Exception:
             self._check_icon = QIcon()
@@ -581,51 +587,105 @@ class VideoAnnotationApp(QMainWindow):
         self.folder_display_label = QLabel(self.LABELS["no_folder_selected"])
         self.folder_display_label.setAlignment(Qt.AlignLeft)
         self.folder_display_label.setToolTip("")
+        try:
+            # Prevent the folder label from expanding vertically
+            self.folder_display_label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        except Exception:
+            pass
         main_layout.addWidget(self.folder_display_label)
         splitter = QSplitter(Qt.Horizontal)
+        try:
+            splitter.setHandleWidth(2)
+        except Exception:
+            pass
         main_layout.addWidget(splitter)
         left_panel = QWidget()
         left_layout = QVBoxLayout(left_panel)
+        try:
+            # Make the left panel as compact as possible
+            left_layout.setContentsMargins(0, 0, 0, 0)
+            left_layout.setSpacing(0)
+            # Reduce default padding on controls in the left panel
+            left_panel.setStyleSheet(
+                "QPushButton{margin:0; padding:2px 6px;}\n"
+                "QListWidget{margin:0; padding:0;}"
+            )
+        except Exception:
+            pass
         self.select_button = QPushButton(self.LABELS["select_folder"])
+        try:
+            self.select_button.setFixedHeight(28)
+        except Exception:
+            pass
         self.select_button.clicked.connect(self.select_folder)
         left_layout.addWidget(self.select_button)
         self.open_ocenaudio_button = QPushButton(self.LABELS["open_ocenaudio"])
+        try:
+            self.open_ocenaudio_button.setFixedHeight(28)
+        except Exception:
+            pass
         self.open_ocenaudio_button.clicked.connect(self.open_in_ocenaudio)
         self.open_ocenaudio_button.setEnabled(False)
         left_layout.addWidget(self.open_ocenaudio_button)
         self.export_wavs_button = QPushButton(self.LABELS["export_wavs"])
+        try:
+            self.export_wavs_button.setFixedHeight(28)
+        except Exception:
+            pass
         self.export_wavs_button.clicked.connect(self.export_wavs)
         self.export_wavs_button.setEnabled(False)
         left_layout.addWidget(self.export_wavs_button)
         self.clear_wavs_button = QPushButton(self.LABELS["clear_wavs"])
+        try:
+            self.clear_wavs_button.setFixedHeight(28)
+        except Exception:
+            pass
         self.clear_wavs_button.clicked.connect(self.clear_wavs)
         self.clear_wavs_button.setEnabled(False)
         left_layout.addWidget(self.clear_wavs_button)
         self.import_wavs_button = QPushButton(self.LABELS["import_wavs"])
+        try:
+            self.import_wavs_button.setFixedHeight(28)
+        except Exception:
+            pass
         self.import_wavs_button.clicked.connect(self.import_wavs)
         self.import_wavs_button.setEnabled(False)
         left_layout.addWidget(self.import_wavs_button)
         self.join_wavs_button = QPushButton(self.LABELS["join_wavs"])
+        try:
+            self.join_wavs_button.setFixedHeight(28)
+        except Exception:
+            pass
         self.join_wavs_button.clicked.connect(self.join_all_wavs)
         self.join_wavs_button.setEnabled(False)
         left_layout.addWidget(self.join_wavs_button)
         self.video_listbox = QListWidget()
+        # Make the list a bit shorter by capping its height
+        try:
+            self.video_listbox.setMaximumHeight(300)
+        except Exception:
+            pass
         self.video_listbox.currentRowChanged.connect(self.on_video_select)
-        left_layout.addWidget(self.video_listbox)
-        self.metadata_label = QLabel(self.LABELS["edit_metadata"])
-        self.metadata_label.setStyleSheet("font-weight: bold; font-size: 12pt;")
-        left_layout.addWidget(self.metadata_label)
-        self.metadata_text = QTextEdit()
-        self.metadata_text.setMinimumHeight(150)
-        left_layout.addWidget(self.metadata_text)
-        self.save_metadata_btn = QPushButton(self.LABELS["save_metadata"])
-        self.save_metadata_btn.clicked.connect(self.save_metadata)
-        self.save_metadata_btn.setEnabled(False)
-        left_layout.addWidget(self.save_metadata_btn)
+        # Let the list occupy ~75% of the extra vertical space
+        left_layout.addWidget(self.video_listbox, 3)
+        # Replace inline metadata editor with a button that opens a dialog
+        self.edit_metadata_button = QPushButton(self.LABELS["edit_metadata"])
+        try:
+            self.edit_metadata_button.setFixedHeight(28)
+        except Exception:
+            pass
+        self.edit_metadata_button.clicked.connect(self.open_metadata_editor)
+        self.edit_metadata_button.setEnabled(False)
+        left_layout.addWidget(self.edit_metadata_button)
         splitter.addWidget(left_panel)
         right_panel = QTabWidget()
         videos_tab = QWidget()
         videos_layout = QVBoxLayout(videos_tab)
+        try:
+            videos_layout.setContentsMargins(4, 4, 4, 4)
+            videos_layout.setSpacing(4)
+        except Exception:
+            pass
         self.video_label = QLabel(self.LABELS["video_listbox_no_video"])
         self.video_label.setAlignment(Qt.AlignCenter)
         self.video_label.setMinimumSize(640, 480)
@@ -639,6 +699,10 @@ class VideoAnnotationApp(QMainWindow):
         self.badge_label.setVisible(False)
         self.video_label.installEventFilter(self)
         video_controls_layout = QHBoxLayout()
+        try:
+            video_controls_layout.setSpacing(4)
+        except Exception:
+            pass
         self.prev_button = QToolButton()
         try:
             self.prev_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipBackward))
@@ -665,6 +729,12 @@ class VideoAnnotationApp(QMainWindow):
         video_controls_layout.addWidget(self.next_button)
         videos_layout.addLayout(video_controls_layout)
         audio_controls_layout = QHBoxLayout()
+        try:
+            audio_controls_layout.setSpacing(4)
+        except Exception:
+            pass
+        # Center the audio controls horizontally within their area
+        audio_controls_layout.addStretch(1)
         self.play_audio_button = QPushButton(self.LABELS["play_audio"])
         self.play_audio_button.clicked.connect(self.play_audio)
         self.play_audio_button.setEnabled(False)
@@ -680,6 +750,7 @@ class VideoAnnotationApp(QMainWindow):
         self.recording_status_label = QLabel("")
         self.recording_status_label.setStyleSheet("color: red; font-weight: bold;")
         audio_controls_layout.addWidget(self.recording_status_label)
+        audio_controls_layout.addStretch(1)
         videos_layout.addLayout(audio_controls_layout)
         videos_layout.addStretch()
         right_panel.addTab(videos_tab, self.LABELS["videos_tab_title"])
@@ -706,8 +777,8 @@ class VideoAnnotationApp(QMainWindow):
         self.play_audio_button.setText(self.LABELS["play_audio"])
         self.stop_audio_button.setText(self.LABELS["stop_audio"])
         self.record_button.setText(self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
-        self.metadata_label.setText(self.LABELS["edit_metadata"])
-        self.save_metadata_btn.setText(self.LABELS["save_metadata"])
+        # Update the metadata editor button label
+        self.edit_metadata_button.setText(self.LABELS["edit_metadata"])
         if not self.current_video:
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
         self.update_folder_display()
@@ -786,7 +857,7 @@ class VideoAnnotationApp(QMainWindow):
             self.import_wavs_button.setEnabled(False)
             self.join_wavs_button.setEnabled(False)
             self.open_ocenaudio_button.setEnabled(False)
-            self.save_metadata_btn.setEnabled(False)
+            self.edit_metadata_button.setEnabled(False)
         except Exception:
             pass
     def select_folder(self):
@@ -814,13 +885,12 @@ class VideoAnnotationApp(QMainWindow):
                 if errors:
                     QMessageBox.warning(self, self.LABELS["cleanup_errors_title"], "Some hidden files could not be deleted:\n" + "\n".join(errors))
             self.load_video_files()
-            self.open_metadata_editor()
             self.export_wavs_button.setEnabled(True)
             self.clear_wavs_button.setEnabled(True)
             self.import_wavs_button.setEnabled(True)
             self.join_wavs_button.setEnabled(True)
             self.open_ocenaudio_button.setEnabled(True)
-            self.save_metadata_btn.setEnabled(True)
+            self.edit_metadata_button.setEnabled(True)
             self.save_settings()
     def load_video_files(self):
         self.video_listbox.clear()
@@ -871,7 +941,37 @@ class VideoAnnotationApp(QMainWindow):
         )
         try:
             content = self.fs.ensure_and_read_metadata(self.fs.current_folder, default_content)
-            self.metadata_text.setPlainText(content)
+            # Build a simple modal dialog for metadata editing
+            dlg = QDialog(self)
+            dlg.setWindowTitle(self.LABELS.get("metadata_editor_title", self.LABELS.get("edit_metadata", "Edit Metadata")))
+            vbox = QVBoxLayout(dlg)
+            editor = QTextEdit()
+            editor.setPlainText(content)
+            editor.setMinimumHeight(200)
+            vbox.addWidget(editor)
+            btn_box = QHBoxLayout()
+            save_btn = QPushButton(self.LABELS.get("update_metadata", "Save and Close"))
+            cancel_btn = QPushButton(self.LABELS.get("cancel", "Cancel"))
+            btn_box.addWidget(save_btn)
+            btn_box.addWidget(cancel_btn)
+            vbox.addLayout(btn_box)
+
+            def _save_and_close():
+                new_content = editor.toPlainText()
+                try:
+                    self.fs.write_metadata(new_content)
+                    QMessageBox.information(self, self.LABELS.get("saved", "Saved"), self.LABELS.get("metadata_saved", "Metadata saved!"))
+                    dlg.accept()
+                except FolderPermissionError:
+                    QMessageBox.critical(self, self.LABELS.get("permission_denied_title", "Permission Denied"), f"You do not have permission to write metadata in: {self.fs.current_folder}")
+                except FolderNotFoundError:
+                    QMessageBox.critical(self, self.LABELS.get("folder_not_found_title", "Folder Not Found"), f"The selected folder no longer exists: {self.fs.current_folder}")
+                except FolderAccessError as e:
+                    QMessageBox.critical(self, self.LABELS.get("unexpected_error_title", "Unexpected Error"), f"An unexpected error occurred: {e}")
+
+            save_btn.clicked.connect(_save_and_close)
+            cancel_btn.clicked.connect(dlg.reject)
+            dlg.exec()
         except FolderPermissionError:
             QMessageBox.critical(self, self.LABELS["permission_denied_title"], f"You do not have permission to access the folder: {self.fs.current_folder}")
         except FolderNotFoundError:
@@ -957,11 +1057,14 @@ class VideoAnnotationApp(QMainWindow):
                 self.video_label.setText(self.LABELS["video_listbox_no_video"])
                 return
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame = cv2.resize(frame, (640, 480))
             h, w, ch = frame.shape
             bytes_per_line = ch * w
             qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
             pixmap = QPixmap.fromImage(qt_image)
+            # Scale to fill the label without black bars, cropping as needed
+            target = self.video_label.size()
+            if target.width() > 0 and target.height() > 0:
+                pixmap = pixmap.scaled(target, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
             self.video_label.setPixmap(pixmap)
         except Exception as e:
             logging.error(f"Failed to load first frame for {video_path}: {e}")
@@ -1074,11 +1177,13 @@ class VideoAnnotationApp(QMainWindow):
                     self.video_label.setText(self.LABELS.get("cannot_open_video", "Cannot open video file."))
                     return
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frame = cv2.resize(frame, (640, 480))
                 h, w, ch = frame.shape
                 bytes_per_line = ch * w
                 qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
                 pixmap = QPixmap.fromImage(qt_image)
+                target = self.video_label.size()
+                if target.width() > 0 and target.height() > 0:
+                    pixmap = pixmap.scaled(target, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
                 self.video_label.setPixmap(pixmap)
         except Exception as e:
             logging.error(f"Video frame update failed: {e}")
@@ -1379,7 +1484,7 @@ class VideoAnnotationApp(QMainWindow):
         else:
             QMessageBox.information(self, self.LABELS["clear_wavs"], self.LABELS["clear_success_msg_prefix"].format(count=len(wav_files)))
         self.load_video_files()
-        self.open_metadata_editor()
+    # No longer auto-open metadata editor; user can click the button to edit
         self.update_video_file_checks()
     def import_wavs(self):
         if not self.fs.current_folder:
@@ -1475,7 +1580,7 @@ class VideoAnnotationApp(QMainWindow):
         else:
             QMessageBox.information(self, self.LABELS["import_wavs"], self.LABELS["import_success_msg_prefix"].format(count=imported_count))
         self.load_video_files()
-        self.open_metadata_editor()
+    # No longer auto-open metadata editor; user can click the button to edit
         self.update_video_file_checks()
     def join_all_wavs(self):
         if not self.fs.current_folder:
@@ -1554,10 +1659,9 @@ class VideoAnnotationApp(QMainWindow):
             self.import_wavs_button.setEnabled(has_folder)
             self.join_wavs_button.setEnabled(has_folder)
             self.open_ocenaudio_button.setEnabled(has_folder)
-            self.save_metadata_btn.setEnabled(has_folder)
+            self.edit_metadata_button.setEnabled(has_folder)
             if has_folder:
                 self.load_video_files()
-                self.open_metadata_editor()
         except Exception:
             pass
 
