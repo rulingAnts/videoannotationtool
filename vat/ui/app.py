@@ -664,9 +664,6 @@ class VideoAnnotationApp(QMainWindow):
         self.next_button.clicked.connect(self.go_next)
         video_controls_layout.addWidget(self.next_button)
         videos_layout.addLayout(video_controls_layout)
-        self.audio_label = QLabel(self.LABELS["audio_no_annotation"])
-        self.audio_label.setAlignment(Qt.AlignCenter)
-        videos_layout.addWidget(self.audio_label)
         audio_controls_layout = QHBoxLayout()
         self.play_audio_button = QPushButton(self.LABELS["play_audio"])
         self.play_audio_button.clicked.connect(self.play_audio)
@@ -713,7 +710,6 @@ class VideoAnnotationApp(QMainWindow):
         self.save_metadata_btn.setText(self.LABELS["save_metadata"])
         if not self.current_video:
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
-            self.audio_label.setText(self.LABELS["audio_no_annotation"])
         self.update_folder_display()
     def update_folder_display(self):
         if getattr(self, 'folder_display_label', None) is None:
@@ -983,14 +979,14 @@ class VideoAnnotationApp(QMainWindow):
             self.update_recording_indicator()
             wav_path = self.fs.wav_path_for(self.current_video)
             if os.path.exists(wav_path):
-                self.audio_label.setText(f"{self.LABELS['audio_label_prefix']}{os.path.splitext(self.current_video)[0]}.wav")
+                # Audio file exists: enable audio controls and show badge
                 self.play_audio_button.setEnabled(True)
                 self.stop_audio_button.setEnabled(True)
                 self.video_label.setStyleSheet("background-color: black; color: white; border: 3px solid #2ecc71;")
                 if getattr(self, 'badge_label', None):
                     self.badge_label.setVisible(True)
             else:
-                self.audio_label.setText(self.LABELS["audio_no_annotation"])
+                # No audio: disable audio controls and hide badge
                 self.play_audio_button.setEnabled(False)
                 self.stop_audio_button.setEnabled(False)
                 self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
@@ -1000,7 +996,6 @@ class VideoAnnotationApp(QMainWindow):
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
             self.play_video_button.setEnabled(False)
             self.stop_video_button.setEnabled(False)
-            self.audio_label.setText(self.LABELS["audio_no_annotation"])
             self.play_audio_button.setEnabled(False)
             self.stop_audio_button.setEnabled(False)
             self.record_button.setEnabled(False)
@@ -1140,7 +1135,9 @@ class VideoAnnotationApp(QMainWindow):
         self.audio_thread = None
         self.audio_worker = None
     def toggle_recording(self):
+        logging.debug("toggle_recording invoked: current_video=%s, is_recording=%s", self.current_video, self.is_recording)
         if not self.current_video:
+            logging.debug("toggle_recording: no current_video, ignoring")
             return
         if self.is_recording:
             self.is_recording = False
@@ -1167,6 +1164,7 @@ class VideoAnnotationApp(QMainWindow):
             self.update_video_file_checks()
         else:
             wav_path = self.fs.wav_path_for(self.current_video)
+            logging.debug("toggle_recording: starting, wav_path=%s, pyaudio_available=%s", wav_path, PYAUDIO_AVAILABLE)
             if os.path.exists(wav_path):
                 reply = QMessageBox.question(self, self.LABELS["overwrite"], 
                                             self.LABELS["overwrite_audio"],
@@ -1175,6 +1173,7 @@ class VideoAnnotationApp(QMainWindow):
                     return
             if not PYAUDIO_AVAILABLE:
                 QMessageBox.warning(self, "Error", "PyAudio is not available. Cannot record audio.")
+                logging.warning("toggle_recording: PyAudio not available, aborting record")
                 return
             self.is_recording = True
             self.record_button.setText(self.LABELS["stop_recording"])
