@@ -1,12 +1,13 @@
-- [] Add a tab for a grid-view interface of still images (and the ability to click each and have a play/record modal/menu come up. For record, confirm overwrite. Recorded audio for images should include the file extension of the image file before .wav so that they don't overwrite the video recording.)
 
 # FS Manager Integration Follow-ups
-- [] Replace remaining `self.folder_path` references with `self.fs.current_folder` in `show_first_frame()`, `play_video()`, and any guards.
-- [] Wire `imagesUpdated` signal to any still-image views when implemented.
-- [] Migrate any direct `os.listdir` usage in UI to `FolderAccessManager` helpers where applicable.
-- [] Investigate occasional playback segfault; add defensive checks around `cv2.VideoCapture` and lifecycle.
-- [] Add unit-style smoke tests for FS manager flows (folder change, videosUpdated, metadata read/write).
+ [] Add a tab for a grid-view interface of still images (and the ability to click each and have a play/record modal/menu come up. For record, confirm overwrite. Recorded audio for images should include the file extension of the image file before .wav so that they don't overwrite the video recording.)
 
 
-Optional next step
-I can finish converting show_first_frame() and play_video() guards that still reference self.folder_path and review any lingering direct filesystem calls. Want me to proceed?
+ [x] Replace remaining `self.folder_path` references with `self.fs.current_folder` in `show_first_frame()`, `play_video()`, and any guards.
+ [] Wire `imagesUpdated` signal to any still-image views when implemented.
+ [] Migrate any direct `os.listdir` usage in UI to `FolderAccessManager` helpers where applicable.
+ [] Investigate occasional playback segfault; add defensive checks around `cv2.VideoCapture` and lifecycle.
+ [] Add unit-style smoke tests for FS manager flows (folder change, videosUpdated, metadata read/write).
+Optional next steps
+- Wire `imagesUpdated` when the images tab is added.
+- If you want, I can run a quick smoke test and check playback stability now.

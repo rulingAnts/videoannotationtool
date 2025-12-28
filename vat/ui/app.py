@@ -488,7 +488,7 @@ class VideoAnnotationApp(QMainWindow):
         self.LABELS = LABELS_ALL[self.language]
         # Unified file-system access
         self.fs = FolderAccessManager()
-        self.folder_path = None  # kept for backward compatibility during transition
+        self.folder_path = None  # deprecated; kept only for transitional compatibility
         self.video_files = []
         self.current_video = None
         self.last_video_name = None
@@ -536,7 +536,7 @@ class VideoAnnotationApp(QMainWindow):
         self.ui_info.connect(self._show_info)
         self.ui_warning.connect(self._show_warning)
         self.ui_error.connect(self._show_error)
-        if self.folder_path:
+        if self.fs.current_folder:
             self.update_folder_display()
             self.export_wavs_button.setEnabled(True)
             self.clear_wavs_button.setEnabled(True)
@@ -545,12 +545,10 @@ class VideoAnnotationApp(QMainWindow):
             self.open_ocenaudio_button.setEnabled(True)
             if getattr(self, 'edit_metadata_btn', None):
                 self.edit_metadata_btn.setEnabled(True)
-            # Seed FS and populate via signal
+            # Populate via signal with current FS folder
             try:
-                if self.fs.set_folder(self.folder_path):
-                    pass
-                else:
-                    self.load_video_files()
+                self._on_folder_changed(self.fs.current_folder)
+                self._on_videos_updated(self.fs.list_videos())
             except Exception:
                 self.load_video_files()
             # Do not auto-open metadata; use the button
@@ -818,7 +816,7 @@ class VideoAnnotationApp(QMainWindow):
                         try:
                             self.fs.set_folder(last_folder)
                         except Exception:
-                            self.folder_path = last_folder
+                            pass
                     last_video = settings.get('last_video')
                     if last_video:
                         self.last_video_name = last_video
