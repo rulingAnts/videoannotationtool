@@ -1963,6 +1963,15 @@ class VideoAnnotationApp(QMainWindow):
         try:
             if getattr(self, 'images_list', None) is None:
                 return
+            # Reuse existing fullscreen viewer if still visible
+            try:
+                if getattr(self, '_fullscreen_viewer', None) is not None and self._fullscreen_viewer.isVisible():
+                    self._fullscreen_viewer.raise_()
+                    self._fullscreen_viewer.activateWindow()
+                    self._fullscreen_viewer.setFocus()
+                    return
+            except Exception:
+                pass
             if item is None:
                 sel = self.images_list.currentItem()
                 if sel is None:
@@ -1979,6 +1988,24 @@ class VideoAnnotationApp(QMainWindow):
                 if not (self.fs.current_folder and name):
                     return
                 path = os.path.join(self.fs.current_folder, name)
+            # Validate image path and readability before opening viewer
+            if not (os.path.isfile(path)):
+                try:
+                    logging.warning(f"UI._open_fullscreen_image: invalid path={path}")
+                except Exception:
+                    pass
+                return
+            try:
+                reader = QImageReader(path)
+                if not reader.canRead():
+                    try:
+                        logging.warning(f"UI._open_fullscreen_image: cannot read image={path}")
+                    except Exception:
+                        pass
+                    return
+            except Exception:
+                return
+
             viewer = FullscreenImageViewer(path)
             self._fullscreen_viewer = viewer
             viewer.showFullScreen()

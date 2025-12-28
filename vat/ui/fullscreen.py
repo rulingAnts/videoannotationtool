@@ -188,6 +188,7 @@ class FullscreenImageViewer(QWidget):
         self.setFocusPolicy(Qt.StrongFocus)
         self.image_path = image_path
         self._pixmap = None
+        self._valid = False
         self._load_image()
         # Zoom scale; will be auto-fitted on first paint
         self.scale = 1.0
@@ -200,15 +201,18 @@ class FullscreenImageViewer(QWidget):
             pm = QPixmap(self.image_path)
             if pm and not pm.isNull():
                 self._pixmap = pm
+                self._valid = True
             else:
                 self._pixmap = None
+                self._valid = False
         except Exception:
             self._pixmap = None
+            self._valid = False
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.fillRect(self.rect(), Qt.black)
-        if self._pixmap:
+        if self._pixmap and self._valid:
             pw = self._pixmap.width()
             ph = self._pixmap.height()
             # Auto-fit once to ~80% of screen, capped at 2x media size
