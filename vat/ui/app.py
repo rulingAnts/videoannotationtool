@@ -1448,7 +1448,7 @@ class VideoAnnotationApp(QMainWindow):
         errors = []
         for wav in wav_files:
             try:
-                os.remove(os.path.join(self.folder_path, wav))
+                os.remove(os.path.join(self.fs.current_folder, wav))
             except Exception as e:
                 errors.append(f"Delete {wav}: {e}")
         import_dir = QFileDialog.getExistingDirectory(self, self.LABELS["import_select_folder_dialog"]) 
@@ -1524,11 +1524,11 @@ class VideoAnnotationApp(QMainWindow):
         self.load_video_files()
         self.update_video_file_checks()
     def join_all_wavs(self):
-        if not self.folder_path:
+        if not self.fs.current_folder:
             QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["no_folder_selected"]) 
             return
-        wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
-        if not wav_files:
+        wav_paths = self.fs.recordings_in()
+        if not wav_paths:
             QMessageBox.information(self, self.LABELS["no_files"], self.LABELS["no_wavs_found"]) 
             return
         ffmpeg_path = resource_path(os.path.join("ffmpeg", "bin", "ffmpeg"))
@@ -1680,7 +1680,7 @@ class VideoAnnotationApp(QMainWindow):
     def eventFilter(self, obj, event):
         if obj is self.video_label:
             try:
-                if event.type() == QEvent.MouseButtonDblClick and self.current_video and self.folder_path:
+                if event.type() == QEvent.MouseButtonDblClick and self.current_video and self.fs.current_folder:
                     self._open_fullscreen_video()
                     return True
             except Exception:
@@ -1692,7 +1692,7 @@ class VideoAnnotationApp(QMainWindow):
         return super().eventFilter(obj, event)
     def _open_fullscreen_video(self):
         try:
-            if not self.current_video or not self.folder_path:
+            if not self.current_video or not self.fs.current_folder:
                 return
             # Safeguard: if already open, bring to front
             if getattr(self, '_fullscreen_viewer', None) is not None:
@@ -1704,7 +1704,7 @@ class VideoAnnotationApp(QMainWindow):
                         return
                 except Exception:
                     pass
-            video_path = os.path.join(self.folder_path, self.current_video)
+            video_path = self._resolve_current_video_path()
             # Create as top-level window (no parent) so it truly fullscreen
             viewer = FullscreenVideoViewer(video_path, initial_scale=self.fullscreen_zoom)
             self._fullscreen_viewer = viewer
