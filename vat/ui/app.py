@@ -706,6 +706,12 @@ class VideoAnnotationApp(QMainWindow):
         self.right_panel = right_panel
         videos_tab = QWidget()
         videos_layout = QVBoxLayout(videos_tab)
+        # Tip for fullscreen video
+        self.video_fullscreen_tip = QLabel(
+            "<b>Tip:</b> Double-click the video to open fullscreen. Use <b>+</b> and <b>-</b> to zoom in/out in fullscreen view.")
+        self.video_fullscreen_tip.setStyleSheet("color: black; font-size: 13px; margin-bottom: 4px;")
+        self.video_fullscreen_tip.setWordWrap(True)
+        videos_layout.addWidget(self.video_fullscreen_tip)
         self.video_label = QLabel(self.LABELS["video_listbox_no_video"])
         self.video_label.setAlignment(Qt.AlignCenter)
         self.video_label.setMinimumSize(640, 480)
@@ -781,7 +787,7 @@ class VideoAnnotationApp(QMainWindow):
             logging.info("UI.init_ui: creating Images tab")
         except Exception:
             pass
-        # Narrow banner: tiny thumbnail + audio controls
+        # Banner: two columns, left = preview, right = controls+tip
         image_banner = QHBoxLayout()
         try:
             image_banner.setSpacing(8)
@@ -795,34 +801,43 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             pass
         image_banner.addWidget(self.image_thumb)
-        # Optional filename visibility toggle
+        # Right cell: controls and tip stacked vertically
+        # (QVBoxLayout, QHBoxLayout, QCheckBox are already imported at the top)
+        controls_and_tip = QVBoxLayout()
+        controls_row = QHBoxLayout()
         try:
-            from PySide6.QtWidgets import QCheckBox
             self.show_image_labels = False
             self.image_labels_toggle = QCheckBox("Show filenames")
             self.image_labels_toggle.setChecked(self.show_image_labels)
             self.image_labels_toggle.toggled.connect(self._toggle_image_labels)
-            image_banner.addWidget(self.image_labels_toggle)
+            controls_row.addWidget(self.image_labels_toggle)
         except Exception:
             self.show_image_labels = False
         self.play_image_audio_button = QPushButton(self.LABELS.get("play_audio", "Play Audio"))
         self.play_image_audio_button.clicked.connect(self._handle_play_image_audio)
         self.play_image_audio_button.setEnabled(False)
-        image_banner.addWidget(self.play_image_audio_button)
+        controls_row.addWidget(self.play_image_audio_button)
         self.stop_image_audio_button = QPushButton(self.LABELS.get("stop_audio", "Stop Audio"))
         self.stop_image_audio_button.clicked.connect(self._handle_stop_image_audio)
         self.stop_image_audio_button.setEnabled(False)
-        image_banner.addWidget(self.stop_image_audio_button)
+        controls_row.addWidget(self.stop_image_audio_button)
         self.record_image_button = QPushButton(self.LABELS.get("record_audio", "Record Audio"))
         self.record_image_button.clicked.connect(self._handle_record_image)
         self.record_image_button.setEnabled(False)
-        image_banner.addWidget(self.record_image_button)
-        # New: Stop Recording button for Images tab
+        controls_row.addWidget(self.record_image_button)
         self.stop_image_record_button = QPushButton(self.LABELS.get("stop_recording", "Stop Recording"))
         self.stop_image_record_button.clicked.connect(self._handle_stop_image_record)
         self.stop_image_record_button.setEnabled(False)
-        image_banner.addWidget(self.stop_image_record_button)
-        image_banner.addStretch(1)
+        controls_row.addWidget(self.stop_image_record_button)
+        controls_row.addStretch(1)
+        controls_and_tip.addLayout(controls_row)
+        # Tip below controls
+        self.image_fullscreen_tip = QLabel(
+            "<b>Tip:</b> Double-click an image to open fullscreen. Use <b>+</b> and <b>-</b> to zoom in/out in fullscreen view.")
+        self.image_fullscreen_tip.setStyleSheet("color: black; font-size: 13px; margin: 4px 0 8px 0;")
+        self.image_fullscreen_tip.setWordWrap(True)
+        controls_and_tip.addWidget(self.image_fullscreen_tip)
+        image_banner.addLayout(controls_and_tip)
         images_layout.addLayout(image_banner)
         # Grid of thumbnails
         self.images_list = QListWidget()
@@ -861,6 +876,16 @@ class VideoAnnotationApp(QMainWindow):
         right_panel.addTab(images_tab, self.LABELS.get("images_tab_title", "Images"))
         splitter.addWidget(right_panel)
         splitter.setSizes([400, 1000])
+        # Connect tab change to enable/disable video_listbox
+        def _on_tab_changed(idx):
+            # 0 = Videos, 1 = Images (assume order)
+            if idx == 1:
+                self.video_listbox.setEnabled(False)
+            else:
+                self.video_listbox.setEnabled(True)
+        self.right_panel.currentChanged.connect(_on_tab_changed)
+        # Set initial state
+        _on_tab_changed(self.right_panel.currentIndex())
         # Keep images grid sizing in sync and defer initial compute
         try:
             self.images_list.installEventFilter(self)
