@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QListWidget, QListWidgetItem, QLabel, QTextEdit, QMessageBox,
     QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle, QSizePolicy,
-    QListView, QStyledItemDelegate, QApplication
+    QListView, QStyledItemDelegate, QApplication, QCheckBox
 )
 from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize, QRect, QPoint
 from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence, QImageReader, QPen, QColor
@@ -805,14 +805,13 @@ class VideoAnnotationApp(QMainWindow):
         # (QVBoxLayout, QHBoxLayout, QCheckBox are already imported at the top)
         controls_and_tip = QVBoxLayout()
         controls_row = QHBoxLayout()
-        try:
-            self.show_image_labels = False
-            self.image_labels_toggle = QCheckBox("Show filenames")
-            self.image_labels_toggle.setChecked(self.show_image_labels)
-            self.image_labels_toggle.toggled.connect(self._toggle_image_labels)
-            controls_row.addWidget(self.image_labels_toggle)
-        except Exception:
-            self.show_image_labels = False
+        # Always show Show filenames toggle above controls
+        self.show_image_labels = False
+        self.image_labels_toggle = QCheckBox("Show filenames")
+        self.image_labels_toggle.setChecked(self.show_image_labels)
+        self.image_labels_toggle.toggled.connect(self._toggle_image_labels)
+        controls_and_tip.addWidget(self.image_labels_toggle)
+        # Controls row (audio/record buttons)
         self.play_image_audio_button = QPushButton(self.LABELS.get("play_audio", "Play Audio"))
         self.play_image_audio_button.clicked.connect(self._handle_play_image_audio)
         self.play_image_audio_button.setEnabled(False)
