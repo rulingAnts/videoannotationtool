@@ -24,7 +24,7 @@ from vat.audio.playback import AudioPlaybackWorker
 from vat.audio.recording import AudioRecordingWorker
 from vat.audio.joiner import JoinWavsWorker
 from vat.utils.resources import resource_path
-from vat.ui.fullscreen import FullscreenVideoViewer
+from vat.ui.fullscreen import FullscreenVideoViewer, FullscreenImageViewer
 from vat.utils.fs_access import (
     FolderAccessManager,
     FolderAccessError,
@@ -506,6 +506,8 @@ class VideoAnnotationApp(QMainWindow):
         self.join_thread = None
         self.join_worker = None
         self._suppress_item_changed = False
+        # Cache for full-resolution image pixmaps (used by thumbnails and fullscreen)
+        self._image_pixmap_cache = {}
         # Fullscreen viewer state
         self._fullscreen_viewer = None
         self.fullscreen_zoom = None
@@ -871,6 +873,15 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             pass
         self.images_list.itemDoubleClicked.connect(self._handle_open_fullscreen_image)
+        # Warm the image cache for items that become visible as the user
+        # scrolls the grid, so fullscreen opens don't pay a cold-start
+        # decoding cost.
+        try:
+            vsb = self.images_list.verticalScrollBar()
+            if vsb is not None:
+                vsb.valueChanged.connect(lambda *_: self._preload_visible_images())
+        except Exception:
+            pass
         images_layout.addWidget(self.images_list)
         right_panel.addTab(images_tab, self.LABELS.get("images_tab_title", "Images"))
         splitter.addWidget(right_panel)
@@ -905,6 +916,12 @@ class VideoAnnotationApp(QMainWindow):
                 self._on_images_updated(self.fs.current_folder, imgs)
             except Exception:
                 pass
+        # After the first population/layout pass, warm the cache for the
+        # thumbnails that are actually visible.
+        try:
+            QTimer.singleShot(0, self._preload_visible_images)
+        except Exception:
+            pass
     def change_language(self, selected_name):
         for key, labels in LABELS_ALL.items():
             if labels["language_name"] == selected_name:
@@ -1988,25 +2005,20 @@ class VideoAnnotationApp(QMainWindow):
                 if not (self.fs.current_folder and name):
                     return
                 path = os.path.join(self.fs.current_folder, name)
-            # Validate image path and readability before opening viewer
-            if not (os.path.isfile(path)):
-                try:
-                    logging.warning(f"UI._open_fullscreen_image: invalid path={path}")
-                except Exception:
-                    pass
-                return
-            try:
-                reader = QImageReader(path)
-                if not reader.canRead():
-                    try:
-                        logging.warning(f"UI._open_fullscreen_image: cannot read image={path}")
-                    except Exception:
-                        pass
-                    return
-            except Exception:
-                return
 
-            viewer = FullscreenImageViewer(path)
+            # Use any cached pixmap if available so the fullscreen viewer
+            # can display immediately on first open.
+            cached_pix = None
+            try:
+                cache = getattr(self, "_image_pixmap_cache", None)
+                if cache:
+                    cached_pix = cache.get(path)
+            except Exception:
+                cached_pix = None
+
+            # Always attempt to open the fullscreen viewer; any image-loading
+            # issues are handled defensively inside FullscreenImageViewer.
+            viewer = FullscreenImageViewer(path, pixmap=cached_pix)
             self._fullscreen_viewer = viewer
             viewer.showFullScreen()
             try:
@@ -2042,6 +2054,72 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             pass
 
+    def _load_image_pixmap(self, path: str | None):
+        """Load or retrieve a cached full-resolution pixmap for an image.
+
+        Uses QImageReader first for robustness, then falls back to
+        QPixmap. Successful loads are stored in self._image_pixmap_cache
+        so later fullscreen opens do not pay a first-decode penalty.
+        """
+        if not path:
+            return None
+        try:
+            cache = getattr(self, "_image_pixmap_cache", None)
+            if cache is None:
+                self._image_pixmap_cache = {}
+                cache = self._image_pixmap_cache
+        except Exception:
+            return None
+        pix = cache.get(path)
+        if pix is not None and not pix.isNull():
+            return pix
+        try:
+            pix = QPixmap(path)
+            if pix.isNull():
+                try:
+                    reader = QImageReader(path)
+                    img = reader.read()
+                    if img and not img.isNull():
+                        pix = QPixmap.fromImage(img)
+                except Exception:
+                    pass
+            if pix is None or pix.isNull():
+                return None
+            cache[path] = pix
+            return pix
+        except Exception:
+            return None
+
+    def _preload_visible_images(self):
+        """Warm the pixmap cache for all items currently visible in the grid."""
+        try:
+            if getattr(self, 'images_list', None) is None:
+                return
+            viewport = self.images_list.viewport()
+            if viewport is None:
+                return
+            vp_rect = viewport.rect()
+            for i in range(self.images_list.count()):
+                item = self.images_list.item(i)
+                if item is None:
+                    continue
+                rect = self.images_list.visualItemRect(item)
+                if (not rect.isValid()) or (not rect.intersects(vp_rect)):
+                    continue
+                path = None
+                try:
+                    path = item.data(Qt.UserRole)
+                except Exception:
+                    path = None
+                if not path:
+                    name = item.text()
+                    if self.fs.current_folder and name:
+                        path = os.path.join(self.fs.current_folder, name)
+                if path:
+                    self._load_image_pixmap(path)
+        except Exception:
+            pass
+
     def _populate_images_list(self, files: list):
         try:
             if getattr(self, 'images_list', None) is None:
@@ -2062,16 +2140,8 @@ class VideoAnnotationApp(QMainWindow):
                 except Exception:
                     pass
                 try:
-                    pix = QPixmap(full)
-                    if pix.isNull():
-                        try:
-                            reader = QImageReader(full)
-                            img = reader.read()
-                            if img and not img.isNull():
-                                pix = QPixmap.fromImage(img)
-                        except Exception:
-                            pass
-                    if not pix.isNull():
+                    pix = self._load_image_pixmap(full)
+                    if pix is not None and not pix.isNull():
                         thumb = pix.scaled(icon_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
                         item.setIcon(QIcon(thumb))
                     else:
@@ -2091,6 +2161,11 @@ class VideoAnnotationApp(QMainWindow):
             # Avoid manual select handlers here; currentItemChanged will fire
         except Exception as e:
             logging.warning(f"Failed to refresh images from FS manager: {e}")
+        # Warm the cache for the thumbnails that are currently visible.
+        try:
+            self._preload_visible_images()
+        except Exception:
+            pass
 
     def _recompute_image_grid_sizes(self):
         if getattr(self, 'images_list', None) is None:
@@ -2178,27 +2253,10 @@ class VideoAnnotationApp(QMainWindow):
             except Exception:
                 pass
             try:
-                pix = QPixmap(path)
-                if pix.isNull():
-                    try:
-                        reader = QImageReader(path)
-                        img = reader.read()
-                        if img and not img.isNull():
-                            pix = QPixmap.fromImage(img)
-                        else:
-                            try:
-                                logging.debug(f"UI.on_image_select: QImageReader failed for '{os.path.basename(path)}' format={reader.format().data().decode(errors='ignore') if reader.format() else 'unknown'} err='{reader.errorString()}'")
-                            except Exception:
-                                pass
-                    except Exception:
-                        pass
-                if not pix.isNull():
+                pix = self._load_image_pixmap(path)
+                if pix is not None and not pix.isNull():
                     self.image_thumb.setPixmap(pix.scaled(self.image_thumb.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
                 else:
-                    try:
-                        logging.debug(f"UI.on_image_select: QPixmap load failed for '{os.path.basename(path)}' (thumb cleared)")
-                    except Exception:
-                        pass
                     self.image_thumb.clear()
             except Exception:
                 pass
@@ -2447,57 +2505,3 @@ class ImageGridDelegate(QStyledItemDelegate):
                 painter.restore()
             except Exception:
                 pass
-
-class FullscreenImageViewer(QWidget):
-    scale_changed = Signal(float)
-    def __init__(self, image_path: str, initial_scale: float | None = None):
-        super().__init__(None)
-        self._path = image_path
-        self._scale = float(initial_scale) if isinstance(initial_scale, (int, float)) and initial_scale > 0 else 1.0
-        self._label = QLabel(self)
-        self._label.setAlignment(Qt.AlignCenter)
-        self._pix = QPixmap(image_path)
-        self._update_pix()
-    def _update_pix(self):
-        if self._pix.isNull():
-            self._label.setText("Cannot open image.")
-            return
-        size = self.size()
-        w = max(1, int(size.width() * self._scale))
-        h = max(1, int(size.height() * self._scale))
-        scaled = self._pix.scaled(w, h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        self._label.setPixmap(scaled)
-        self._label.resize(self.size())
-    def resizeEvent(self, event):
-        try:
-            self._label.resize(self.size())
-            self._update_pix()
-        except Exception:
-            pass
-        try:
-            return super().resizeEvent(event)
-        except Exception:
-            pass
-    def keyPressEvent(self, event):
-        try:
-            key = event.key()
-            mods = event.modifiers()
-            if key in (Qt.Key_Escape, Qt.Key_Q):
-                self.close()
-                event.accept()
-                return
-            if key == Qt.Key_Plus or (key == Qt.Key_Equal and (mods & Qt.ShiftModifier)):
-                self._scale = min(4.0, self._scale * 1.1)
-                self.scale_changed.emit(self._scale)
-                self._update_pix()
-                event.accept()
-                return
-            if key == Qt.Key_Minus:
-                self._scale = max(0.25, self._scale / 1.1)
-                self.scale_changed.emit(self._scale)
-                self._update_pix()
-                event.accept()
-                return
-        except Exception:
-            pass
-        return super().keyPressEvent(event)
