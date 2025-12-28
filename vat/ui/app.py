@@ -600,6 +600,7 @@ class VideoAnnotationApp(QMainWindow):
         left_layout = QVBoxLayout(left_panel)
         try:
             left_layout.setContentsMargins(0, 0, 0, 0)
+            left_layout.setSpacing(4)
         except Exception:
             pass
         self.select_button = QPushButton(self.LABELS["select_folder"])
