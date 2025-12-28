@@ -2,14 +2,14 @@
 from PyInstaller.utils.hooks import collect_all
 
 datas = []
-binaries = [('C:\\Users\\Seth\\Windows File System Folder\\GIT\\videoannotationtool\\videoannotationtool\\assets\\ffmpeg-bin\\windows\\ffmpeg.exe', 'ffmpeg\\bin'), ('C:\\Users\\Seth\\Windows File System Folder\\GIT\\videoannotationtool\\videoannotationtool\\assets\\ffmpeg-bin\\windows\\ffprobe.exe', 'ffmpeg\\bin')]
+binaries = [('C:\\Users\\Seth\\Windows File System Folder\\GIT\\videoannotationtool\\assets\\ffmpeg-bin\\windows\\ffmpeg.exe', 'ffmpeg\\bin'), ('C:\\Users\\Seth\\Windows File System Folder\\GIT\\videoannotationtool\\assets\\ffmpeg-bin\\windows\\ffprobe.exe', 'ffmpeg\\bin')]
 hiddenimports = ['PySide6.QtCore', 'PySide6.QtGui', 'PySide6.QtWidgets']
 tmp_ret = collect_all('PySide6')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
-    ['C:\\Users\\Seth\\Windows File System Folder\\GIT\\videoannotationtool\\videoannotationtool\\videoannotation.py'],
+    ['C:\\Users\\Seth\\Windows File System Folder\\GIT\\videoannotationtool\\videoannotation.py'],
     pathex=[],
     binaries=binaries,
     datas=datas,
@@ -39,7 +39,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['C:\\Users\\Seth\\Windows File System Folder\\GIT\\videoannotationtool\\videoannotationtool\\assets\\icon.ico'],
+    icon=['C:\\Users\\Seth\\Windows File System Folder\\GIT\\videoannotationtool\\assets\\icon.ico'],
 )
 coll = COLLECT(
     exe,

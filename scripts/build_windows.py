@@ -104,7 +104,8 @@ def ensure_icon():
 
 
 def build_with_pyinstaller(name: str, onefile: bool, windowed: bool, clean: bool, extra_args: list[str] | None = None):
-    cmd = ['pyinstaller']
+    # Use python -m PyInstaller to avoid PATH issues
+    cmd = [sys.executable, '-m', 'PyInstaller']
     if clean:
         cmd.append('--clean')
     cmd += ['--name', name]
