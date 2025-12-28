@@ -504,8 +504,8 @@ class VideoAnnotationApp(QMainWindow):
         self.load_settings()
         self.init_ui()
         self.setWindowTitle(self.LABELS["app_title"])
-        # Slightly reduced default window height
-        self.resize(1400, 720)
+        # Slightly reduced default window size (width and height)
+        self.resize(1120, 680)
         # Global shortcuts: work regardless of focus
         try:
             self._shortcut_log_ctrl = QShortcut(QKeySequence("Ctrl+Shift+L"), self)
