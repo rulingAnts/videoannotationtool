@@ -18,10 +18,10 @@ Var AllUsers
 !define APPNAME "Video Annotation Tool"
 !define COMPANY "Seth Johnston"
 
-VIProductVersion "2.0.0.0"
+VIProductVersion "2.0.1.0"
 VIAddVersionKey "ProductName" "${APPNAME}"
-VIAddVersionKey "FileVersion" "2.0.0"
-VIAddVersionKey "ProductVersion" "2.0.0"
+VIAddVersionKey "FileVersion" "2.0.1"
+VIAddVersionKey "ProductVersion" "2.0.1"
 VIAddVersionKey "CompanyName" "${COMPANY}"
 VIAddVersionKey "LegalCopyright" "Copyright (C) 2025 ${COMPANY}"
 VIAddVersionKey "FileDescription" "Video Annotation Tool Installer"
