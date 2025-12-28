@@ -3,8 +3,13 @@
 
 !include "nsDialogs.nsh"
 
+# Default to per-user
+!define APPNAME "Video Annotation Tool"
+!define COMPANY "Seth Johnston"
+!define VERSION "2.0.1"
+
 Name "Video Annotation Tool"
-OutFile "VideoAnnotationToolSetup.exe"
+OutFile "Video Annotation Tool Setup ${VERSION}.exe"
 
 # Allow user to choose install scope
 InstallDirRegKey HKCU "Software\VideoAnnotationTool" "Install_Dir"
@@ -13,15 +18,10 @@ InstallDir "$LocalAppData\Programs\Video Annotation Tool"
 # Variables for scope
 Var AllUsers
 
-
-# Default to per-user
-!define APPNAME "Video Annotation Tool"
-!define COMPANY "Seth Johnston"
-
-VIProductVersion "2.0.1.0"
+VIProductVersion "${VERSION}"
 VIAddVersionKey "ProductName" "${APPNAME}"
-VIAddVersionKey "FileVersion" "2.0.1"
-VIAddVersionKey "ProductVersion" "2.0.1"
+VIAddVersionKey "FileVersion" "${VERSION}"
+VIAddVersionKey "ProductVersion" "${VERSION}"
 VIAddVersionKey "CompanyName" "${COMPANY}"
 VIAddVersionKey "LegalCopyright" "Copyright (C) 2025 ${COMPANY}"
 VIAddVersionKey "FileDescription" "Video Annotation Tool Installer"
@@ -67,7 +67,7 @@ Section "Install"
     SetShellVarContext current
     SetOutPath "$LocalAppData\Programs\${APPNAME}"
     WriteRegStr HKCU "Software\${APPNAME}" "Install_Dir" "$LocalAppData\Programs\${APPNAME}"
-    File /r "..\dist\Video Annotation Tool.exe"
+    File "..\dist\Video Annotation Tool.exe"
     ; Write uninstaller
     WriteUninstaller "$INSTDIR\Uninstall.exe"
     ; Start Menu shortcuts
