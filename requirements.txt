@@ -5,3 +5,4 @@ PyAudio
 numpy
 pydub
 PySide6
+PyYAML

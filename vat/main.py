@@ -1,5 +1,6 @@
 import sys
 import logging
+from logging.handlers import RotatingFileHandler
 import argparse
 import os
 from PySide6.QtWidgets import QApplication
@@ -21,14 +22,36 @@ def main():
     except Exception:
         pass
     log_file_path = args.log_file or os.path.join(default_log_dir, "app.log")
-    handlers = [logging.FileHandler(log_file_path)]
+    class YamlFormatter(logging.Formatter):
+        def format(self, record: logging.LogRecord) -> str:
+            # ISO timestamp
+            ts = self.formatTime(record, datefmt="%Y-%m-%dT%H:%M:%S%z")
+            def esc(s: str) -> str:
+                try:
+                    s = str(s)
+                except Exception:
+                    s = ""
+                # escape single quotes for YAML single-quoted scalars
+                return s.replace("'", "''")
+            msg = esc(record.getMessage())
+            name = esc(record.name)
+            module = esc(record.module)
+            func = esc(record.funcName)
+            level = esc(record.levelname)
+            line = record.lineno if isinstance(record.lineno, int) else 0
+            # inline YAML mapping to keep one line per entry
+            return (
+                f"{{ts: '{ts}', level: '{level}', logger: '{name}', module: '{module}', func: '{func}', line: {line}, msg: '{msg}'}}"
+            )
+
+    file_handler = RotatingFileHandler(log_file_path, maxBytes=1024 * 1024, backupCount=3, encoding='utf-8')
+    file_handler.setFormatter(YamlFormatter())
+    handlers = [file_handler]
     if args.debug:
-        handlers.append(logging.StreamHandler(sys.stdout))
-    logging.basicConfig(
-        level=log_level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=handlers
-    )
+        stream_handler = logging.StreamHandler(sys.stdout)
+        stream_handler.setFormatter(YamlFormatter())
+        handlers.append(stream_handler)
+    logging.basicConfig(level=log_level, handlers=handlers)
     logging.info("Starting Video Annotation Tool (PySide6 version)")
     configure_opencv_ffmpeg()
     configure_pydub_ffmpeg()
