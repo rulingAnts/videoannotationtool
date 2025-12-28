@@ -488,7 +488,6 @@ class VideoAnnotationApp(QMainWindow):
         self.LABELS = LABELS_ALL[self.language]
         # Unified file-system access
         self.fs = FolderAccessManager()
-        self.folder_path = None  # deprecated; kept only for transitional compatibility
         self.video_files = []
         self.current_video = None
         self.last_video_name = None
@@ -565,8 +564,6 @@ class VideoAnnotationApp(QMainWindow):
     def _on_join_error(self, msg: str):
         self.ui_error.emit(self.LABELS["error_title"], f"An error occurred while joining files:\n{msg}")
     def _on_folder_changed(self, path: str):
-        # Keep legacy attribute in sync for any remaining references
-        self.folder_path = path or None
         try:
             if getattr(self, '_ui_ready', False):
                 self.update_folder_display()
