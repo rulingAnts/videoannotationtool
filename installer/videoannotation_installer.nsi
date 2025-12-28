@@ -18,7 +18,7 @@ InstallDir "$LocalAppData\Programs\Video Annotation Tool"
 # Variables for scope
 Var AllUsers
 
-VIProductVersion "${VERSION}"
+VIProductVersion "${VERSION}.0"
 VIAddVersionKey "ProductName" "${APPNAME}"
 VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "ProductVersion" "${VERSION}"
