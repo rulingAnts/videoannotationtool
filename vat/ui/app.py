@@ -716,25 +716,15 @@ class VideoAnnotationApp(QMainWindow):
         self.play_video_button.setEnabled(False)
         video_controls_layout.addWidget(self.play_video_button)
         self.stop_video_button = QPushButton(self.LABELS["stop_video"])
-        self.stop_video_button.clicked.connect(self.stop_video)
-        self.stop_video_button.setEnabled(False)
-        video_controls_layout.addWidget(self.stop_video_button)
-        self.next_button = QToolButton()
-        try:
-            self.next_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipForward))
-        except Exception:
-            self.next_button.setText("▶")
-        self.next_button.setToolTip("Next video")
-        self.next_button.clicked.connect(self.go_next)
-        video_controls_layout.addWidget(self.next_button)
-        videos_layout.addLayout(video_controls_layout)
         audio_controls_layout = QHBoxLayout()
         try:
             audio_controls_layout.setSpacing(4)
         except Exception:
             pass
-        # Center the audio controls horizontally within their area
         audio_controls_layout.addStretch(1)
+        video_controls_layout.addWidget(self.next_button)
+        videos_layout.addLayout(video_controls_layout)
+        audio_controls_layout = QHBoxLayout()
         self.play_audio_button = QPushButton(self.LABELS["play_audio"])
         self.play_audio_button.clicked.connect(self.play_audio)
         self.play_audio_button.setEnabled(False)
