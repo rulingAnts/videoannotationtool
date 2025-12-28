@@ -546,6 +546,8 @@ class VideoAnnotationApp(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
+        main_layout.setSpacing(0)
+        main_layout.setContentsMargins(0, 0, 0, 0)
         try:
             self._check_icon = self.style().standardIcon(QStyle.SP_DialogApplyButton)
         except Exception:
