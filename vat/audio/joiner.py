@@ -2,16 +2,19 @@ import os
 import numpy as np
 from pydub import AudioSegment
 from PySide6.QtCore import QObject, Signal
+from typing import Optional
+from vat.utils.fs_access import FolderAccessManager
 
 class JoinWavsWorker(QObject):
     finished = Signal()
     error = Signal(str)
     success = Signal(str)
 
-    def __init__(self, folder_path: str, output_file: str):
+    def __init__(self, folder_path: Optional[str] = None, output_file: str = "", fs: Optional[FolderAccessManager] = None):
         super().__init__()
         self.folder_path = folder_path
         self.output_file = output_file
+        self.fs = fs
 
     def generate_click_sound_pydub(self, duration_ms: int, freq: int, rate: int):
         t = np.linspace(0, duration_ms / 1000, int(rate * duration_ms / 1000), endpoint=False)
@@ -28,7 +31,11 @@ class JoinWavsWorker(QObject):
 
     def run(self):
         try:
-            wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
+            if self.fs is not None:
+                wav_paths = self.fs.recordings_in()
+                wav_files = [os.path.basename(p) for p in wav_paths]
+            else:
+                wav_files = [f for f in os.listdir(self.folder_path or "") if f.lower().endswith('.wav') and not f.startswith('.')]
             wav_files.sort()
             std_rate = 44100
             std_channels = 1
@@ -39,7 +46,7 @@ class JoinWavsWorker(QObject):
             combined_audio = AudioSegment.empty()
             combined_audio = combined_audio.set_frame_rate(std_rate).set_channels(std_channels).set_sample_width(std_sample_width)
             for i, file in enumerate(wav_files):
-                file_path = os.path.join(self.folder_path, file)
+                file_path = os.path.join(self.fs.current_folder if self.fs else (self.folder_path or ""), file)
                 audio = AudioSegment.from_file(file_path, format="wav")
                 if audio.frame_rate != std_rate:
                     audio = audio.set_frame_rate(std_rate)

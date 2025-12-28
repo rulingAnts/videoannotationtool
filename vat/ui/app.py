@@ -24,6 +24,12 @@ from vat.audio.recording import AudioRecordingWorker
 from vat.audio.joiner import JoinWavsWorker
 from vat.utils.resources import resource_path
 from vat.ui.fullscreen import FullscreenVideoViewer
+from vat.utils.fs_access import (
+    FolderAccessManager,
+    FolderAccessError,
+    FolderPermissionError,
+    FolderNotFoundError,
+)
 
 # UI labels for easy translation, with language names in their own language
 LABELS_ALL = {
@@ -480,7 +486,9 @@ class VideoAnnotationApp(QMainWindow):
         super().__init__()
         self.language = "English"
         self.LABELS = LABELS_ALL[self.language]
-        self.folder_path = None
+        # Unified file-system access
+        self.fs = FolderAccessManager()
+        self.folder_path = None  # kept for backward compatibility during transition
         self.video_files = []
         self.current_video = None
         self.last_video_name = None
@@ -501,6 +509,13 @@ class VideoAnnotationApp(QMainWindow):
         # Fullscreen viewer state
         self._fullscreen_viewer = None
         self.fullscreen_zoom = None
+        self._ui_ready = False
+        # Connect FS manager signals
+        try:
+            self.fs.folderChanged.connect(self._on_folder_changed)
+            self.fs.videosUpdated.connect(self._on_videos_updated)
+        except Exception:
+            pass
         self.load_settings()
         self.init_ui()
         self.setWindowTitle(self.LABELS["app_title"])
@@ -530,7 +545,14 @@ class VideoAnnotationApp(QMainWindow):
             self.open_ocenaudio_button.setEnabled(True)
             if getattr(self, 'edit_metadata_btn', None):
                 self.edit_metadata_btn.setEnabled(True)
-            self.load_video_files()
+            # Seed FS and populate via signal
+            try:
+                if self.fs.set_folder(self.folder_path):
+                    pass
+                else:
+                    self.load_video_files()
+            except Exception:
+                self.load_video_files()
             # Do not auto-open metadata; use the button
     def _show_info(self, title, text):
         QMessageBox.information(self, title, text)
@@ -544,6 +566,36 @@ class VideoAnnotationApp(QMainWindow):
         self.ui_info.emit(self.LABELS["success"], f"{self.LABELS['wavs_joined']}\n{output_file}")
     def _on_join_error(self, msg: str):
         self.ui_error.emit(self.LABELS["error_title"], f"An error occurred while joining files:\n{msg}")
+    def _on_folder_changed(self, path: str):
+        # Keep legacy attribute in sync for any remaining references
+        self.folder_path = path or None
+        try:
+            if getattr(self, '_ui_ready', False):
+                self.update_folder_display()
+        except Exception:
+            pass
+    def _on_videos_updated(self, files: list):
+        # Populate listbox and internal state from FS manager update
+        try:
+            self.video_files = list(files)
+            if not getattr(self, '_ui_ready', False) or getattr(self, 'video_listbox', None) is None:
+                return
+            self.video_listbox.clear()
+            basenames = [os.path.basename(vp) for vp in self.video_files]
+            for name in basenames:
+                item = QListWidgetItem(name)
+                wav_exists = os.path.exists(self.fs.wav_path_for(name))
+                item.setIcon(self._check_icon if wav_exists else self._empty_icon)
+                self.video_listbox.addItem(item)
+            if self.last_video_name and self.last_video_name in basenames:
+                idx = basenames.index(self.last_video_name)
+                self.video_listbox.setCurrentRow(idx)
+            if not self.video_files:
+                QMessageBox.information(self, self.LABELS["no_videos_found"], f"{self.LABELS['no_videos_found']} {self.fs.current_folder}")
+        except Exception as e:
+            logging.warning(f"Failed to refresh videos from FS manager: {e}")
+        self.update_media_controls()
+        self.update_video_file_checks()
     def init_ui(self):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -707,6 +759,8 @@ class VideoAnnotationApp(QMainWindow):
         right_panel.addTab(videos_tab, self.LABELS["videos_tab_title"])
         splitter.addWidget(right_panel)
         splitter.setSizes([400, 1000])
+        # Mark UI as ready for FS signal handlers
+        self._ui_ready = True
     def change_language(self, selected_name):
         for key, labels in LABELS_ALL.items():
             if labels["language_name"] == selected_name:
@@ -736,10 +790,11 @@ class VideoAnnotationApp(QMainWindow):
     def update_folder_display(self):
         if getattr(self, 'folder_display_label', None) is None:
             return
-        if self.folder_path:
-            base = os.path.basename(self.folder_path.rstrip(os.sep)) or self.folder_path
+        folder = self.fs.current_folder
+        if folder:
+            base = os.path.basename(folder.rstrip(os.sep)) or folder
             self.folder_display_label.setText(base)
-            self.folder_display_label.setToolTip(self.folder_path)
+            self.folder_display_label.setToolTip(folder)
         else:
             self.folder_display_label.setText(self.LABELS["no_folder_selected"])
             self.folder_display_label.setToolTip("")
@@ -755,7 +810,10 @@ class VideoAnnotationApp(QMainWindow):
                         self.LABELS = LABELS_ALL[self.language]
                     last_folder = settings.get('last_folder')
                     if last_folder and os.path.isdir(last_folder):
-                        self.folder_path = last_folder
+                        try:
+                            self.fs.set_folder(last_folder)
+                        except Exception:
+                            self.folder_path = last_folder
                     last_video = settings.get('last_video')
                     if last_video:
                         self.last_video_name = last_video
@@ -772,7 +830,7 @@ class VideoAnnotationApp(QMainWindow):
                 json.dump({
                     'ocenaudio_path': self.ocenaudio_path,
                     'language': self.language,
-                    'last_folder': self.folder_path,
+                    'last_folder': self.fs.current_folder,
                     'last_video': self.current_video,
                     # Persist the last used fullscreen zoom if set
                     'fullscreen_zoom': self.fullscreen_zoom if isinstance(self.fullscreen_zoom, (int, float)) else None,
@@ -780,22 +838,23 @@ class VideoAnnotationApp(QMainWindow):
         except Exception as e:
             logging.warning(f"Failed to save settings: {e}")
     def select_folder(self):
-        initial_dir = self.folder_path or os.path.expanduser("~")
+        initial_dir = self.fs.current_folder or os.path.expanduser("~")
         folder = QFileDialog.getExistingDirectory(self, self.LABELS["select_folder_dialog"], initial_dir)
         if folder:
-            self.folder_path = folder
-            self.update_folder_display()
+            # Set via FS manager for unified state and signal refresh
+            if not self.fs.set_folder(folder):
+                QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["permission_denied_title"])
+                return
             if sys.platform == "win32":
-                hidden_files = [f for f in os.listdir(self.folder_path) if f.startswith('.')]
+                hidden_files = [f for f in os.listdir(self.fs.current_folder) if f.startswith('.')]
                 errors = []
                 for f in hidden_files:
                     try:
-                        os.remove(os.path.join(self.folder_path, f))
+                        os.remove(os.path.join(self.fs.current_folder, f))
                     except Exception as e:
                         errors.append(f"Delete {f}: {e}")
                 if errors:
                     QMessageBox.warning(self, self.LABELS["cleanup_errors_title"], "Some hidden files could not be deleted:\n" + "\n".join(errors))
-            self.load_video_files()
             self.export_wavs_button.setEnabled(True)
             self.clear_wavs_button.setEnabled(True)
             self.import_wavs_button.setEnabled(True)
@@ -805,33 +864,32 @@ class VideoAnnotationApp(QMainWindow):
                 self.edit_metadata_btn.setEnabled(True)
             self.save_settings()
     def load_video_files(self):
+        # Manual refresh using FS manager (in case signals are not available)
         self.video_listbox.clear()
         self.video_files = []
-        extensions = ('.mpg', '.mpeg', '.mp4', '.avi', '.mkv', '.mov')
-        if not self.folder_path:
+        if not self.fs.current_folder:
             QMessageBox.information(self, self.LABELS["no_folder_selected"], self.LABELS["no_folder_selected"])
             return
         try:
-            for filename in os.listdir(self.folder_path):
-                full_path = os.path.join(self.folder_path, filename)
-                if os.path.isfile(full_path) and filename.lower().endswith(extensions):
-                    self.video_files.append(full_path)
+            self.video_files = self.fs.list_videos()
             self.video_files.sort()
             basenames = [os.path.basename(vp) for vp in self.video_files]
             for name in basenames:
                 item = QListWidgetItem(name)
-                wav_exists = os.path.exists(os.path.join(self.folder_path, os.path.splitext(name)[0] + '.wav'))
+                wav_exists = os.path.exists(self.fs.wav_path_for(name))
                 item.setIcon(self._check_icon if wav_exists else self._empty_icon)
                 self.video_listbox.addItem(item)
             if self.last_video_name and self.last_video_name in basenames:
                 idx = basenames.index(self.last_video_name)
                 self.video_listbox.setCurrentRow(idx)
             if not self.video_files:
-                QMessageBox.information(self, self.LABELS["no_videos_found"], f"{self.LABELS['no_videos_found']} {self.folder_path}")
-        except PermissionError:
-            QMessageBox.critical(self, self.LABELS["permission_denied_title"], f"You do not have permission to access the folder: {self.folder_path}")
-        except FileNotFoundError:
-            QMessageBox.critical(self, self.LABELS["folder_not_found_title"], f"The selected folder no longer exists: {self.folder_path}")
+                QMessageBox.information(self, self.LABELS["no_videos_found"], f"{self.LABELS['no_videos_found']} {self.fs.current_folder}")
+        except FolderPermissionError:
+            QMessageBox.critical(self, self.LABELS["permission_denied_title"], f"You do not have permission to access the folder: {self.fs.current_folder}")
+        except FolderNotFoundError:
+            QMessageBox.critical(self, self.LABELS["folder_not_found_title"], f"The selected folder no longer exists: {self.fs.current_folder}")
+        except FolderAccessError as e:
+            QMessageBox.critical(self, self.LABELS["unexpected_error_title"], f"An unexpected error occurred: {e}")
         except Exception as e:
             QMessageBox.critical(self, self.LABELS["unexpected_error_title"], f"An unexpected error occurred: {e}")
         if not self.video_files:
@@ -839,14 +897,13 @@ class VideoAnnotationApp(QMainWindow):
         self.update_media_controls()
         self.update_video_file_checks()
     def open_metadata_dialog(self):
-        if not self.folder_path:
+        if not self.fs.current_folder:
             return
         try:
             from PySide6.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QPushButton, QHBoxLayout
         except Exception:
             QMessageBox.critical(self, self.LABELS["error_title"], "Unable to open metadata editor.")
             return
-        metadata_path = os.path.join(self.folder_path, "metadata.txt")
         default_content = (
             "name: \n"
             "date: \n"
@@ -856,12 +913,8 @@ class VideoAnnotationApp(QMainWindow):
             "permissions for use given by speaker: \n"
         )
         try:
-            if not os.path.exists(metadata_path):
-                with open(metadata_path, "w") as f:
-                    f.write(default_content)
-            with open(metadata_path, "r") as f:
-                content = f.read()
-        except Exception as e:
+            content = self.fs.ensure_and_read_metadata(self.fs.current_folder, default_content)
+        except FolderAccessError as e:
             QMessageBox.critical(self, self.LABELS["error_title"], f"Failed to load metadata: {e}")
             return
         dlg = QDialog(self)
@@ -878,8 +931,7 @@ class VideoAnnotationApp(QMainWindow):
         layout.addLayout(btns)
         def _save_and_close():
             try:
-                with open(metadata_path, "w") as f:
-                    f.write(editor.toPlainText())
+                self.fs.write_metadata(editor.toPlainText())
                 QMessageBox.information(dlg, self.LABELS["saved"], self.LABELS["metadata_saved"])
                 dlg.accept()
             except Exception as e:
@@ -972,7 +1024,7 @@ class VideoAnnotationApp(QMainWindow):
             self.record_button.setEnabled(True)
             self.record_button.setText(self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
             self.update_recording_indicator()
-            wav_path = os.path.join(self.folder_path, os.path.splitext(self.current_video)[0] + '.wav')
+            wav_path = self.fs.wav_path_for(self.current_video)
             if os.path.exists(wav_path):
                 self.play_audio_button.setEnabled(True)
                 self.stop_audio_button.setEnabled(True)
@@ -1092,7 +1144,7 @@ class VideoAnnotationApp(QMainWindow):
         if not self.current_video:
             return
         self.stop_audio()
-        wav_path = os.path.join(self.folder_path, os.path.splitext(self.current_video)[0] + '.wav')
+        wav_path = self.fs.wav_path_for(self.current_video)
         if not os.path.exists(wav_path):
             return
         if not PYAUDIO_AVAILABLE:
@@ -1154,7 +1206,7 @@ class VideoAnnotationApp(QMainWindow):
                 pass
             self.update_video_file_checks()
         else:
-            wav_path = os.path.join(self.folder_path, os.path.splitext(self.current_video)[0] + '.wav')
+            wav_path = self.fs.wav_path_for(self.current_video)
             if os.path.exists(wav_path):
                 reply = QMessageBox.question(self, self.LABELS["overwrite"], 
                                             self.LABELS["overwrite_audio"],
@@ -1225,15 +1277,14 @@ class VideoAnnotationApp(QMainWindow):
         finally:
             super().closeEvent(event)
     def open_in_ocenaudio(self):
-        if not self.folder_path:
+        if not self.fs.current_folder:
             QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["no_folder_selected"]) 
             return
-        wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
-        if not wav_files:
+        file_paths = self.fs.recordings_in()
+        if not file_paths:
             QMessageBox.information(self, self.LABELS["no_files"], self.LABELS["no_wavs_found"]) 
             return
-        wav_files.sort()
-        file_paths = [os.path.join(self.folder_path, f) for f in wav_files]
+        file_paths.sort()
         if self.ocenaudio_path and os.path.exists(self.ocenaudio_path):
             command = [self.ocenaudio_path] + file_paths
         else:
@@ -1273,10 +1324,11 @@ class VideoAnnotationApp(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, self.LABELS["error_title"], f"{self.LABELS['ocenaudio_open_fail_prefix']}{e}")
     def export_wavs(self):
-        if not self.folder_path:
+        if not self.fs.current_folder:
             QMessageBox.critical(self, "Error", "No folder selected.")
             return
-        wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
+        wav_paths = self.fs.recordings_in()
+        wav_files = [os.path.basename(p) for p in wav_paths]
         export_dir = QFileDialog.getExistingDirectory(self, self.LABELS["export_select_folder_dialog"]) 
         if not export_dir:
             return
@@ -1300,15 +1352,16 @@ class VideoAnnotationApp(QMainWindow):
                 return
         errors = []
         for wav in wav_files:
-            src = os.path.join(self.folder_path, wav)
+            src = os.path.join(self.fs.current_folder, wav)
             dst = os.path.join(export_dir, wav)
             try:
                 shutil.copy2(src, dst)
             except Exception as e:
                 errors.append(f"{wav}: {e}")
-        metadata_src = os.path.join(self.folder_path, "metadata.txt")
         try:
-            shutil.copy2(metadata_src, metadata_dst)
+            content = self.fs.ensure_and_read_metadata(self.fs.current_folder, "")
+            with open(metadata_dst, "w") as f:
+                f.write(content if isinstance(content, str) else "")
         except Exception as e:
             errors.append(f"metadata.txt: {e}")
         if errors:
@@ -1316,10 +1369,11 @@ class VideoAnnotationApp(QMainWindow):
         else:
             QMessageBox.information(self, self.LABELS["export_wavs"], f"Exported {len(wav_files)} WAV files and metadata.txt to {export_dir}.")
     def clear_wavs(self):
-        if not self.folder_path:
+        if not self.fs.current_folder:
             QMessageBox.critical(self, "Error", "No folder selected.")
             return
-        wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
+        wav_paths = self.fs.recordings_in()
+        wav_files = [os.path.basename(p) for p in wav_paths]
         if not wav_files:
             QMessageBox.information(self, self.LABELS["clear_wavs"], self.LABELS["no_wavs_found"]) 
             return
@@ -1334,10 +1388,9 @@ class VideoAnnotationApp(QMainWindow):
         errors = []
         for wav in wav_files:
             try:
-                os.remove(os.path.join(self.folder_path, wav))
+                os.remove(os.path.join(self.fs.current_folder, wav))
             except Exception as e:
                 errors.append(f"{wav}: {e}")
-        metadata_path = os.path.join(self.folder_path, "metadata.txt")
         default_content = (
             "name: \n"
             "date: \n"
@@ -1347,8 +1400,7 @@ class VideoAnnotationApp(QMainWindow):
             "permissions for use given by speaker: \n"
         )
         try:
-            with open(metadata_path, "w") as f:
-                f.write(default_content)
+            self.fs.write_metadata(default_content)
         except Exception as e:
             errors.append(f"metadata.txt reset: {e}")
         if errors:
@@ -1358,7 +1410,7 @@ class VideoAnnotationApp(QMainWindow):
         self.load_video_files()
         self.update_video_file_checks()
     def import_wavs(self):
-        if not self.folder_path:
+        if not self.fs.current_folder:
             QMessageBox.critical(self, "Error", "No folder selected.")
             return
         reply = QMessageBox.question(
@@ -1369,7 +1421,8 @@ class VideoAnnotationApp(QMainWindow):
         )
         if reply == QMessageBox.No:
             return
-        wav_files = [f for f in os.listdir(self.folder_path) if f.lower().endswith('.wav') and not f.startswith('.')]
+        wav_paths_existing = self.fs.recordings_in()
+        wav_files = [os.path.basename(p) for p in wav_paths_existing]
         errors = []
         for wav in wav_files:
             try:
@@ -1389,7 +1442,7 @@ class VideoAnnotationApp(QMainWindow):
             if wav_basename in video_basenames:
                 matched = True
         metadata_src = os.path.join(import_dir, "metadata.txt")
-        metadata_dst = os.path.join(self.folder_path, "metadata.txt")
+        metadata_dst = os.path.join(self.fs.current_folder, "metadata.txt")
         if matched and os.path.exists(metadata_src):
             try:
                 shutil.copy2(metadata_src, metadata_dst)
@@ -1413,7 +1466,7 @@ class VideoAnnotationApp(QMainWindow):
         for wav in import_files:
             wav_basename = os.path.splitext(wav)[0]
             if wav_basename in video_basenames:
-                dst = os.path.join(self.folder_path, wav)
+                dst = os.path.join(self.fs.current_folder, wav)
                 if os.path.exists(dst):
                     overwrite_files.append(wav)
         if os.path.exists(metadata_dst) and os.path.exists(metadata_src):
@@ -1432,7 +1485,7 @@ class VideoAnnotationApp(QMainWindow):
             wav_basename = os.path.splitext(wav)[0]
             if wav_basename in video_basenames:
                 src = os.path.join(import_dir, wav)
-                dst = os.path.join(self.folder_path, wav)
+                dst = os.path.join(self.fs.current_folder, wav)
                 try:
                     shutil.copy2(src, dst)
                     imported_count += 1
@@ -1469,7 +1522,7 @@ class VideoAnnotationApp(QMainWindow):
         if not output_file:
             return
         self.join_thread = QThread()
-        self.join_worker = JoinWavsWorker(self.folder_path, output_file)
+        self.join_worker = JoinWavsWorker(output_file=output_file, fs=self.fs)
         self.join_worker.moveToThread(self.join_thread)
         self.join_thread.started.connect(self.join_worker.run)
         self.join_worker.finished.connect(self.join_thread.quit)
@@ -1492,12 +1545,12 @@ class VideoAnnotationApp(QMainWindow):
             channels=1
         )
     def update_video_file_checks(self):
-        if not self.folder_path:
+        if not self.fs.current_folder:
             return
         for i in range(self.video_listbox.count()):
             item = self.video_listbox.item(i)
             name = item.text()
-            wav_exists = os.path.exists(os.path.join(self.folder_path, os.path.splitext(name)[0] + '.wav'))
+            wav_exists = os.path.exists(self.fs.wav_path_for(name))
             desired_icon = self._check_icon if wav_exists else self._empty_icon
             item.setIcon(desired_icon)
     def go_prev(self):
