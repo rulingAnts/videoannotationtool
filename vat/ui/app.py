@@ -14,10 +14,10 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QListWidget, QListWidgetItem, QLabel, QTextEdit, QMessageBox,
     QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle, QSizePolicy,
-    QListView
+    QListView, QStyledItemDelegate, QApplication
 )
-from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize
-from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence, QImageReader
+from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize, QRect, QPoint
+from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence, QImageReader, QPen, QColor
 
 from vat.audio import PYAUDIO_AVAILABLE
 from vat.audio.playback import AudioPlaybackWorker
@@ -570,14 +570,12 @@ class VideoAnnotationApp(QMainWindow):
             if getattr(self, '_ui_ready', False):
                 logging.info(f"UI._on_folder_changed: path={path}")
                 self.update_folder_display()
+                # Populate images directly from the active FS folder to ensure sync
                 try:
-                    imgs = self.fs.list_images()
-                    logging.info(f"UI._on_folder_changed: images_count={len(imgs)}; sample={[os.path.basename(f) for f in imgs[:3]]}")
-                    # Populate via shared logic to ensure sizing/selection are consistent
-                    try:
-                        self._populate_images_list(imgs)
-                    except Exception as e2:
-                        logging.warning(f"UI._on_folder_changed: populate failed: {e2}")
+                    active = self.fs.current_folder or ""
+                    imgs = self.fs.list_images(active)
+                    logging.info(f"UI._on_folder_changed: active={active}; images_count={len(imgs)}; sample={[os.path.basename(f) for f in imgs[:3]]}")
+                    self._populate_images_list(imgs)
                 except Exception as e:
                     logging.warning(f"UI._on_folder_changed: failed to list/populate images: {e}")
         except Exception:
@@ -848,11 +846,14 @@ class VideoAnnotationApp(QMainWindow):
             logging.info("UI.init_ui: images_list ready (IconMode)")
         except Exception:
             pass
-        # Strengthen selection syncing: react to both selection and current-item changes
-        self.images_list.itemSelectionChanged.connect(self._handle_image_selection)
+        # Install custom delegate to draw green border and check overlay for recorded images
+        try:
+            self.images_list.setItemDelegate(ImageGridDelegate(self.fs))
+        except Exception:
+            pass
+        # Selection syncing: rely on current-item changes to avoid duplicate triggers
         try:
             self.images_list.currentItemChanged.connect(lambda *args: self._handle_image_selection())
-            self.images_list.itemClicked.connect(lambda *args: self._handle_image_selection())
         except Exception:
             pass
         self.images_list.itemDoubleClicked.connect(self._handle_open_fullscreen_image)
@@ -873,13 +874,11 @@ class VideoAnnotationApp(QMainWindow):
             pass
         # Mark UI as ready for FS signal handlers
         self._ui_ready = True
-        # Initialize images tab if folder already set
+        # Populate images initially if a folder is already set
         if self.fs.current_folder:
             try:
-                logging.info("UI.init_ui: forcing initial images population")
                 imgs = self.fs.list_images()
-                logging.info(f"UI.init_ui: initial images_count={len(imgs)}; sample={[os.path.basename(f) for f in imgs[:3]]}")
-                self._on_images_updated(imgs)
+                self._on_images_updated(self.fs.current_folder, imgs)
             except Exception:
                 pass
     def change_language(self, selected_name):
@@ -980,12 +979,14 @@ class VideoAnnotationApp(QMainWindow):
             if getattr(self, 'edit_metadata_btn', None):
                 self.edit_metadata_btn.setEnabled(True)
             self.save_settings()
+            # Rely on FS signals (_on_folder_changed -> list_images -> imagesUpdated)
             try:
                 logging.info(f"UI.select_folder: path={folder}")
-                imgs = self.fs.list_images()
-                logging.info(f"UI.select_folder: images_count={len(imgs)}; sample={[os.path.basename(f) for f in imgs[:3]]}")
-                # Ensure images grid populates immediately
-                self._on_images_updated(imgs)
+            except Exception:
+                pass
+            # Populate immediately to prevent transient empty state
+            try:
+                self._on_folder_changed(folder)
             except Exception:
                 pass
     def load_video_files(self):
@@ -1429,6 +1430,11 @@ class VideoAnnotationApp(QMainWindow):
             self._update_image_record_controls()
         except Exception:
             pass
+        try:
+            # Ensure grid overlays update when recording stops
+            self.images_list.viewport().update()
+        except Exception:
+            pass
     def closeEvent(self, event):
         try:
             try:
@@ -1763,7 +1769,12 @@ class VideoAnnotationApp(QMainWindow):
             desired_icon = self._check_icon if wav_exists else self._empty_icon
             item.setIcon(desired_icon)
         # Update image badges
-        # Do not override image thumbnails here; badges handled elsewhere
+        try:
+            # Just trigger repaint; delegate will render overlays based on wav existence
+            if getattr(self, 'images_list', None):
+                self.images_list.viewport().update()
+        except Exception:
+            pass
     def go_prev(self):
         if self.video_listbox.count() == 0:
             return
@@ -2020,15 +2031,13 @@ class VideoAnnotationApp(QMainWindow):
                 count += 1
             if count > 0:
                 self.images_list.setCurrentRow(0)
+            # Delegate repaint checks; selection change will trigger banner update
             self.update_video_file_checks()
             try:
                 logging.info(f"Images tab populated: count={count}; sample={[os.path.basename(f) for f in files[:3]]}")
             except Exception:
                 pass
-            try:
-                self.on_image_select()
-            except Exception:
-                pass
+            # Avoid manual select handlers here; currentItemChanged will fire
         except Exception as e:
             logging.warning(f"Failed to refresh images from FS manager: {e}")
 
@@ -2073,7 +2082,24 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             pass
 
-    def _on_images_updated(self, files: list):
+    def _on_images_updated(self, *args):
+        # Support both legacy (files) and new (folder, files) signal forms
+        if len(args) == 2:
+            folder, files = args
+        elif len(args) == 1:
+            folder, files = "", args[0]
+        else:
+            return
+        try:
+            active = self.fs.current_folder or ""
+            if folder and os.path.normpath(folder) != os.path.normpath(active):
+                try:
+                    logging.warning(f"UI._on_images_updated: ignoring update for folder={folder}; active={active}")
+                except Exception:
+                    pass
+                return
+        except Exception:
+            pass
         self._populate_images_list(files)
 
     def on_image_select(self):
@@ -2161,6 +2187,11 @@ class VideoAnnotationApp(QMainWindow):
                 self.stop_image_record_button.setEnabled(False)
             try:
                 logging.debug(f"UI._update_image_record_controls: wav_path={wav_path}, exists={exists}, is_recording={self.is_recording}")
+            except Exception:
+                pass
+            # Trigger repaint so delegate overlays reflect current state
+            try:
+                self.images_list.viewport().update()
             except Exception:
                 pass
         except Exception:
@@ -2281,6 +2312,11 @@ class VideoAnnotationApp(QMainWindow):
             except Exception:
                 pass
             self.update_video_file_checks()
+            try:
+                # Update the images grid visuals
+                self.images_list.viewport().update()
+            except Exception:
+                pass
         except Exception:
             pass
 
@@ -2309,6 +2345,57 @@ class VideoAnnotationApp(QMainWindow):
         x = max(0, w - bw - 8)
         y = 8
         self.badge_label.move(x, y)
+
+
+class ImageGridDelegate(QStyledItemDelegate):
+    def __init__(self, fs_manager: FolderAccessManager, parent=None):
+        super().__init__(parent)
+        self.fs = fs_manager
+
+    def paint(self, painter, option, index):
+        # Default painting first (thumbnail + optional text)
+        super().paint(painter, option, index)
+        try:
+            path = index.data(Qt.UserRole)
+            if not path:
+                name = index.data(Qt.DisplayRole) or ""
+                parent_folder = getattr(getattr(self.parent(), 'fs', None), 'current_folder', None)
+                if parent_folder and name:
+                    path = os.path.join(parent_folder, name)
+            wav_path = self.fs.wav_path_for_image(path or "")
+            has_wav = bool(wav_path and os.path.exists(wav_path))
+        except Exception:
+            has_wav = False
+        if not has_wav:
+            return
+        try:
+            painter.save()
+            # Green border around icon area
+            pen = QPen(QColor("#2ecc71"))
+            pen.setWidth(3)
+            painter.setPen(pen)
+            painter.setBrush(Qt.NoBrush)
+            r = option.rect
+            ds = getattr(option, 'decorationSize', QSize(0, 0))
+            iw = max(1, ds.width())
+            ih = max(1, ds.height())
+            x = r.x() + (r.width() - iw) // 2
+            y = r.y() + 5
+            icon_rect = QRect(x, y, iw, ih)
+            painter.drawRect(icon_rect.adjusted(1, 1, -1, -1))
+            # Small check overlay in the top-right of the icon
+            try:
+                chk = QApplication.style().standardIcon(QStyle.SP_DialogApplyButton).pixmap(18, 18)
+                ox = icon_rect.right() - 18 - 4
+                oy = icon_rect.top() + 4
+                painter.drawPixmap(QPoint(ox, oy), chk)
+            except Exception:
+                pass
+        finally:
+            try:
+                painter.restore()
+            except Exception:
+                pass
 
 class FullscreenImageViewer(QWidget):
     scale_changed = Signal(float)

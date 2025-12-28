@@ -28,7 +28,7 @@ class FolderAccessManager(QObject):
     folderChanged = Signal(str)
     videosUpdated = Signal(list)
     metadataChanged = Signal(str)
-    imagesUpdated = Signal(list)
+    imagesUpdated = Signal(str, list)
 
     VIDEO_EXTS = (".mpg", ".mpeg", ".mp4", ".avi", ".mkv", ".mov")
 
@@ -117,7 +117,7 @@ class FolderAccessManager(QObject):
             except Exception:
                 pass
             try:
-                self.imagesUpdated.emit(list(self._images_cache))
+                self.imagesUpdated.emit(self.current_folder or "", list(self._images_cache))
             except Exception:
                 pass
         except FolderAccessError:
