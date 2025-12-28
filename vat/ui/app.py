@@ -1454,7 +1454,11 @@ class VideoAnnotationApp(QMainWindow):
         import_dir = QFileDialog.getExistingDirectory(self, self.LABELS["import_select_folder_dialog"]) 
         if not import_dir:
             return
-        import_files = [f for f in os.listdir(import_dir) if f.lower().endswith('.wav') and not f.startswith('.')]
+        try:
+            import_paths = self.fs.recordings_in(import_dir)
+            import_files = [os.path.basename(p) for p in import_paths]
+        except Exception:
+            import_files = [f for f in os.listdir(import_dir) if f.lower().endswith('.wav') and not f.startswith('.')]
         video_basenames = set(os.path.splitext(os.path.basename(f))[0] for f in self.video_files)
         mismatched_wavs = []
         imported_count = 0
