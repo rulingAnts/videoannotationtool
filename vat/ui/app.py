@@ -1081,6 +1081,11 @@ class VideoAnnotationApp(QMainWindow):
         video_path = self._resolve_current_video_path()
         self.cap = cv2.VideoCapture(video_path)
         if not self.cap.isOpened():
+            try:
+                self.cap.release()
+            except Exception:
+                pass
+            self.cap = None
             QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["cannot_open_video"])
             return
         self.playing_video = True
