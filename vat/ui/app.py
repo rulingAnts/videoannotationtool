@@ -13,7 +13,7 @@ from pydub import AudioSegment
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QListWidget, QListWidgetItem, QLabel, QTextEdit, QMessageBox,
-    QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle
+    QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle, QSizePolicy
 )
 from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent
 from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence
@@ -504,7 +504,8 @@ class VideoAnnotationApp(QMainWindow):
         self.load_settings()
         self.init_ui()
         self.setWindowTitle(self.LABELS["app_title"])
-        self.resize(1400, 800)
+        # Slightly reduced default window height
+        self.resize(1400, 720)
         # Global shortcuts: work regardless of focus
         try:
             self._shortcut_log_ctrl = QShortcut(QKeySequence("Ctrl+Shift+L"), self)
@@ -547,14 +548,12 @@ class VideoAnnotationApp(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
-        # Tighten top-level layout to avoid extra spacing
+        # Keep layout tight but ensure a small top margin
         try:
             main_layout.setSpacing(0)
-            main_layout.setContentsMargins(0, 0, 0, 0)
+            main_layout.setContentsMargins(8, 8, 8, 6)
         except Exception:
             pass
-        main_layout.setSpacing(0)
-        main_layout.setContentsMargins(0, 0, 0, 0)
         try:
             self._check_icon = self.style().standardIcon(QStyle.SP_DialogApplyButton)
         except Exception:
@@ -569,15 +568,40 @@ class VideoAnnotationApp(QMainWindow):
         self.language_dropdown.addItems([LABELS_ALL[k]["language_name"] for k in LABELS_ALL])
         self.language_dropdown.setCurrentText(self.LABELS["language_name"])
         self.language_dropdown.currentTextChanged.connect(self.change_language)
+        # Remove extra margins/padding in the header controls
+        try:
+            self.language_dropdown.setStyleSheet("margin:0px; padding:0px;")
+        except Exception:
+            pass
         main_layout.addWidget(self.language_dropdown)
+        # Add a tiny spacer between the dropdown and folder label
+        try:
+            main_layout.addSpacing(6)
+        except Exception:
+            pass
         self.folder_display_label = QLabel(self.LABELS["no_folder_selected"])
         self.folder_display_label.setAlignment(Qt.AlignLeft)
         self.folder_display_label.setToolTip("")
+        try:
+            self.folder_display_label.setMargin(0)
+            self.folder_display_label.setStyleSheet("margin:0px; padding:0px;")
+            self.folder_display_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        except Exception:
+            pass
         main_layout.addWidget(self.folder_display_label)
         splitter = QSplitter(Qt.Horizontal)
+        try:
+            splitter.setContentsMargins(0, 0, 0, 0)
+        except Exception:
+            pass
         main_layout.addWidget(splitter)
         left_panel = QWidget()
+        self.left_panel = left_panel
         left_layout = QVBoxLayout(left_panel)
+        try:
+            left_layout.setContentsMargins(0, 0, 0, 0)
+        except Exception:
+            pass
         self.select_button = QPushButton(self.LABELS["select_folder"])
         self.select_button.clicked.connect(self.select_folder)
         left_layout.addWidget(self.select_button)
@@ -602,6 +626,10 @@ class VideoAnnotationApp(QMainWindow):
         self.join_wavs_button.setEnabled(False)
         left_layout.addWidget(self.join_wavs_button)
         self.video_listbox = QListWidget()
+        try:
+            self.video_listbox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        except Exception:
+            pass
         self.video_listbox.currentRowChanged.connect(self.on_video_select)
         left_layout.addWidget(self.video_listbox)
         # Replace inline metadata editor with a single button
@@ -651,10 +679,12 @@ class VideoAnnotationApp(QMainWindow):
         self.next_button.clicked.connect(self.go_next)
         video_controls_layout.addWidget(self.next_button)
         videos_layout.addLayout(video_controls_layout)
-        self.audio_label = QLabel(self.LABELS["audio_no_annotation"])
-        self.audio_label.setAlignment(Qt.AlignCenter)
-        videos_layout.addWidget(self.audio_label)
         audio_controls_layout = QHBoxLayout()
+        try:
+            audio_controls_layout.setSpacing(8)
+        except Exception:
+            pass
+        audio_controls_layout.addStretch(1)
         self.play_audio_button = QPushButton(self.LABELS["play_audio"])
         self.play_audio_button.clicked.connect(self.play_audio)
         self.play_audio_button.setEnabled(False)
@@ -670,6 +700,7 @@ class VideoAnnotationApp(QMainWindow):
         self.recording_status_label = QLabel("")
         self.recording_status_label.setStyleSheet("color: red; font-weight: bold;")
         audio_controls_layout.addWidget(self.recording_status_label)
+        audio_controls_layout.addStretch(1)
         videos_layout.addLayout(audio_controls_layout)
         videos_layout.addStretch()
         right_panel.addTab(videos_tab, self.LABELS["videos_tab_title"])
@@ -700,7 +731,6 @@ class VideoAnnotationApp(QMainWindow):
             self.edit_metadata_btn.setText(self.LABELS["edit_metadata"])
         if not self.current_video:
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
-            self.audio_label.setText(self.LABELS["audio_no_annotation"])
         self.update_folder_display()
     def update_folder_display(self):
         if getattr(self, 'folder_display_label', None) is None:
@@ -943,14 +973,12 @@ class VideoAnnotationApp(QMainWindow):
             self.update_recording_indicator()
             wav_path = os.path.join(self.folder_path, os.path.splitext(self.current_video)[0] + '.wav')
             if os.path.exists(wav_path):
-                self.audio_label.setText(f"{self.LABELS['audio_label_prefix']}{os.path.splitext(self.current_video)[0]}.wav")
                 self.play_audio_button.setEnabled(True)
                 self.stop_audio_button.setEnabled(True)
                 self.video_label.setStyleSheet("background-color: black; color: white; border: 3px solid #2ecc71;")
                 if getattr(self, 'badge_label', None):
                     self.badge_label.setVisible(True)
             else:
-                self.audio_label.setText(self.LABELS["audio_no_annotation"])
                 self.play_audio_button.setEnabled(False)
                 self.stop_audio_button.setEnabled(False)
                 self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
@@ -960,7 +988,6 @@ class VideoAnnotationApp(QMainWindow):
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
             self.play_video_button.setEnabled(False)
             self.stop_video_button.setEnabled(False)
-            self.audio_label.setText(self.LABELS["audio_no_annotation"])
             self.play_audio_button.setEnabled(False)
             self.stop_audio_button.setEnabled(False)
             self.record_button.setEnabled(False)
@@ -1513,6 +1540,21 @@ class VideoAnnotationApp(QMainWindow):
             event.accept()
             return
         return super().keyPressEvent(event)
+    def resizeEvent(self, event):
+        try:
+            # Reduce listbox vertical size to ~75% of the left panel
+            if getattr(self, 'left_panel', None) is not None and getattr(self, 'video_listbox', None) is not None:
+                left_h = max(0, self.left_panel.height())
+                # Reduce another ~10%: target ~65% of left panel height
+                target_h = int(left_h * 0.65)
+                min_h = 200
+                self.video_listbox.setMaximumHeight(max(min_h, target_h))
+        except Exception:
+            pass
+        try:
+            return super().resizeEvent(event)
+        except Exception:
+            pass
     def _show_log_viewer(self):
         try:
             from PySide6.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QPushButton
