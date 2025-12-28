@@ -185,23 +185,25 @@
     })();
   </script>
   <script>
-    // Carousel logic
+    // Carousel logic with arrow buttons and swipe/drag
     (function() {
       const carousel = document.getElementById('screenshotCarousel');
       if (!carousel) return;
       const track = carousel.querySelector('.carousel-track');
       const slides = Array.from(carousel.querySelectorAll('.carousel-slide'));
       const dotsContainer = carousel.querySelector('.carousel-dots');
+      const leftBtn = carousel.querySelector('.carousel-arrow-left');
+      const rightBtn = carousel.querySelector('.carousel-arrow-right');
       let current = 0;
       let timer = null;
+      let isDragging = false, startX = 0, currentX = 0, dragDelta = 0;
       function goTo(idx) {
-        current = idx;
-        track.style.transform = `translateX(-${idx * 100}%)`;
-        dotsContainer.querySelectorAll('button').forEach((b,i) => b.classList.toggle('active', i===idx));
+        current = (idx + slides.length) % slides.length;
+        track.style.transform = `translateX(-${current * 100}%)`;
+        dotsContainer.querySelectorAll('button').forEach((b,i) => b.classList.toggle('active', i===current));
       }
-      function next() {
-        goTo((current+1)%slides.length);
-      }
+      function next() { goTo(current+1); }
+      function prev() { goTo(current-1); }
       // Dots
       slides.forEach((_,i) => {
         const btn = document.createElement('button');
@@ -222,8 +224,47 @@
       // Keyboard support
       carousel.tabIndex = 0;
       carousel.addEventListener('keydown', e => {
-        if (e.key === 'ArrowLeft') { goTo((current-1+slides.length)%slides.length); resetTimer(); }
+        if (e.key === 'ArrowLeft') { prev(); resetTimer(); }
         if (e.key === 'ArrowRight') { next(); resetTimer(); }
+      });
+      // Arrow buttons
+      if (leftBtn) leftBtn.onclick = () => { prev(); resetTimer(); };
+      if (rightBtn) rightBtn.onclick = () => { next(); resetTimer(); };
+      // Touch/drag support
+      function onDragStart(e) {
+        isDragging = true;
+        startX = (e.touches ? e.touches[0].clientX : e.clientX);
+        currentX = startX;
+        track.style.transition = 'none';
+      }
+      function onDragMove(e) {
+        if (!isDragging) return;
+        currentX = (e.touches ? e.touches[0].clientX : e.clientX);
+        dragDelta = currentX - startX;
+        track.style.transform = `translateX(${-current * 100 + (dragDelta/track.offsetWidth)*100}%)`;
+      }
+      function onDragEnd() {
+        if (!isDragging) return;
+        track.style.transition = '';
+        if (Math.abs(dragDelta) > track.offsetWidth/6) {
+          if (dragDelta < 0) next();
+          else prev();
+        } else {
+          goTo(current);
+        }
+        isDragging = false;
+        dragDelta = 0;
+        resetTimer();
+      }
+      track.addEventListener('mousedown', onDragStart);
+      track.addEventListener('touchstart', onDragStart, {passive:true});
+      window.addEventListener('mousemove', onDragMove);
+      window.addEventListener('touchmove', onDragMove, {passive:true});
+      window.addEventListener('mouseup', onDragEnd);
+      window.addEventListener('touchend', onDragEnd);
+      // Prevent image dragging
+      slides.forEach(slide => {
+        slide.querySelector('img').ondragstart = e => e.preventDefault();
       });
     })();
   </script>
