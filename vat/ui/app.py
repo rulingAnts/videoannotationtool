@@ -527,9 +527,10 @@ class VideoAnnotationApp(QMainWindow):
             self.import_wavs_button.setEnabled(True)
             self.join_wavs_button.setEnabled(True)
             self.open_ocenaudio_button.setEnabled(True)
-            self.save_metadata_btn.setEnabled(True)
+            if getattr(self, 'edit_metadata_btn', None):
+                self.edit_metadata_btn.setEnabled(True)
             self.load_video_files()
-            self.open_metadata_editor()
+            # Do not auto-open metadata; use the button
     def _show_info(self, title, text):
         QMessageBox.information(self, title, text)
     def _show_warning(self, title, text):
@@ -546,6 +547,12 @@ class VideoAnnotationApp(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
+        # Tighten top-level layout to avoid extra spacing
+        try:
+            main_layout.setSpacing(0)
+            main_layout.setContentsMargins(0, 0, 0, 0)
+        except Exception:
+            pass
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
         try:
@@ -597,16 +604,11 @@ class VideoAnnotationApp(QMainWindow):
         self.video_listbox = QListWidget()
         self.video_listbox.currentRowChanged.connect(self.on_video_select)
         left_layout.addWidget(self.video_listbox)
-        self.metadata_label = QLabel(self.LABELS["edit_metadata"])
-        self.metadata_label.setStyleSheet("font-weight: bold; font-size: 12pt;")
-        left_layout.addWidget(self.metadata_label)
-        self.metadata_text = QTextEdit()
-        self.metadata_text.setMinimumHeight(150)
-        left_layout.addWidget(self.metadata_text)
-        self.save_metadata_btn = QPushButton(self.LABELS["save_metadata"])
-        self.save_metadata_btn.clicked.connect(self.save_metadata)
-        self.save_metadata_btn.setEnabled(False)
-        left_layout.addWidget(self.save_metadata_btn)
+        # Replace inline metadata editor with a single button
+        self.edit_metadata_btn = QPushButton(self.LABELS["edit_metadata"])
+        self.edit_metadata_btn.clicked.connect(self.open_metadata_dialog)
+        self.edit_metadata_btn.setEnabled(False)
+        left_layout.addWidget(self.edit_metadata_btn)
         splitter.addWidget(left_panel)
         right_panel = QTabWidget()
         videos_tab = QWidget()
@@ -694,8 +696,8 @@ class VideoAnnotationApp(QMainWindow):
         self.play_audio_button.setText(self.LABELS["play_audio"])
         self.stop_audio_button.setText(self.LABELS["stop_audio"])
         self.record_button.setText(self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
-        self.metadata_label.setText(self.LABELS["edit_metadata"])
-        self.save_metadata_btn.setText(self.LABELS["save_metadata"])
+        if getattr(self, 'edit_metadata_btn', None):
+            self.edit_metadata_btn.setText(self.LABELS["edit_metadata"])
         if not self.current_video:
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
             self.audio_label.setText(self.LABELS["audio_no_annotation"])
@@ -763,13 +765,13 @@ class VideoAnnotationApp(QMainWindow):
                 if errors:
                     QMessageBox.warning(self, self.LABELS["cleanup_errors_title"], "Some hidden files could not be deleted:\n" + "\n".join(errors))
             self.load_video_files()
-            self.open_metadata_editor()
             self.export_wavs_button.setEnabled(True)
             self.clear_wavs_button.setEnabled(True)
             self.import_wavs_button.setEnabled(True)
             self.join_wavs_button.setEnabled(True)
             self.open_ocenaudio_button.setEnabled(True)
-            self.save_metadata_btn.setEnabled(True)
+            if getattr(self, 'edit_metadata_btn', None):
+                self.edit_metadata_btn.setEnabled(True)
             self.save_settings()
     def load_video_files(self):
         self.video_listbox.clear()
@@ -805,8 +807,13 @@ class VideoAnnotationApp(QMainWindow):
             self.current_video = None
         self.update_media_controls()
         self.update_video_file_checks()
-    def open_metadata_editor(self):
+    def open_metadata_dialog(self):
         if not self.folder_path:
+            return
+        try:
+            from PySide6.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QPushButton, QHBoxLayout
+        except Exception:
+            QMessageBox.critical(self, self.LABELS["error_title"], "Unable to open metadata editor.")
             return
         metadata_path = os.path.join(self.folder_path, "metadata.txt")
         default_content = (
@@ -817,20 +824,39 @@ class VideoAnnotationApp(QMainWindow):
             "speaker: \n"
             "permissions for use given by speaker: \n"
         )
-        if not os.path.exists(metadata_path):
-            with open(metadata_path, "w") as f:
-                f.write(default_content)
-        with open(metadata_path, "r") as f:
-            content = f.read()
-        self.metadata_text.setPlainText(content)
-    def save_metadata(self):
-        if not self.folder_path:
+        try:
+            if not os.path.exists(metadata_path):
+                with open(metadata_path, "w") as f:
+                    f.write(default_content)
+            with open(metadata_path, "r") as f:
+                content = f.read()
+        except Exception as e:
+            QMessageBox.critical(self, self.LABELS["error_title"], f"Failed to load metadata: {e}")
             return
-        metadata_path = os.path.join(self.folder_path, "metadata.txt")
-        content = self.metadata_text.toPlainText()
-        with open(metadata_path, "w") as f:
-            f.write(content)
-        QMessageBox.information(self, self.LABELS["saved"], self.LABELS["metadata_saved"])
+        dlg = QDialog(self)
+        dlg.setWindowTitle(self.LABELS["edit_metadata"])
+        layout = QVBoxLayout(dlg)
+        editor = QTextEdit(dlg)
+        editor.setPlainText(content)
+        layout.addWidget(editor)
+        btns = QHBoxLayout()
+        save_btn = QPushButton(self.LABELS["save_metadata"], dlg)
+        cancel_btn = QPushButton("Cancel", dlg)
+        btns.addWidget(save_btn)
+        btns.addWidget(cancel_btn)
+        layout.addLayout(btns)
+        def _save_and_close():
+            try:
+                with open(metadata_path, "w") as f:
+                    f.write(editor.toPlainText())
+                QMessageBox.information(dlg, self.LABELS["saved"], self.LABELS["metadata_saved"])
+                dlg.accept()
+            except Exception as e:
+                QMessageBox.critical(dlg, self.LABELS["error_title"], f"Failed to save metadata: {e}")
+        save_btn.clicked.connect(_save_and_close)
+        cancel_btn.clicked.connect(dlg.reject)
+        dlg.resize(600, 400)
+        dlg.exec()
     def on_video_select(self, current_row):
         if current_row < 0:
             return
@@ -1302,7 +1328,6 @@ class VideoAnnotationApp(QMainWindow):
         else:
             QMessageBox.information(self, self.LABELS["clear_wavs"], self.LABELS["clear_success_msg_prefix"].format(count=len(wav_files)))
         self.load_video_files()
-        self.open_metadata_editor()
         self.update_video_file_checks()
     def import_wavs(self):
         if not self.folder_path:
@@ -1394,7 +1419,6 @@ class VideoAnnotationApp(QMainWindow):
         else:
             QMessageBox.information(self, self.LABELS["import_wavs"], self.LABELS["import_success_msg_prefix"].format(count=imported_count))
         self.load_video_files()
-        self.open_metadata_editor()
         self.update_video_file_checks()
     def join_all_wavs(self):
         if not self.folder_path:
