@@ -1,4 +1,5 @@
 import os
+import logging
 from typing import List, Optional, Dict
 from PySide6.QtCore import QObject, Signal
 
@@ -53,6 +54,10 @@ class FolderAccessManager(QObject):
 
     def set_folder(self, path: str) -> bool:
         if path and os.path.isdir(path) and self.is_accessible(path):
+            try:
+                logging.info(f"FS.set_folder: path={path}")
+            except Exception:
+                pass
             self.current_folder = path
             try:
                 self.folderChanged.emit(path)
@@ -108,6 +113,10 @@ class FolderAccessManager(QObject):
         try:
             self._images_cache = self.list_images(self.current_folder)
             try:
+                logging.info(f"FS._refresh_images: count={len(self._images_cache)}")
+            except Exception:
+                pass
+            try:
                 self.imagesUpdated.emit(list(self._images_cache))
             except Exception:
                 pass
@@ -160,6 +169,50 @@ class FolderAccessManager(QObject):
         folder = self.current_folder or os.path.dirname(video_or_name) or ""
         basename = os.path.splitext(os.path.basename(video_or_name))[0]
         return os.path.join(folder, basename + ".wav")
+
+    def wav_path_for_image(self, image_or_name: str) -> str:
+        # Prefer the image's own directory when a full path is provided;
+        # otherwise fall back to the current folder.
+        img_dir = os.path.dirname(image_or_name)
+        folder = img_dir if img_dir else (self.current_folder or "")
+        filename = os.path.basename(image_or_name)
+        return os.path.join(folder, filename + ".wav")
+
+    def has_image_audio(self, image_or_name: str) -> bool:
+        return os.path.exists(self.wav_path_for_image(image_or_name))
+
+    def image_recordings_in(self, folder: Optional[str] = None) -> List[str]:
+        fold = folder or self.current_folder
+        if not fold:
+            return []
+        try:
+            images = self.list_images(fold)
+            files = []
+            for img in images:
+                wp = self.wav_path_for_image(img)
+                if os.path.exists(wp):
+                    files.append(wp)
+            files.sort()
+            return files
+        except FolderAccessError:
+            return []
+
+    def video_recordings_in(self, folder: Optional[str] = None) -> List[str]:
+        fold = folder or self.current_folder
+        if not fold:
+            return []
+        try:
+            videos = self.list_videos(fold)
+            files = []
+            for vp in videos:
+                name = os.path.basename(vp)
+                wp = self.wav_path_for(name)
+                if os.path.exists(wp):
+                    files.append(wp)
+            files.sort()
+            return files
+        except FolderAccessError:
+            return []
 
     def recordings_in(self, folder: Optional[str] = None) -> List[str]:
         fold = folder or self.current_folder
@@ -220,10 +273,15 @@ class FolderAccessManager(QObject):
             errors.append(str(e))
         return errors
 
-    IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif")
+    # Include common image extensions, notably both TIFF variants
+    IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".gif")
 
     def list_images(self, path: Optional[str] = None) -> List[str]:
         folder = path or self.current_folder
+        try:
+            logging.debug(f"FS.list_images: folder={folder}")
+        except Exception:
+            pass
         if not folder:
             return []
         if not os.path.isdir(folder):
@@ -232,11 +290,24 @@ class FolderAccessManager(QObject):
             raise FolderPermissionError(folder)
         try:
             files = []
+            # Top-level images
             for name in os.listdir(folder):
                 full = os.path.join(folder, name)
                 if os.path.isfile(full) and name.lower().endswith(self.IMAGE_EXTS):
                     files.append(full)
+            # Common subfolders that may contain images (non-recursive)
+            for sub in ("images", "Images"):
+                subpath = os.path.join(folder, sub)
+                if os.path.isdir(subpath) and self.is_accessible(subpath):
+                    for name in os.listdir(subpath):
+                        full = os.path.join(subpath, name)
+                        if os.path.isfile(full) and name.lower().endswith(self.IMAGE_EXTS):
+                            files.append(full)
             files.sort()
+            try:
+                logging.info(f"FS.list_images: found={len(files)}; sample={[os.path.basename(f) for f in files[:3]]}")
+            except Exception:
+                pass
             return files
         except PermissionError:
             raise FolderPermissionError(folder)

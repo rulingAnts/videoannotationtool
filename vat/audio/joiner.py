@@ -10,10 +10,11 @@ class JoinWavsWorker(QObject):
     error = Signal(str)
     success = Signal(str)
 
-    def __init__(self, output_file: str = "", fs: Optional[FolderAccessManager] = None):
+    def __init__(self, output_file: str = "", fs: Optional[FolderAccessManager] = None, file_paths: Optional[list] = None):
         super().__init__()
         self.output_file = output_file
         self.fs = fs
+        self.file_paths = file_paths or []
 
     def generate_click_sound_pydub(self, duration_ms: int, freq: int, rate: int):
         t = np.linspace(0, duration_ms / 1000, int(rate * duration_ms / 1000), endpoint=False)
@@ -30,9 +31,12 @@ class JoinWavsWorker(QObject):
 
     def run(self):
         try:
-            if self.fs is None:
-                raise RuntimeError("No FolderAccessManager provided")
-            wav_paths = self.fs.recordings_in()
+            if self.file_paths:
+                wav_paths = list(self.file_paths)
+            else:
+                if self.fs is None:
+                    raise RuntimeError("No FolderAccessManager provided")
+                wav_paths = self.fs.recordings_in()
             wav_files = [os.path.basename(p) for p in wav_paths]
             wav_files.sort()
             std_rate = 44100

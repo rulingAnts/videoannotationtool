@@ -13,10 +13,11 @@ from pydub import AudioSegment
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QListWidget, QListWidgetItem, QLabel, QTextEdit, QMessageBox,
-    QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle, QSizePolicy
+    QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle, QSizePolicy,
+    QListView
 )
-from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent
-from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence
+from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize
+from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence, QImageReader
 
 from vat.audio import PYAUDIO_AVAILABLE
 from vat.audio.playback import AudioPlaybackWorker
@@ -513,6 +514,7 @@ class VideoAnnotationApp(QMainWindow):
         try:
             self.fs.folderChanged.connect(self._on_folder_changed)
             self.fs.videosUpdated.connect(self._on_videos_updated)
+            self.fs.imagesUpdated.connect(self._on_images_updated)
         except Exception:
             pass
         self.load_settings()
@@ -566,7 +568,18 @@ class VideoAnnotationApp(QMainWindow):
     def _on_folder_changed(self, path: str):
         try:
             if getattr(self, '_ui_ready', False):
+                logging.info(f"UI._on_folder_changed: path={path}")
                 self.update_folder_display()
+                try:
+                    imgs = self.fs.list_images()
+                    logging.info(f"UI._on_folder_changed: images_count={len(imgs)}; sample={[os.path.basename(f) for f in imgs[:3]]}")
+                    # Populate via shared logic to ensure sizing/selection are consistent
+                    try:
+                        self._populate_images_list(imgs)
+                    except Exception as e2:
+                        logging.warning(f"UI._on_folder_changed: populate failed: {e2}")
+                except Exception as e:
+                    logging.warning(f"UI._on_folder_changed: failed to list/populate images: {e}")
         except Exception:
             pass
     def _on_videos_updated(self, files: list):
@@ -692,6 +705,7 @@ class VideoAnnotationApp(QMainWindow):
         left_layout.addWidget(self.edit_metadata_btn)
         splitter.addWidget(left_panel)
         right_panel = QTabWidget()
+        self.right_panel = right_panel
         videos_tab = QWidget()
         videos_layout = QVBoxLayout(videos_tab)
         self.video_label = QLabel(self.LABELS["video_listbox_no_video"])
@@ -757,10 +771,117 @@ class VideoAnnotationApp(QMainWindow):
         videos_layout.addLayout(audio_controls_layout)
         videos_layout.addStretch()
         right_panel.addTab(videos_tab, self.LABELS["videos_tab_title"])
+        # Images tab
+        images_tab = QWidget()
+        images_layout = QVBoxLayout(images_tab)
+        try:
+            images_layout.setContentsMargins(0, 0, 0, 0)
+            images_layout.setSpacing(6)
+        except Exception:
+            pass
+        try:
+            logging.info("UI.init_ui: creating Images tab")
+        except Exception:
+            pass
+        # Narrow banner: tiny thumbnail + audio controls
+        image_banner = QHBoxLayout()
+        try:
+            image_banner.setSpacing(8)
+            image_banner.setContentsMargins(0, 0, 0, 0)
+        except Exception:
+            pass
+        self.image_thumb = QLabel()
+        try:
+            self.image_thumb.setFixedSize(96, 72)
+            self.image_thumb.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
+        except Exception:
+            pass
+        image_banner.addWidget(self.image_thumb)
+        # Optional filename visibility toggle
+        try:
+            from PySide6.QtWidgets import QCheckBox
+            self.show_image_labels = False
+            self.image_labels_toggle = QCheckBox("Show filenames")
+            self.image_labels_toggle.setChecked(self.show_image_labels)
+            self.image_labels_toggle.toggled.connect(self._toggle_image_labels)
+            image_banner.addWidget(self.image_labels_toggle)
+        except Exception:
+            self.show_image_labels = False
+        self.play_image_audio_button = QPushButton(self.LABELS.get("play_audio", "Play Audio"))
+        self.play_image_audio_button.clicked.connect(self._handle_play_image_audio)
+        self.play_image_audio_button.setEnabled(False)
+        image_banner.addWidget(self.play_image_audio_button)
+        self.stop_image_audio_button = QPushButton(self.LABELS.get("stop_audio", "Stop Audio"))
+        self.stop_image_audio_button.clicked.connect(self._handle_stop_image_audio)
+        self.stop_image_audio_button.setEnabled(False)
+        image_banner.addWidget(self.stop_image_audio_button)
+        self.record_image_button = QPushButton(self.LABELS.get("record_audio", "Record Audio"))
+        self.record_image_button.clicked.connect(self._handle_record_image)
+        self.record_image_button.setEnabled(False)
+        image_banner.addWidget(self.record_image_button)
+        # New: Stop Recording button for Images tab
+        self.stop_image_record_button = QPushButton(self.LABELS.get("stop_recording", "Stop Recording"))
+        self.stop_image_record_button.clicked.connect(self._handle_stop_image_record)
+        self.stop_image_record_button.setEnabled(False)
+        image_banner.addWidget(self.stop_image_record_button)
+        image_banner.addStretch(1)
+        images_layout.addLayout(image_banner)
+        # Grid of thumbnails
+        self.images_list = QListWidget()
+        try:
+            self.images_list.setViewMode(QListView.IconMode)
+            # Ensure Adjust mode is set from QListView enum
+            self.images_list.setResizeMode(QListView.Adjust)
+            # Fill rows left-to-right to avoid a single tall column
+            self.images_list.setFlow(QListView.LeftToRight)
+            # Initial placeholder sizes; will be recomputed adaptively
+            self.images_list.setIconSize(QSize(320, 240))
+            self.images_list.setGridSize(QSize(360, 280))
+            self.images_list.setSpacing(6)
+            self.images_list.setMovement(QListView.Static)
+            self.images_list.setWrapping(True)
+            # Let items compute size per grid cell for better wrapping
+            self.images_list.setUniformItemSizes(False)
+            self.images_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            self.images_list.setSelectionMode(QListWidget.SingleSelection)
+            self.images_list.setSelectionBehavior(QListWidget.SelectItems)
+            logging.info("UI.init_ui: images_list ready (IconMode)")
+        except Exception:
+            pass
+        # Strengthen selection syncing: react to both selection and current-item changes
+        self.images_list.itemSelectionChanged.connect(self._handle_image_selection)
+        try:
+            self.images_list.currentItemChanged.connect(lambda *args: self._handle_image_selection())
+            self.images_list.itemClicked.connect(lambda *args: self._handle_image_selection())
+        except Exception:
+            pass
+        self.images_list.itemDoubleClicked.connect(self._handle_open_fullscreen_image)
+        images_layout.addWidget(self.images_list)
+        right_panel.addTab(images_tab, self.LABELS.get("images_tab_title", "Images"))
         splitter.addWidget(right_panel)
         splitter.setSizes([400, 1000])
+        # Keep images grid sizing in sync and defer initial compute
+        try:
+            self.images_list.installEventFilter(self)
+            QTimer.singleShot(0, self._recompute_image_grid_sizes)
+        except Exception:
+            pass
+        # Compute adaptive two-column sizing after layout
+        try:
+            self._recompute_image_grid_sizes()
+        except Exception:
+            pass
         # Mark UI as ready for FS signal handlers
         self._ui_ready = True
+        # Initialize images tab if folder already set
+        if self.fs.current_folder:
+            try:
+                logging.info("UI.init_ui: forcing initial images population")
+                imgs = self.fs.list_images()
+                logging.info(f"UI.init_ui: initial images_count={len(imgs)}; sample={[os.path.basename(f) for f in imgs[:3]]}")
+                self._on_images_updated(imgs)
+            except Exception:
+                pass
     def change_language(self, selected_name):
         for key, labels in LABELS_ALL.items():
             if labels["language_name"] == selected_name:
@@ -859,6 +980,14 @@ class VideoAnnotationApp(QMainWindow):
             if getattr(self, 'edit_metadata_btn', None):
                 self.edit_metadata_btn.setEnabled(True)
             self.save_settings()
+            try:
+                logging.info(f"UI.select_folder: path={folder}")
+                imgs = self.fs.list_images()
+                logging.info(f"UI.select_folder: images_count={len(imgs)}; sample={[os.path.basename(f) for f in imgs[:3]]}")
+                # Ensure images grid populates immediately
+                self._on_images_updated(imgs)
+            except Exception:
+                pass
     def load_video_files(self):
         # Manual refresh using FS manager (in case signals are not available)
         self.video_listbox.clear()
@@ -1197,6 +1326,37 @@ class VideoAnnotationApp(QMainWindow):
     def _on_audio_thread_finished(self):
         self.audio_thread = None
         self.audio_worker = None
+    def _handle_play_image_audio(self):
+        try:
+            return self.play_image_audio()
+        except Exception:
+            pass
+    def _handle_stop_image_audio(self):
+        try:
+            return self.stop_image_audio()
+        except Exception:
+            pass
+    def _handle_record_image(self):
+        try:
+            return self.toggle_image_recording()
+        except Exception:
+            pass
+    def _handle_stop_image_record(self):
+        try:
+            return self.stop_image_recording()
+        except Exception:
+            pass
+    def _handle_image_selection(self):
+        try:
+            logging.debug("UI._handle_image_selection invoked")
+            return self.on_image_select()
+        except Exception:
+            pass
+    def _handle_open_fullscreen_image(self, item):
+        try:
+            return self._open_fullscreen_image(item)
+        except Exception:
+            pass
     def toggle_recording(self):
         if not self.current_video:
             return
@@ -1255,6 +1415,20 @@ class VideoAnnotationApp(QMainWindow):
     def _on_recording_thread_finished(self):
         self.recording_thread = None
         self.recording_worker = None
+        # Ensure recording state resets on thread finish (videos and images)
+        try:
+            self.is_recording = False
+        except Exception:
+            pass
+        # Update UI controls accordingly
+        try:
+            self.update_media_controls()
+        except Exception:
+            pass
+        try:
+            self._update_image_record_controls()
+        except Exception:
+            pass
     def closeEvent(self, event):
         try:
             try:
@@ -1298,7 +1472,15 @@ class VideoAnnotationApp(QMainWindow):
         if not self.fs.current_folder:
             QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["no_folder_selected"]) 
             return
-        file_paths = self.fs.recordings_in()
+        # Tab-aware: open recordings for the active tab
+        try:
+            active_index = self.right_panel.currentIndex() if getattr(self, 'right_panel', None) else 0
+        except Exception:
+            active_index = 0
+        if active_index == 1:
+            file_paths = self.fs.image_recordings_in()
+        else:
+            file_paths = self.fs.video_recordings_in()
         if not file_paths:
             QMessageBox.information(self, self.LABELS["no_files"], self.LABELS["no_wavs_found"]) 
             return
@@ -1527,7 +1709,12 @@ class VideoAnnotationApp(QMainWindow):
         if not self.fs.current_folder:
             QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["no_folder_selected"]) 
             return
-        wav_paths = self.fs.recordings_in()
+        # Tab-aware: join recordings for the active tab
+        try:
+            active_index = self.right_panel.currentIndex() if getattr(self, 'right_panel', None) else 0
+        except Exception:
+            active_index = 0
+        wav_paths = self.fs.image_recordings_in() if active_index == 1 else self.fs.video_recordings_in()
         if not wav_paths:
             QMessageBox.information(self, self.LABELS["no_files"], self.LABELS["no_wavs_found"]) 
             return
@@ -1544,7 +1731,7 @@ class VideoAnnotationApp(QMainWindow):
         if not output_file:
             return
         self.join_thread = QThread()
-        self.join_worker = JoinWavsWorker(output_file=output_file, fs=self.fs)
+        self.join_worker = JoinWavsWorker(output_file=output_file, fs=self.fs, file_paths=wav_paths)
         self.join_worker.moveToThread(self.join_thread)
         self.join_thread.started.connect(self.join_worker.run)
         self.join_worker.finished.connect(self.join_thread.quit)
@@ -1575,6 +1762,8 @@ class VideoAnnotationApp(QMainWindow):
             wav_exists = os.path.exists(self.fs.wav_path_for(name))
             desired_icon = self._check_icon if wav_exists else self._empty_icon
             item.setIcon(desired_icon)
+        # Update image badges
+        # Do not override image thumbnails here; badges handled elsewhere
     def go_prev(self):
         if self.video_listbox.count() == 0:
             return
@@ -1625,6 +1814,11 @@ class VideoAnnotationApp(QMainWindow):
                 target_h = int(left_h * 0.65)
                 min_h = 200
                 self.video_listbox.setMaximumHeight(max(min_h, target_h))
+        except Exception:
+            pass
+        # Recompute images grid sizes to maintain true two-column layout
+        try:
+            self._recompute_image_grid_sizes()
         except Exception:
             pass
         try:
@@ -1689,12 +1883,20 @@ class VideoAnnotationApp(QMainWindow):
                 self._position_badge()
             except Exception:
                 pass
+        # Keep images grid sizing in sync with show/resize events
+        try:
+            if obj is getattr(self, 'images_list', None):
+                if event.type() in (QEvent.Show, QEvent.Resize):
+                    self._recompute_image_grid_sizes()
+        except Exception:
+            pass
         return super().eventFilter(obj, event)
+
+    # --- Images tab helpers (moved back into VideoAnnotationApp) ---
     def _open_fullscreen_video(self):
         try:
             if not self.current_video or not self.fs.current_folder:
                 return
-            # Safeguard: if already open, bring to front
             if getattr(self, '_fullscreen_viewer', None) is not None:
                 try:
                     if self._fullscreen_viewer.isVisible():
@@ -1705,7 +1907,6 @@ class VideoAnnotationApp(QMainWindow):
                 except Exception:
                     pass
             video_path = self._resolve_current_video_path()
-            # Create as top-level window (no parent) so it truly fullscreen
             viewer = FullscreenVideoViewer(video_path, initial_scale=self.fullscreen_zoom)
             self._fullscreen_viewer = viewer
             viewer.showFullScreen()
@@ -1715,7 +1916,6 @@ class VideoAnnotationApp(QMainWindow):
                 viewer.setFocus()
             except Exception:
                 pass
-            # Track zoom changes and persist on close
             try:
                 viewer.scale_changed.connect(self._on_fullscreen_scale_changed)
                 viewer.destroyed.connect(self._on_fullscreen_closed)
@@ -1723,18 +1923,381 @@ class VideoAnnotationApp(QMainWindow):
                 pass
         except Exception as e:
             logging.error(f"Failed to open fullscreen viewer: {e}")
+
+    def _open_fullscreen_image(self, item=None):
+        try:
+            if getattr(self, 'images_list', None) is None:
+                return
+            if item is None:
+                sel = self.images_list.currentItem()
+                if sel is None:
+                    return
+            else:
+                sel = item
+            path = None
+            try:
+                path = sel.data(Qt.UserRole)
+            except Exception:
+                path = None
+            if not path:
+                name = sel.text()
+                if not (self.fs.current_folder and name):
+                    return
+                path = os.path.join(self.fs.current_folder, name)
+            viewer = FullscreenImageViewer(path, initial_scale=self.fullscreen_zoom)
+            self._fullscreen_viewer = viewer
+            viewer.showFullScreen()
+            try:
+                viewer.raise_()
+                viewer.activateWindow()
+                viewer.setFocus()
+            except Exception:
+                pass
+            try:
+                viewer.scale_changed.connect(self._on_fullscreen_scale_changed)
+                viewer.destroyed.connect(self._on_fullscreen_closed)
+            except Exception:
+                pass
+        except Exception as e:
+            logging.error(f"Failed to open fullscreen image viewer: {e}")
+
+    def _toggle_image_labels(self, checked: bool):
+        try:
+            self.show_image_labels = bool(checked)
+            files = []
+            for i in range(self.images_list.count()):
+                it = self.images_list.item(i)
+                fp = it.data(Qt.UserRole)
+                if fp:
+                    files.append(fp)
+            if not files:
+                files = self.fs.list_images()
+            self._populate_images_list(files)
+            try:
+                self._recompute_image_grid_sizes()
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def _populate_images_list(self, files: list):
+        try:
+            if getattr(self, 'images_list', None) is None:
+                return
+            self.images_list.clear()
+            try:
+                self._recompute_image_grid_sizes()
+            except Exception:
+                pass
+            icon_size = self.images_list.iconSize()
+            count = 0
+            for full in files:
+                name = os.path.basename(full)
+                item_text = name if getattr(self, 'show_image_labels', False) else ""
+                item = QListWidgetItem(item_text)
+                try:
+                    item.setData(Qt.UserRole, full)
+                except Exception:
+                    pass
+                try:
+                    pix = QPixmap(full)
+                    if pix.isNull():
+                        try:
+                            reader = QImageReader(full)
+                            img = reader.read()
+                            if img and not img.isNull():
+                                pix = QPixmap.fromImage(img)
+                        except Exception:
+                            pass
+                    if not pix.isNull():
+                        thumb = pix.scaled(icon_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                        item.setIcon(QIcon(thumb))
+                    else:
+                        item.setIcon(self._empty_icon)
+                except Exception:
+                    item.setIcon(self._empty_icon)
+                self.images_list.addItem(item)
+                count += 1
+            if count > 0:
+                self.images_list.setCurrentRow(0)
+            self.update_video_file_checks()
+            try:
+                logging.info(f"Images tab populated: count={count}; sample={[os.path.basename(f) for f in files[:3]]}")
+            except Exception:
+                pass
+            try:
+                self.on_image_select()
+            except Exception:
+                pass
+        except Exception as e:
+            logging.warning(f"Failed to refresh images from FS manager: {e}")
+
+    def _recompute_image_grid_sizes(self):
+        if getattr(self, 'images_list', None) is None:
+            return
+        try:
+            vp = self.images_list.viewport()
+            vpw = vp.width() if vp is not None else self.images_list.width()
+            try:
+                fw = int(getattr(self.images_list, 'frameWidth', lambda: 0)())
+            except Exception:
+                fw = 0
+            vpw = max(50, vpw - (fw * 2))
+            try:
+                sbw = int(self.images_list.verticalScrollBar().width())
+                if sbw <= 0:
+                    sbw = 12
+            except Exception:
+                sbw = 12
+            vpw = max(100, vpw - sbw)
+            try:
+                spacing = int(self.images_list.spacing())
+            except Exception:
+                spacing = 8
+            cols = 2
+            total_spacing = spacing * (cols + 1)
+            usable = max(120, vpw - total_spacing)
+            min_col_w = 160
+            col_w = max(min_col_w, usable // cols)
+            icon_w = int(col_w * 0.90)
+            icon_h = int(icon_w * 3 / 4)
+            label_h = 18 if getattr(self, 'show_image_labels', False) else 0
+            grid_w = max(100, col_w)
+            grid_h = icon_h + label_h + 10
+            self.images_list.setIconSize(QSize(icon_w, icon_h))
+            self.images_list.setGridSize(QSize(grid_w, grid_h))
+            try:
+                logging.debug(f"UI._recompute_image_grid_sizes: vpw={vpw}, fw={fw}, sbw={sbw}, usable={usable}, col_w={col_w}, icon=({icon_w}x{icon_h}), grid=({grid_w}x{grid_h}), spacing={spacing}")
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def _on_images_updated(self, files: list):
+        self._populate_images_list(files)
+
+    def on_image_select(self):
+        try:
+            sel = self.images_list.currentItem()
+            if sel is None:
+                try:
+                    self.image_thumb.clear()
+                except Exception:
+                    pass
+                self.play_image_audio_button.setEnabled(False)
+                self.stop_image_audio_button.setEnabled(False)
+                self.record_image_button.setEnabled(False)
+                return
+            path = None
+            try:
+                path = sel.data(Qt.UserRole)
+            except Exception:
+                path = None
+            if not path:
+                name = sel.text()
+                path = os.path.join(self.fs.current_folder or "", name)
+            try:
+                logging.debug(f"UI.on_image_select: path={path}")
+            except Exception:
+                pass
+            try:
+                pix = QPixmap(path)
+                if pix.isNull():
+                    try:
+                        reader = QImageReader(path)
+                        img = reader.read()
+                        if img and not img.isNull():
+                            pix = QPixmap.fromImage(img)
+                        else:
+                            try:
+                                logging.debug(f"UI.on_image_select: QImageReader failed for '{os.path.basename(path)}' format={reader.format().data().decode(errors='ignore') if reader.format() else 'unknown'} err='{reader.errorString()}'")
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                if not pix.isNull():
+                    self.image_thumb.setPixmap(pix.scaled(self.image_thumb.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
+                else:
+                    try:
+                        logging.debug(f"UI.on_image_select: QPixmap load failed for '{os.path.basename(path)}' (thumb cleared)")
+                    except Exception:
+                        pass
+                    self.image_thumb.clear()
+            except Exception:
+                pass
+            # Update image-related controls (play/stop and record/stop-record)
+            try:
+                self._update_image_record_controls(path)
+            except Exception:
+                pass
+            try:
+                logging.debug(f"UI.on_image_select: selected='{os.path.basename(path)}', wav_exists={exists}")
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def _update_image_record_controls(self, path: str | None = None):
+        try:
+            # Resolve current selection path if not provided
+            if not path:
+                sel = self.images_list.currentItem()
+                if sel is not None:
+                    try:
+                        path = sel.data(Qt.UserRole) or os.path.join(self.fs.current_folder or "", sel.text())
+                    except Exception:
+                        path = None
+            wav_path = self.fs.wav_path_for_image(path or "")
+            exists = os.path.exists(wav_path)
+            # Play/Stop audio reflect wav existence
+            self.play_image_audio_button.setEnabled(exists)
+            self.stop_image_audio_button.setEnabled(exists)
+            # Record/Stop-Record reflect recording state
+            if self.is_recording:
+                self.record_image_button.setEnabled(False)
+                self.stop_image_record_button.setEnabled(True)
+            else:
+                self.record_image_button.setEnabled(True)
+                self.stop_image_record_button.setEnabled(False)
+            try:
+                logging.debug(f"UI._update_image_record_controls: wav_path={wav_path}, exists={exists}, is_recording={self.is_recording}")
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def play_image_audio(self):
+        try:
+            sel = self.images_list.currentItem()
+            if sel is None:
+                return
+            path = None
+            try:
+                path = sel.data(Qt.UserRole)
+            except Exception:
+                path = None
+            if not path:
+                name = sel.text()
+                path = os.path.join(self.fs.current_folder or "", name)
+            wav_path = self.fs.wav_path_for_image(path)
+            if not os.path.exists(wav_path):
+                return
+            self.stop_audio()
+            if not PYAUDIO_AVAILABLE:
+                QMessageBox.warning(self, "Error", "PyAudio is not available. Cannot play audio.")
+                return
+            self.audio_thread = QThread()
+            self.audio_worker = AudioPlaybackWorker(wav_path)
+            self.audio_worker.moveToThread(self.audio_thread)
+            self.audio_thread.started.connect(self.audio_worker.run)
+            self.audio_worker.finished.connect(self.audio_thread.quit)
+            self.audio_worker.finished.connect(self.audio_worker.deleteLater)
+            self.audio_thread.finished.connect(self.audio_thread.deleteLater)
+            self.audio_thread.finished.connect(self._on_audio_thread_finished)
+            self.audio_worker.error.connect(self._show_worker_error)
+            self.audio_thread.start()
+        except Exception:
+            pass
+
+    def stop_image_audio(self):
+        self.stop_audio()
+
+    def toggle_image_recording(self):
+        try:
+            sel = self.images_list.currentItem()
+            if sel is None:
+                return
+            path = None
+            try:
+                path = sel.data(Qt.UserRole)
+            except Exception:
+                path = None
+            if not path:
+                name = sel.text()
+                path = os.path.join(self.fs.current_folder or "", name)
+            wav_path = self.fs.wav_path_for_image(path)
+            if os.path.exists(wav_path):
+                reply = QMessageBox.question(self, self.LABELS["overwrite"], 
+                                            self.LABELS["overwrite_audio"],
+                                            QMessageBox.Yes | QMessageBox.No)
+                if reply == QMessageBox.No:
+                    return
+            if not PYAUDIO_AVAILABLE:
+                QMessageBox.warning(self, "Error", "PyAudio is not available. Cannot record audio.")
+                return
+            self.is_recording = True
+            try:
+                self.statusBar().showMessage(self.LABELS.get("recording_started", "Recording started"), 2000)
+            except Exception:
+                pass
+            # Update controls: disable Record, enable Stop Recording
+            try:
+                self._update_image_record_controls(path)
+            except Exception:
+                pass
+            self.recording_thread = QThread()
+            self.recording_worker = AudioRecordingWorker(wav_path)
+            self.recording_worker.moveToThread(self.recording_thread)
+            self.recording_thread.started.connect(self.recording_worker.run)
+            self.recording_worker.finished.connect(self.recording_thread.quit)
+            self.recording_worker.finished.connect(self.recording_worker.deleteLater)
+            self.recording_thread.finished.connect(self.recording_thread.deleteLater)
+            self.recording_worker.finished.connect(self.update_video_file_checks)
+            self.recording_thread.finished.connect(self._on_recording_thread_finished)
+            self.recording_worker.error.connect(self._show_worker_error)
+            self.recording_thread.start()
+        except Exception:
+            pass
+
+    def stop_image_recording(self):
+        try:
+            if not self.is_recording:
+                return
+            # Request worker stop
+            if self.recording_worker:
+                try:
+                    self.recording_worker.stop()
+                except RuntimeError:
+                    pass
+            # Quit and wait for thread
+            if self.recording_thread:
+                try:
+                    if self.recording_thread.isRunning():
+                        self.recording_thread.quit()
+                        self.recording_thread.wait()
+                except RuntimeError:
+                    pass
+                finally:
+                    self.recording_thread = None
+                    self.recording_worker = None
+            self.is_recording = False
+            # Update controls after stop
+            try:
+                self._update_image_record_controls()
+            except Exception:
+                pass
+            try:
+                self.statusBar().showMessage(self.LABELS.get("recording_stopped", "Recording stopped"), 2000)
+            except Exception:
+                pass
+            self.update_video_file_checks()
+        except Exception:
+            pass
+
     def _on_fullscreen_scale_changed(self, scale: float):
         try:
             if isinstance(scale, (int, float)) and scale > 0:
                 self.fullscreen_zoom = float(scale)
         except Exception:
             pass
+
     def _on_fullscreen_closed(self, *args):
         try:
             self._fullscreen_viewer = None
             self.save_settings()
         except Exception:
             pass
+
     def _position_badge(self):
         if not getattr(self, 'badge_label', None):
             return
@@ -1746,3 +2309,57 @@ class VideoAnnotationApp(QMainWindow):
         x = max(0, w - bw - 8)
         y = 8
         self.badge_label.move(x, y)
+
+class FullscreenImageViewer(QWidget):
+    scale_changed = Signal(float)
+    def __init__(self, image_path: str, initial_scale: float | None = None):
+        super().__init__(None)
+        self._path = image_path
+        self._scale = float(initial_scale) if isinstance(initial_scale, (int, float)) and initial_scale > 0 else 1.0
+        self._label = QLabel(self)
+        self._label.setAlignment(Qt.AlignCenter)
+        self._pix = QPixmap(image_path)
+        self._update_pix()
+    def _update_pix(self):
+        if self._pix.isNull():
+            self._label.setText("Cannot open image.")
+            return
+        size = self.size()
+        w = max(1, int(size.width() * self._scale))
+        h = max(1, int(size.height() * self._scale))
+        scaled = self._pix.scaled(w, h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        self._label.setPixmap(scaled)
+        self._label.resize(self.size())
+    def resizeEvent(self, event):
+        try:
+            self._label.resize(self.size())
+            self._update_pix()
+        except Exception:
+            pass
+        try:
+            return super().resizeEvent(event)
+        except Exception:
+            pass
+    def keyPressEvent(self, event):
+        try:
+            key = event.key()
+            mods = event.modifiers()
+            if key in (Qt.Key_Escape, Qt.Key_Q):
+                self.close()
+                event.accept()
+                return
+            if key == Qt.Key_Plus or (key == Qt.Key_Equal and (mods & Qt.ShiftModifier)):
+                self._scale = min(4.0, self._scale * 1.1)
+                self.scale_changed.emit(self._scale)
+                self._update_pix()
+                event.accept()
+                return
+            if key == Qt.Key_Minus:
+                self._scale = max(0.25, self._scale / 1.1)
+                self.scale_changed.emit(self._scale)
+                self._update_pix()
+                event.accept()
+                return
+        except Exception:
+            pass
+        return super().keyPressEvent(event)

@@ -163,3 +163,115 @@ class FullscreenVideoViewer(QWidget):
         except Exception:
             pass
         return super().closeEvent(event)
+
+
+class FullscreenImageViewer(QWidget):
+    # Emitted when the zoom scale changes
+    scale_changed = Signal(float)
+
+    def __init__(self, image_path: str, initial_scale: float | None = None, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
+        self.setFocusPolicy(Qt.StrongFocus)
+        self.image_path = image_path
+        self._pixmap = None
+        self._load_image()
+        # If an initial scale is provided, use it; else auto-fit on first paint
+        self.scale = initial_scale if (initial_scale is not None and initial_scale > 0.0) else 1.0
+        self.offset_x = 0
+        self.offset_y = 0
+        self._auto_fit_done = initial_scale is not None
+
+    def _load_image(self):
+        try:
+            pm = QPixmap(self.image_path)
+            if pm and not pm.isNull():
+                self._pixmap = pm
+            else:
+                self._pixmap = None
+        except Exception:
+            self._pixmap = None
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.fillRect(self.rect(), Qt.black)
+        if self._pixmap:
+            pw = self._pixmap.width()
+            ph = self._pixmap.height()
+            # Auto-fit once to the window, maintaining aspect ratio
+            if not self._auto_fit_done and self.width() > 0 and self.height() > 0:
+                fit_scale_w = self.width() / float(pw)
+                fit_scale_h = self.height() / float(ph)
+                self.scale = max(0.1, min(fit_scale_w, fit_scale_h))
+                self.offset_x = 0
+                self.offset_y = 0
+                self._auto_fit_done = True
+            sw = int(pw * self.scale)
+            sh = int(ph * self.scale)
+            x = (self.width() - sw) // 2 + self.offset_x
+            y = (self.height() - sh) // 2 + self.offset_y
+            painter.drawPixmap(x, y, sw, sh, self._pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        tip = "+ / -: zoom    arrows: pan    click/any key: close"
+        font = QFont()
+        font.setPointSize(12)
+        painter.setFont(font)
+        metrics = painter.fontMetrics()
+        pad = 12
+        text_w = metrics.horizontalAdvance(tip)
+        text_h = metrics.height()
+        rect_w = text_w + pad * 2
+        rect_h = text_h + pad
+        painter.setOpacity(0.6)
+        painter.fillRect(10, 10, rect_w, rect_h, QColor(0, 0, 0))
+        painter.setOpacity(1.0)
+        painter.setPen(QColor(255, 255, 255))
+        painter.drawText(10 + pad, 10 + text_h, tip)
+
+    def keyPressEvent(self, event):
+        key = event.key()
+        if key in (Qt.Key_Plus, Qt.Key_Equal):
+            self.scale = min(8.0, self.scale * 1.1)
+            try:
+                self.scale_changed.emit(float(self.scale))
+            except Exception:
+                pass
+            self.update()
+            event.accept()
+            return
+        if key == Qt.Key_Minus:
+            self.scale = max(0.1, self.scale / 1.1)
+            try:
+                self.scale_changed.emit(float(self.scale))
+            except Exception:
+                pass
+            self.update()
+            event.accept()
+            return
+        if key == Qt.Key_Left:
+            self.offset_x += 50
+            self.update()
+            event.accept()
+            return
+        if key == Qt.Key_Right:
+            self.offset_x -= 50
+            self.update()
+            event.accept()
+            return
+        if key == Qt.Key_Up:
+            self.offset_y += 50
+            self.update()
+            event.accept()
+            return
+        if key == Qt.Key_Down:
+            self.offset_y -= 50
+            self.update()
+            event.accept()
+            return
+        self.close()
+
+    def mousePressEvent(self, event):
+        self.close()
+
+    def closeEvent(self, event):
+        return super().closeEvent(event)
