@@ -21,11 +21,15 @@
       <h2>Download <span id="latestVersion" class="badge" style="margin-left:8px">checking…</span></h2>
       <p>Get the latest version for your computer. No coding or setup required.</p>
       <div class="actions">
-        <a id="winLink" class="button primary" href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">
-          <span>Download for Windows</span>
+        <a id="winInstaller" class="button primary" href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">
+          <span>Windows Installer</span>
           <span class="small">(.exe)</span>
         </a>
-        <a id="macLink" class="button secondary" href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">
+        <a id="winPortable" class="button secondary" href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">
+          <span>Windows Portable</span>
+          <span class="small">(.exe only)</span>
+        </a>
+        <a id="macLink" class="button secondary" href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener" style="display:none;">
           <span>Download for macOS</span>
           <span class="small">(.dmg)</span>
         </a>
@@ -47,9 +51,27 @@
         </ul>
       </div>
       <div>
-        <h2>Screenshot</h2>
-        <div class="figure">
-          <img src="./assets/screenshots/screenshot.png" alt="Video Annotation Tool main window" />
+        <h2>Screenshots</h2>
+        <div class="carousel" id="screenshotCarousel">
+          <div class="carousel-track">
+            <div class="carousel-slide">
+              <img src="./assets/screenshots/screenshot_videos.png" alt="Default Video Annotation view" />
+              <div class="carousel-caption">Default Video Annotation view: Record descriptions of videos one at a time.</div>
+            </div>
+            <div class="carousel-slide">
+              <img src="./assets/screenshots/screenshot_images.png" alt="Image Annotation view" />
+              <div class="carousel-caption">Image Annotation view: Describe still images in the same folder.</div>
+            </div>
+            <div class="carousel-slide">
+              <img src="./assets/screenshots/screenshot_combined_wav.png" alt="Export as single WAV file" />
+              <div class="carousel-caption">Export all recordings as a single WAV file for easy import into SayMore or ELAN.</div>
+            </div>
+            <div class="carousel-slide">
+              <img src="./assets/screenshots/screenshot_ocenaudio.png" alt="Open in OcenAudio editor" />
+              <div class="carousel-caption">Open all recordings in OcenAudio for trimming, normalization, and further editing.</div>
+            </div>
+          </div>
+          <div class="carousel-dots"></div>
         </div>
       </div>
     </section>
@@ -118,7 +140,8 @@
       const owner = 'rulingAnts';
       const repo = 'videoannotationtool';
       const api = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
-      const winA = document.getElementById('winLink');
+      const winInstaller = document.getElementById('winInstaller');
+      const winPortable = document.getElementById('winPortable');
       const macA = document.getElementById('macLink');
       const ver = document.getElementById('latestVersion');
 
@@ -131,13 +154,21 @@
           const tag = data.tag_name || data.name || '';
           if (ver) ver.textContent = tag ? tag : 'latest';
           const assets = Array.isArray(data.assets) ? data.assets : [];
-          const findByExt = (ext) => assets.find(a => a && a.browser_download_url && a.name && a.name.toLowerCase().endsWith(ext));
-          const exe = findByExt('.exe');
-          const dmg = findByExt('.dmg');
-          if (exe && winA) {
-            winA.href = exe.browser_download_url;
-            winA.removeAttribute('target');
-            winA.removeAttribute('rel');
+          // Find installer and portable .exe
+          const isInstaller = (n) => /setup|installer/i.test(n);
+          const isPortable = (n) => n.toLowerCase().endsWith('.exe') && !isInstaller(n);
+          const installer = assets.find(a => a && a.browser_download_url && a.name && isInstaller(a.name));
+          const portable = assets.find(a => a && a.browser_download_url && a.name && isPortable(a.name));
+          const dmg = assets.find(a => a && a.browser_download_url && a.name && a.name.toLowerCase().endsWith('.dmg'));
+          if (installer && winInstaller) {
+            winInstaller.href = installer.browser_download_url;
+            winInstaller.removeAttribute('target');
+            winInstaller.removeAttribute('rel');
+          }
+          if (portable && winPortable) {
+            winPortable.href = portable.browser_download_url;
+            winPortable.removeAttribute('target');
+            winPortable.removeAttribute('rel');
           }
           if (dmg && macA) {
             macA.href = dmg.browser_download_url;
@@ -149,6 +180,49 @@
           if (ver) ver.textContent = 'latest';
           console.warn('Failed to fetch latest release info:', err);
         });
+    })();
+  </script>
+  <script>
+    // Carousel logic
+    (function() {
+      const carousel = document.getElementById('screenshotCarousel');
+      if (!carousel) return;
+      const track = carousel.querySelector('.carousel-track');
+      const slides = Array.from(carousel.querySelectorAll('.carousel-slide'));
+      const dotsContainer = carousel.querySelector('.carousel-dots');
+      let current = 0;
+      let timer = null;
+      function goTo(idx) {
+        current = idx;
+        track.style.transform = `translateX(-${idx * 100}%)`;
+        dotsContainer.querySelectorAll('button').forEach((b,i) => b.classList.toggle('active', i===idx));
+      }
+      function next() {
+        goTo((current+1)%slides.length);
+      }
+      // Dots
+      slides.forEach((_,i) => {
+        const btn = document.createElement('button');
+        btn.setAttribute('aria-label', `Show screenshot ${i+1}`);
+        btn.onclick = () => { goTo(i); resetTimer(); };
+        dotsContainer.appendChild(btn);
+      });
+      goTo(0);
+      // Auto-swipe
+      function resetTimer() {
+        if (timer) clearInterval(timer);
+        timer = setInterval(next, 4200);
+      }
+      resetTimer();
+      // Pause on hover
+      carousel.addEventListener('mouseenter', ()=>{ if (timer) clearInterval(timer); });
+      carousel.addEventListener('mouseleave', resetTimer);
+      // Keyboard support
+      carousel.tabIndex = 0;
+      carousel.addEventListener('keydown', e => {
+        if (e.key === 'ArrowLeft') { goTo((current-1+slides.length)%slides.length); resetTimer(); }
+        if (e.key === 'ArrowRight') { next(); resetTimer(); }
+      });
     })();
   </script>
 </body>
