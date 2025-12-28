@@ -180,6 +180,46 @@ class FolderAccessManager(QObject):
         except Exception as e:
             raise FolderAccessError(str(e))
 
+    def cleanup_hidden_files(self, folder: Optional[str] = None) -> List[str]:
+        """Delete common hidden/junk files in the given folder.
+
+        Behavior:
+        - Always delete Windows hidden files by name (e.g., Thumbs.db, desktop.ini),
+          regardless of platform. This helps when organizing Windows-originated folders
+          on macOS/Linux.
+        - Additionally, on Windows only, delete dot-prefixed files.
+
+        Returns a list of error messages for files that could not be deleted.
+        """
+        errors: List[str] = []
+        try:
+            import sys as _sys
+            fold = folder or self.current_folder
+            if not fold:
+                return errors
+            # Safety checks
+            if not os.path.isdir(fold):
+                raise FolderNotFoundError(fold)
+            if not self.is_accessible(fold):
+                raise FolderPermissionError(fold)
+            windows_hidden_names = {"Thumbs.db", "desktop.ini"}
+            for f in os.listdir(fold):
+                should_delete = False
+                if f in windows_hidden_names:
+                    should_delete = True
+                elif _sys.platform == "win32" and f.startswith('.'):
+                    should_delete = True
+                if should_delete:
+                    try:
+                        os.remove(os.path.join(fold, f))
+                    except Exception as e:
+                        errors.append(f"Delete {f}: {e}")
+        except FolderAccessError as e:
+            errors.append(str(e))
+        except Exception as e:
+            errors.append(str(e))
+        return errors
+
     IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif")
 
     def list_images(self, path: Optional[str] = None) -> List[str]:

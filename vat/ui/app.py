@@ -845,16 +845,12 @@ class VideoAnnotationApp(QMainWindow):
             if not self.fs.set_folder(folder):
                 QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["permission_denied_title"])
                 return
-            if sys.platform == "win32":
-                hidden_files = [f for f in os.listdir(self.fs.current_folder) if f.startswith('.')]
-                errors = []
-                for f in hidden_files:
-                    try:
-                        os.remove(os.path.join(self.fs.current_folder, f))
-                    except Exception as e:
-                        errors.append(f"Delete {f}: {e}")
+            try:
+                errors = self.fs.cleanup_hidden_files()
                 if errors:
                     QMessageBox.warning(self, self.LABELS["cleanup_errors_title"], "Some hidden files could not be deleted:\n" + "\n".join(errors))
+            except Exception:
+                pass
             self.export_wavs_button.setEnabled(True)
             self.clear_wavs_button.setEnabled(True)
             self.import_wavs_button.setEnabled(True)

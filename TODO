@@ -7,9 +7,7 @@
  [x] Standardize `JoinWavsWorker` to rely on `FolderAccessManager` (remove legacy `folder_path`).
  [] Wire `imagesUpdated` signal to any still-image views when implemented.
  [] Migrate any direct `os.listdir` usage in UI to `FolderAccessManager` helpers where applicable.
+ [x] Centralize Windows dotfile cleanup in `FolderAccessManager.cleanup_hidden_files()` and use it in UI.
  [] Investigate occasional playback segfault; gather logs and reproduce cases.
  [x] Add defensive checks around `cv2.VideoCapture` lifecycle (release on open failure).
  [x] Add unit-style smoke tests for FS manager flows (folder change, videosUpdated, metadata read/write).
-Optional next steps
-- Wire `imagesUpdated` when the images tab is added.
-- If you want, I can run a quick smoke test and check playback stability now.
