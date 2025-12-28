@@ -3,7 +3,7 @@ import math
 import cv2
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import QWidget
-from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QFont
+from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QFont, QGuiApplication
 
 class FullscreenVideoViewer(QWidget):
     # Emitted when the zoom scale changes
@@ -18,12 +18,12 @@ class FullscreenVideoViewer(QWidget):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._update_frame)
         self.playing = False
-        # If an initial scale is provided, use it; else auto-fit on first paint
-        self.scale = initial_scale if (initial_scale is not None and initial_scale > 0.0) else 1.0
+        # Zoom scale; will be auto-fitted on first paint
+        self.scale = 1.0
         self.offset_x = 0
         self.offset_y = 0
         self._current_pixmap = None
-        self._auto_fit_done = initial_scale is not None
+        self._auto_fit_done = False
         self._start_video()
 
     def _start_video(self):
@@ -61,11 +61,24 @@ class FullscreenVideoViewer(QWidget):
         if self._current_pixmap:
             pw = self._current_pixmap.width()
             ph = self._current_pixmap.height()
-            # Auto-fit once to the window, maintaining aspect ratio
+            # Auto-fit once to ~80% of screen, capped at 2x media size
             if not self._auto_fit_done and self.width() > 0 and self.height() > 0:
-                fit_scale_w = self.width() / float(pw)
-                fit_scale_h = self.height() / float(ph)
-                self.scale = max(0.1, min(fit_scale_w, fit_scale_h))
+                screen = QGuiApplication.primaryScreen()
+                if screen is not None:
+                    geom = screen.availableGeometry()
+                    sw = float(geom.width())
+                    sh = float(geom.height())
+                    target_w = sw * 0.8
+                    target_h = sh * 0.8
+                    fit_scale_w = target_w / float(pw)
+                    fit_scale_h = target_h / float(ph)
+                    base_scale = min(fit_scale_w, fit_scale_h, 2.0)
+                    self.scale = max(0.1, base_scale)
+                else:
+                    # Fallback to simple window fit
+                    fit_scale_w = self.width() / float(pw)
+                    fit_scale_h = self.height() / float(ph)
+                    self.scale = max(0.1, min(fit_scale_w, fit_scale_h))
                 self.offset_x = 0
                 self.offset_y = 0
                 self._auto_fit_done = True
@@ -176,11 +189,11 @@ class FullscreenImageViewer(QWidget):
         self.image_path = image_path
         self._pixmap = None
         self._load_image()
-        # If an initial scale is provided, use it; else auto-fit on first paint
-        self.scale = initial_scale if (initial_scale is not None and initial_scale > 0.0) else 1.0
+        # Zoom scale; will be auto-fitted on first paint
+        self.scale = 1.0
         self.offset_x = 0
         self.offset_y = 0
-        self._auto_fit_done = initial_scale is not None
+        self._auto_fit_done = False
 
     def _load_image(self):
         try:
@@ -198,11 +211,23 @@ class FullscreenImageViewer(QWidget):
         if self._pixmap:
             pw = self._pixmap.width()
             ph = self._pixmap.height()
-            # Auto-fit once to the window, maintaining aspect ratio
+            # Auto-fit once to ~80% of screen, capped at 2x media size
             if not self._auto_fit_done and self.width() > 0 and self.height() > 0:
-                fit_scale_w = self.width() / float(pw)
-                fit_scale_h = self.height() / float(ph)
-                self.scale = max(0.1, min(fit_scale_w, fit_scale_h))
+                screen = QGuiApplication.primaryScreen()
+                if screen is not None:
+                    geom = screen.availableGeometry()
+                    sw = float(geom.width())
+                    sh = float(geom.height())
+                    target_w = sw * 0.8
+                    target_h = sh * 0.8
+                    fit_scale_w = target_w / float(pw)
+                    fit_scale_h = target_h / float(ph)
+                    base_scale = min(fit_scale_w, fit_scale_h, 2.0)
+                    self.scale = max(0.1, base_scale)
+                else:
+                    fit_scale_w = self.width() / float(pw)
+                    fit_scale_h = self.height() / float(ph)
+                    self.scale = max(0.1, min(fit_scale_w, fit_scale_h))
                 self.offset_x = 0
                 self.offset_y = 0
                 self._auto_fit_done = True

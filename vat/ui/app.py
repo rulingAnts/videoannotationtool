@@ -1942,7 +1942,7 @@ class VideoAnnotationApp(QMainWindow):
                 except Exception:
                     pass
             video_path = self._resolve_current_video_path()
-            viewer = FullscreenVideoViewer(video_path, initial_scale=self.fullscreen_zoom)
+            viewer = FullscreenVideoViewer(video_path)
             self._fullscreen_viewer = viewer
             viewer.showFullScreen()
             try:
@@ -1979,7 +1979,7 @@ class VideoAnnotationApp(QMainWindow):
                 if not (self.fs.current_folder and name):
                     return
                 path = os.path.join(self.fs.current_folder, name)
-            viewer = FullscreenImageViewer(path, initial_scale=self.fullscreen_zoom)
+            viewer = FullscreenImageViewer(path)
             self._fullscreen_viewer = viewer
             viewer.showFullScreen()
             try:
