@@ -590,6 +590,9 @@ class VideoAnnotationApp(QMainWindow):
             if self.last_video_name and self.last_video_name in basenames:
                 idx = basenames.index(self.last_video_name)
                 self.video_listbox.setCurrentRow(idx)
+            elif basenames:
+                # Auto-select the first video on folder change
+                self.video_listbox.setCurrentRow(0)
             if not self.video_files:
                 QMessageBox.information(self, self.LABELS["no_videos_found"], f"{self.LABELS['no_videos_found']} {self.fs.current_folder}")
         except Exception as e:
@@ -603,7 +606,8 @@ class VideoAnnotationApp(QMainWindow):
         # Keep layout tight but ensure a small top margin
         try:
             main_layout.setSpacing(0)
-            main_layout.setContentsMargins(8, 8, 8, 6)
+            # Increase top margin to prevent overlap under titlebar
+            main_layout.setContentsMargins(8, 14, 8, 6)
         except Exception:
             pass
         try:
@@ -623,6 +627,7 @@ class VideoAnnotationApp(QMainWindow):
         # Remove extra margins/padding in the header controls
         try:
             self.language_dropdown.setStyleSheet("margin:0px; padding:0px;")
+            self.language_dropdown.setFixedHeight(28)
         except Exception:
             pass
         main_layout.addWidget(self.language_dropdown)
@@ -882,6 +887,9 @@ class VideoAnnotationApp(QMainWindow):
             if self.last_video_name and self.last_video_name in basenames:
                 idx = basenames.index(self.last_video_name)
                 self.video_listbox.setCurrentRow(idx)
+            elif basenames:
+                # Auto-select first video to ensure player loads
+                self.video_listbox.setCurrentRow(0)
             if not self.video_files:
                 QMessageBox.information(self, self.LABELS["no_videos_found"], f"{self.LABELS['no_videos_found']} {self.fs.current_folder}")
         except FolderPermissionError:
@@ -982,25 +990,39 @@ class VideoAnnotationApp(QMainWindow):
             self._position_badge()
         except Exception:
             pass
+    def _resolve_current_video_path(self) -> str:
+        """Return full path for `self.current_video` by matching against `self.video_files`.
+        Fallback to FS join if not found.
+        """
+        try:
+            if self.current_video:
+                for vp in self.video_files:
+                    if os.path.basename(vp) == self.current_video:
+                        return vp
+                if self.fs.current_folder:
+                    return os.path.join(self.fs.current_folder, self.current_video)
+        except Exception:
+            pass
+        return ""
     def show_first_frame(self):
         if not self.current_video:
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
             return
-        video_path = os.path.join(self.folder_path, self.current_video)
-        if not os.path.exists(video_path):
-            QMessageBox.critical(self, self.LABELS["error_title"], f"{self.LABELS['cannot_open_video']}\n{video_path}")
+        video_path = self._resolve_current_video_path()
+        if not (video_path and os.path.exists(video_path)):
+            logging.warning(f"Cannot open video (path missing or inaccessible): {video_path}")
             self.video_label.setText(self.LABELS["cannot_open_video"])
             return
         cap = None
         try:
             cap = cv2.VideoCapture(video_path)
             if not cap.isOpened():
-                QMessageBox.critical(self, self.LABELS["error_title"], f"{self.LABELS['cannot_open_video']}\n{video_path}")
+                logging.warning(f"Cannot open video (cv2 open failed): {video_path}")
                 self.video_label.setText(self.LABELS["cannot_open_video"])
                 return
             ret, frame = cap.read()
             if not ret:
-                QMessageBox.warning(self, self.LABELS["unexpected_error_title"], f"{self.LABELS['cannot_open_video']}\n{video_path}")
+                logging.warning(f"Cannot open video (first frame read failed): {video_path}")
                 self.video_label.setText(self.LABELS["cannot_open_video"])
                 return
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -1012,7 +1034,7 @@ class VideoAnnotationApp(QMainWindow):
             self.video_label.setPixmap(pixmap)
         except Exception as e:
             logging.error(f"Failed to load first frame for {video_path}: {e}")
-            QMessageBox.critical(self, self.LABELS["error_title"], f"{self.LABELS['unexpected_error_title']}: {e}")
+            # Silent UI update; avoid popup on auto-selection
             self.video_label.setText(self.LABELS["cannot_open_video"])
         finally:
             if cap is not None:
@@ -1061,7 +1083,7 @@ class VideoAnnotationApp(QMainWindow):
         if not self.current_video:
             return
         self.stop_video()
-        video_path = os.path.join(self.folder_path, self.current_video)
+        video_path = self._resolve_current_video_path()
         self.cap = cv2.VideoCapture(video_path)
         if not self.cap.isOpened():
             QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["cannot_open_video"])
