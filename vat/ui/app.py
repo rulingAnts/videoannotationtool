@@ -1011,19 +1011,19 @@ class VideoAnnotationApp(QMainWindow):
         video_path = self._resolve_current_video_path()
         if not (video_path and os.path.exists(video_path)):
             logging.warning(f"Cannot open video (path missing or inaccessible): {video_path}")
-            self.video_label.setText(self.LABELS["cannot_open_video"])
+            self.video_label.setText("Loading preview…")
             return
         cap = None
         try:
             cap = cv2.VideoCapture(video_path)
             if not cap.isOpened():
                 logging.warning(f"Cannot open video (cv2 open failed): {video_path}")
-                self.video_label.setText(self.LABELS["cannot_open_video"])
+                self.video_label.setText("Loading preview…")
                 return
             ret, frame = cap.read()
             if not ret:
                 logging.warning(f"Cannot open video (first frame read failed): {video_path}")
-                self.video_label.setText(self.LABELS["cannot_open_video"])
+                self.video_label.setText("Loading preview…")
                 return
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame = cv2.resize(frame, (640, 480))
@@ -1035,7 +1035,7 @@ class VideoAnnotationApp(QMainWindow):
         except Exception as e:
             logging.error(f"Failed to load first frame for {video_path}: {e}")
             # Silent UI update; avoid popup on auto-selection
-            self.video_label.setText(self.LABELS["cannot_open_video"])
+            self.video_label.setText("Loading preview…")
         finally:
             if cap is not None:
                 cap.release()
