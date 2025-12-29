@@ -243,6 +243,10 @@
         af: { label: 'Afrikaans' },
       };
 
+      // Store original English HTML for all translatable elements so we can
+      // restore it when switching back to English after another language.
+      const ORIGINAL_HTML = {};
+
       const TRANSLATIONS = {
         id: {
           'i18n-brand-title': 'Alat Anotasi Video',
@@ -657,14 +661,38 @@
         return 'en';
       }
 
-      function applyTranslations(lang) {
-        const dict = TRANSLATIONS[lang] || {};
-        Object.keys(dict).forEach(id => {
+      function captureOriginals() {
+        const ids = new Set();
+        Object.values(TRANSLATIONS).forEach(dict => {
+          Object.keys(dict).forEach(id => ids.add(id));
+        });
+        ids.forEach(id => {
+          if (Object.prototype.hasOwnProperty.call(ORIGINAL_HTML, id)) return;
           const el = document.getElementById(id);
           if (el) {
-            el.innerHTML = dict[id];
+            ORIGINAL_HTML[id] = el.innerHTML;
           }
         });
+      }
+
+      function applyTranslations(lang) {
+        if (lang === 'en') {
+          // Restore original English content
+          Object.keys(ORIGINAL_HTML).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+              el.innerHTML = ORIGINAL_HTML[id];
+            }
+          });
+        } else {
+          const dict = TRANSLATIONS[lang] || {};
+          Object.keys(dict).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+              el.innerHTML = dict[id];
+            }
+          });
+        }
         document.documentElement.lang = lang;
       }
 
@@ -679,6 +707,8 @@
           select.appendChild(opt);
         });
         const lang = detectLanguage();
+        // Capture original English markup before applying any translations
+        captureOriginals();
         select.value = lang;
         applyTranslations(lang);
         select.addEventListener('change', () => {
