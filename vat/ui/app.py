@@ -799,6 +799,15 @@ class VideoAnnotationApp(QMainWindow):
         try:
             self.language_dropdown.setStyleSheet("margin:0px; padding:0px;")
             self.language_dropdown.setFixedHeight(28)
+            # Ensure the dropdown popup list has an opaque background so
+            # language names are readable even if parent widgets use
+            # transparent backgrounds or custom stylesheets.
+            try:
+                view = self.language_dropdown.view()
+                view.setStyleSheet("background-color: palette(base); color: palette(text);")
+            except Exception:
+                # If anything goes wrong here, we still want the app to start.
+                pass
         except Exception:
             pass
         main_layout.addWidget(self.language_dropdown)
