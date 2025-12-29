@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle, QSizePolicy,
     QListView, QStyledItemDelegate, QApplication, QCheckBox
 )
-from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize, QRect, QPoint
+from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize, QRect, QPoint, QLocale
 from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence, QImageReader, QPen, QColor
 
 from vat.audio import PYAUDIO_AVAILABLE
@@ -647,6 +647,7 @@ class VideoAnnotationApp(QMainWindow):
     ui_error = Signal(str, str)
     def __init__(self):
         super().__init__()
+        # Default language; may be overridden by settings or system locale
         self.language = "English"
         self.LABELS = LABELS_ALL[self.language]
         # Unified file-system access
@@ -1172,27 +1173,74 @@ class VideoAnnotationApp(QMainWindow):
             self.folder_display_label.setToolTip("")
     def load_settings(self):
         try:
+            settings = None
             if os.path.exists(self.settings_file):
                 with open(self.settings_file, 'r') as f:
                     settings = json.load(f)
-                    self.ocenaudio_path = settings.get('ocenaudio_path')
-                    saved_lang = settings.get('language')
-                    if saved_lang and saved_lang in LABELS_ALL:
-                        self.language = saved_lang
+            if isinstance(settings, dict):
+                self.ocenaudio_path = settings.get('ocenaudio_path')
+                saved_lang = settings.get('language')
+                if saved_lang and saved_lang in LABELS_ALL:
+                    # Respect explicit user choice
+                    self.language = saved_lang
+                    self.LABELS = LABELS_ALL[self.language]
+                last_folder = settings.get('last_folder')
+                if last_folder and os.path.isdir(last_folder):
+                    try:
+                        self.fs.set_folder(last_folder)
+                    except Exception:
+                        pass
+                last_video = settings.get('last_video')
+                if last_video:
+                    self.last_video_name = last_video
+                # Persistent fullscreen zoom
+                zoom = settings.get('fullscreen_zoom')
+                if isinstance(zoom, (int, float)) and zoom > 0:
+                    self.fullscreen_zoom = float(zoom)
+            else:
+                # No saved language preference: try to match system UI language
+                try:
+                    locale = QLocale.system()
+                    # Prefer explicit language codes; fall back to language name
+                    lang_name = locale.languageToString(locale.language())
+                    lang_name = (lang_name or "").strip()
+                    candidates = []
+                    if lang_name:
+                        candidates.append(lang_name)
+                    ui_name = locale.name()  # e.g. "en_US"
+                    if ui_name:
+                        candidates.append(ui_name)
+                    # Map common Qt language names / codes to our LABELS_ALL keys
+                    def _match_language():
+                        # Direct match on language_name
+                        for key, labels in LABELS_ALL.items():
+                            if labels.get("language_name") in candidates:
+                                return key
+                        # Simple heuristics for common locales
+                        for c in candidates:
+                            c_lower = c.lower()
+                            if c_lower.startswith("en"):
+                                return "English"
+                            if c_lower.startswith("id") or "bahasa" in c_lower:
+                                return "Bahasa Indonesia"
+                            if c_lower.startswith("ko"):
+                                return "한국어"
+                            if c_lower.startswith("nl"):
+                                return "Nederlands"
+                            if c_lower.startswith("pt"):
+                                return "Português (Brasil)"
+                            if c_lower.startswith("es"):
+                                return "Español (Latinoamérica)"
+                            if c_lower.startswith("af"):
+                                return "Afrikaans"
+                        return None
+                    matched = _match_language()
+                    if matched and matched in LABELS_ALL:
+                        self.language = matched
                         self.LABELS = LABELS_ALL[self.language]
-                    last_folder = settings.get('last_folder')
-                    if last_folder and os.path.isdir(last_folder):
-                        try:
-                            self.fs.set_folder(last_folder)
-                        except Exception:
-                            pass
-                    last_video = settings.get('last_video')
-                    if last_video:
-                        self.last_video_name = last_video
-                    # Persistent fullscreen zoom
-                    zoom = settings.get('fullscreen_zoom')
-                    if isinstance(zoom, (int, float)) and zoom > 0:
-                        self.fullscreen_zoom = float(zoom)
+                except Exception:
+                    # On any failure, keep English defaults
+                    pass
         except Exception as e:
             logging.warning(f"Failed to load settings: {e}")
     def save_settings(self):
