@@ -6,7 +6,7 @@
 # Default to per-user
 !define APPNAME "Video Annotation Tool"
 !define COMPANY "Seth Johnston"
-!define VERSION "2.0.1"
+!define VERSION "2.0.2"
 
 Name "Video Annotation Tool"
 OutFile "Video Annotation Tool Setup ${VERSION}.exe"
