@@ -1969,7 +1969,10 @@ class VideoAnnotationApp(QMainWindow):
                 "exercise as one continuous speech event, with the same "
                 "participants and topics spanning multiple clips. A continuous "
                 "recording will help you study how they connect events and track "
-                "participants later."
+                "participants later.<br><br>"
+                "You can find a short list of recommended video stimulus kits "
+                "here: <a href=\"https://rulingants.github.io/videoannotationtool/#stimulus-kits\">"
+                "Recommended stimulus kits</a>."
             )
             QMessageBox.information(
                 self,
