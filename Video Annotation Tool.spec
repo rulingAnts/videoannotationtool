@@ -29,7 +29,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='Video Annotation Tool',
+    name='Visual Stimulus Kit Tool',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

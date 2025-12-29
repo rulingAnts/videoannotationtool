@@ -186,7 +186,7 @@ def main():
             extra_args += ['--add-binary', f"{bins['ffprobe']};{dest_dir}"]
 
         build_with_pyinstaller(
-            name='Video Annotation Tool',
+            name='Visual Stimulus Kit Tool',
             onefile=onefile,
             windowed=windowed,
             clean=not args.no_clean,

@@ -195,7 +195,7 @@ python scripts/generate_icon.py
 # Build with PyInstaller
 pyinstaller --clean pyinstaller.spec
 
-# Output: dist/Video Annotation Tool.exe
+# Output: dist/Visual Stimulus Kit Tool.exe
 ```
 
 ## Testing

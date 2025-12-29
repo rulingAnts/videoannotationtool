@@ -1,19 +1,19 @@
-; NSIS script for Video Annotation Tool Windows installer
-; Output: VideoAnnotationToolSetup.exe
+; NSIS script for Visual Stimulus Kit Tool Windows installer
+; Output: VisualStimulusKitToolSetup.exe
 
 !include "nsDialogs.nsh"
 
 # Default to per-user
-!define APPNAME "Video Annotation Tool"
+!define APPNAME "Visual Stimulus Kit Tool"
 !define COMPANY "Seth Johnston"
 !define VERSION "2.0.2"
 
-Name "Video Annotation Tool"
-OutFile "Video Annotation Tool Setup ${VERSION}.exe"
+Name "Visual Stimulus Kit Tool"
+OutFile "Visual Stimulus Kit Tool Setup ${VERSION}.exe"
 
 # Allow user to choose install scope
-InstallDirRegKey HKCU "Software\VideoAnnotationTool" "Install_Dir"
-InstallDir "$LocalAppData\Programs\Video Annotation Tool"
+InstallDirRegKey HKCU "Software\VisualStimulusKitTool" "Install_Dir"
+InstallDir "$LocalAppData\Programs\Visual Stimulus Kit Tool"
 
 # Variables for scope
 Var AllUsers
@@ -24,7 +24,7 @@ VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "ProductVersion" "${VERSION}"
 VIAddVersionKey "CompanyName" "${COMPANY}"
 VIAddVersionKey "LegalCopyright" "Copyright (C) 2025 ${COMPANY}"
-VIAddVersionKey "FileDescription" "Video Annotation Tool Installer"
+VIAddVersionKey "FileDescription" "Visual Stimulus Kit Tool Installer"
 
 # Custom page for install scope
 Page custom SelectInstallScope
@@ -62,22 +62,22 @@ Section "Install"
     StrCmp $AllUsers 1 0 +5
         SetShellVarContext all
         SetOutPath "$ProgramFiles64\${APPNAME}"
-        WriteRegStr HKLM "Software\${APPNAME}" "Install_Dir" "$ProgramFiles64\${APPNAME}"
+        WriteRegStr HKLM "Software\VisualStimulusKitTool" "Install_Dir" "$ProgramFiles64\${APPNAME}"
         Goto +4
     SetShellVarContext current
     SetOutPath "$LocalAppData\Programs\${APPNAME}"
-    WriteRegStr HKCU "Software\${APPNAME}" "Install_Dir" "$LocalAppData\Programs\${APPNAME}"
-    File "..\dist\Video Annotation Tool.exe"
+    WriteRegStr HKCU "Software\VisualStimulusKitTool" "Install_Dir" "$LocalAppData\Programs\${APPNAME}"
+    File "..\dist\Visual Stimulus Kit Tool.exe"
     ; Write uninstaller
     WriteUninstaller "$INSTDIR\Uninstall.exe"
     ; Start Menu shortcuts
     CreateDirectory "$SMPROGRAMS\${APPNAME}"
-    CreateShortCut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\Video Annotation Tool.exe"
+    CreateShortCut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\Visual Stimulus Kit Tool.exe"
     CreateShortCut "$SMPROGRAMS\${APPNAME}\Uninstall ${APPNAME}.lnk" "$INSTDIR\Uninstall.exe"
 SectionEnd
 
 Section "Uninstall"
-    Delete "$INSTDIR\Video Annotation Tool.exe"
+    Delete "$INSTDIR\Visual Stimulus Kit Tool.exe"
     Delete "$INSTDIR\Uninstall.exe"
     Delete "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk"
     Delete "$SMPROGRAMS\${APPNAME}\Uninstall ${APPNAME}.lnk"

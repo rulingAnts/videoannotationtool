@@ -115,7 +115,7 @@ For most users, we highly recommend using the **portable build for Windows (x64)
 
 ## Usage
 
-1.  Run the application from your terminal (or double-click the portable app "Video Annotation Tool.exe"):
+1.  Run the application from your terminal (or double-click the portable app "Visual Stimulus Kit Tool.exe"):
     ```bash
     python3.11 videoannotation.py
     ```

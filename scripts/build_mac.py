@@ -366,7 +366,7 @@ def main():
     parser.add_argument('--onedir', action='store_true', help='Build a one-folder app (default)')
     parser.add_argument('--console', action='store_true', help='Show console when running app')
     parser.add_argument('--windowed', action='store_true', help='Hide console / GUI app (default)')
-    parser.add_argument('--name', default='Video Annotation Tool', help='Output app name')
+    parser.add_argument('--name', default='Visual Stimulus Kit Tool', help='Output app name')
     parser.add_argument('--version', help='Override version (defaults to contents of VERSION file)')
     # Packaging options
     parser.add_argument('--dmg', action='store_true', help='Create a DMG from the built app bundle')

@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller spec for PySide6-based Video Annotation Tool (macOS)
+# PyInstaller spec for PySide6-based Visual Stimulus Kit Tool (macOS)
 
 from PyInstaller.utils.hooks import collect_data_files
 
@@ -23,7 +23,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='VideoAnnotationTool',
+    name='Visual Stimulus Kit Tool',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -43,11 +43,11 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='VideoAnnotationTool',
+    name='Visual Stimulus Kit Tool',
 )
 app = BUNDLE(
     coll,
-    name='VideoAnnotationTool.app',
+    name='Visual Stimulus Kit Tool.app',
     icon='assets/icon.icns',
     bundle_identifier=None,
 )

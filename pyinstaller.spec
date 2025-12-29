@@ -1,4 +1,4 @@
-# PyInstaller spec for PySide6-based Video Annotation Tool (onefile, windowed build)
+# PyInstaller spec for PySide6-based Visual Stimulus Kit Tool (onefile, windowed build)
 
 from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 block_cipher = None
@@ -33,7 +33,7 @@ exe = EXE(pyz,
           a.binaries,
           a.zipfiles,
           a.datas,
-          name='Video Annotation Tool',
+          name='Visual Stimulus Kit Tool',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
