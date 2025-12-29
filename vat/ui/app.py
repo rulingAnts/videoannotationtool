@@ -98,6 +98,31 @@ LABELS_ALL = {
         "recording_indicator": "● Recording",
         "recording_started": "Recording started",
         "recording_stopped": "Recording stopped",
+        "video_fullscreen_tip": "<b>Tip:</b> Double-click the video to open fullscreen. Use <b>+</b> and <b>-</b> to zoom in/out in fullscreen view.",
+        "image_fullscreen_tip": "<b>Tip:</b> Double-click an image to open fullscreen. Use <b>+</b> and <b>-</b> to zoom in/out in fullscreen view.",
+        "image_show_filenames": "Show filenames",
+        "welcome_dialog_title": "Welcome to the Video Annotation Tool",
+        "welcome_dialog_body_html": (
+            "<p><b>Welcome!</b> This tool helps you collect clear, well-organised "
+            "examples of how people speak and sign in minority and under-documented languages. "
+            "You will use short video clips or still images (stimuli) to guide speakers and signers "
+            "through specific situations or meanings so you can study the grammar and vocabulary.</p>"
+            "<p><b>Best practices:</b></p>"
+            "<ol>"
+            "<li><b>Follow the instructions for your stimulus kit.</b> Keep the sequence of video clips "
+            "and still images in the same order as the kit instructions. The exact filenames and the "
+            "ordering of still images do not need to match the video list perfectly, but the meanings "
+            "and situations should be presented in the intended sequence.</li>"
+            "<li><b>Make a continuous backup recording whenever possible.</b> In addition to recording "
+            "one short audio file per item in this tool, it is very helpful to keep a separate, "
+            "continuous audio (and/or video) recording of the whole elicitation session. This protects "
+            "you if something goes wrong with individual files.</li>"
+            "</ol>"
+            "<p>For examples of recommended stimulus kits and more background, see the "
+            "<a href=\"https://sethjohnston.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
+            "section on the project website.</p>"
+        ),
+        "ocenaudio_not_found_body": "Ocenaudio not found. Please install it to use this feature.",
     },
     "Bahasa Indonesia": {
         "language_name": "Bahasa Indonesia",
@@ -163,6 +188,29 @@ LABELS_ALL = {
         "recording_indicator": "● Merekam",
         "recording_started": "Perekaman dimulai",
         "recording_stopped": "Perekaman dihentikan",
+        "video_fullscreen_tip": "<b>Tip:</b> Klik ganda video untuk membukanya dalam mode layar penuh. Gunakan <b>+</b> dan <b>-</b> untuk memperbesar atau memperkecil tampilan layar penuh.",
+        "image_fullscreen_tip": "<b>Tip:</b> Klik ganda gambar untuk membukanya dalam mode layar penuh. Gunakan <b>+</b> dan <b>-</b> untuk memperbesar atau memperkecil tampilan layar penuh.",
+        "image_show_filenames": "Tampilkan nama berkas",
+        "welcome_dialog_title": "Selamat datang di Alat Anotasi Video",
+        "welcome_dialog_body_html": (
+            "<p><b>Selamat datang!</b> Alat ini membantu Anda mengumpulkan contoh yang jelas dan teratur "
+            "tentang bagaimana orang berbicara dan berbahasa isyarat dalam bahasa minoritas dan yang kurang terdokumentasi. "
+            "Anda akan menggunakan klip video pendek atau gambar diam (stimulus) untuk memandu penutur dan pengguna bahasa isyarat "
+            "melalui situasi atau makna tertentu sehingga Anda dapat mempelajari tata bahasa dan kosakata.</p>"
+            "<p><b>Praktik yang disarankan:</b></p>"
+            "<ol>"
+            "<li><b>Ikuti petunjuk untuk paket stimulus Anda.</b> Pertahankan urutan klip video "
+            "dan gambar diam sesuai dengan urutan dalam petunjuk paket. Nama berkas dan urutan tepat untuk gambar diam "
+            "tidak harus persis sama dengan daftar video, tetapi makna dan situasinya harus disajikan dalam urutan yang dimaksudkan.</li>"
+            "<li><b>Buat rekaman cadangan yang terus menerus bila memungkinkan.</b> Selain merekam satu berkas audio pendek per item di alat ini, "
+            "akan sangat membantu jika Anda juga membuat rekaman audio (dan/atau video) terpisah yang berkelanjutan untuk seluruh sesi elisitasi. "
+            "Ini melindungi Anda jika terjadi masalah dengan berkas individual.</li>"
+            "</ol>"
+            "<p>Untuk contoh paket stimulus yang direkomendasikan dan informasi lebih lanjut, lihat bagian "
+            "<a href=\"https://sethjohnston.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
+            "di situs web proyek.</p>"
+        ),
+        "ocenaudio_not_found_body": "Ocenaudio tidak ditemukan. Silakan instal agar dapat menggunakan fitur ini.",
     },
     "한국어": {
         "language_name": "한국어",
@@ -228,6 +276,28 @@ LABELS_ALL = {
         "recording_indicator": "● 녹음 중",
         "recording_started": "녹음이 시작되었습니다",
         "recording_stopped": "녹음이 종료되었습니다",
+        "video_fullscreen_tip": "<b>팁:</b> 비디오를 두 번 클릭하면 전체 화면으로 열립니다. 전체 화면에서 <b>+</b>와 <b>-</b> 키로 확대/축소할 수 있습니다.",
+        "image_fullscreen_tip": "<b>팁:</b> 이미지를 두 번 클릭하면 전체 화면으로 열립니다. 전체 화면에서 <b>+</b>와 <b>-</b> 키로 확대/축소할 수 있습니다.",
+        "image_show_filenames": "파일 이름 표시",
+        "welcome_dialog_title": "비디오 주석 도구에 오신 것을 환영합니다",
+        "welcome_dialog_body_html": (
+            "<p><b>환영합니다!</b> 이 도구는 소수 언어와 충분히 기록되지 않은 언어에서 사람들이 말하고 수어하는 방식을 "
+            "명확하고 잘 정리된 예문으로 모을 수 있도록 도와줍니다. "
+            "짧은 비디오 클립이나 정지 이미지(자극 자료)를 사용하여 화자와 수어 사용자가 특정 상황이나 의미를 표현하도록 유도하고, "
+            "그 결과를 바탕으로 문법과 어휘를 살펴볼 수 있습니다.</p>"
+            "<p><b>권장 사용 방법:</b></p>"
+            "<ol>"
+            "<li><b>사용 중인 자극 자료(킷)의 안내서를 따르십시오.</b> 비디오 클립과 정지 이미지는 안내서에 제시된 순서를 유지하는 것이 좋습니다. "
+            "정지 이미지의 파일 이름이나 정확한 순서는 비디오 목록과 완전히 같을 필요는 없지만, 의미와 상황은 의도된 순서대로 제시되어야 합니다.</li>"
+            "<li><b>가능하다면 항상 연속적인 백업 녹음을 만드십시오.</b> 이 도구에서 항목마다 짧은 오디오 파일을 하나씩 녹음하는 것과 더불어, "
+            "전체 일리스티테이션 세션을 별도의 연속 오디오(및/또는 비디오)로 기록해 두면 큰 도움이 됩니다. "
+            "이렇게 하면 개별 파일에 문제가 생겨도 자료를 잃지 않을 가능성이 커집니다.</li>"
+            "</ol>"
+            "<p>권장 자극 자료와 더 자세한 배경 설명은 프로젝트 웹사이트의 "
+            "<a href=\"https://sethjohnston.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
+            "섹션에서 확인할 수 있습니다.</p>"
+        ),
+        "ocenaudio_not_found_body": "Ocenaudio를 찾을 수 없습니다. 이 기능을 사용하려면 먼저 설치해 주세요.",
     },
     "Nederlands": {
         "language_name": "Nederlands",
@@ -290,6 +360,29 @@ LABELS_ALL = {
         "wav_mismatch_msg_prefix": "De volgende WAV-bestanden komen met geen enkele videobestandsnaam overeen en zijn niet geïmporteerd:\n",
         "ffmpeg_not_found_msg": "FFmpeg niet gevonden. Zorg dat FFmpeg is geïnstalleerd of is meegeleverd met de executable.",
         "save_combined_wav_dialog_title": "Gecombineerd WAV-bestand opslaan",
+        "video_fullscreen_tip": "<b>Tip:</b> Dubbelklik op de video om deze op volledig scherm te openen. Gebruik <b>+</b> en <b>-</b> om in en uit te zoomen in de volledig-schermweergave.",
+        "image_fullscreen_tip": "<b>Tip:</b> Dubbelklik op een afbeelding om deze op volledig scherm te openen. Gebruik <b>+</b> en <b>-</b> om in en uit te zoomen in de volledig-schermweergave.",
+        "image_show_filenames": "Bestandsnamen tonen",
+        "welcome_dialog_title": "Welkom bij de Video Annotatie Tool",
+        "welcome_dialog_body_html": (
+            "<p><b>Welkom!</b> Deze tool helpt je om duidelijke, goed geordende voorbeelden te verzamelen "
+            "van hoe mensen spreken en gebaren in minderheids- en ondergedocumenteerde talen. "
+            "Je gebruikt korte videoclips of stilstaande beelden (stimuli) om sprekers en gebarende personen "
+            "door specifieke situaties of betekenissen te leiden, zodat je de grammatica en woordenschat kunt bestuderen.</p>"
+            "<p><b>Aanbevolen werkwijze:</b></p>"
+            "<ol>"
+            "<li><b>Volg de instructies van je stimulusset.</b> Houd de volgorde van de videoclips "
+            "en stilstaande beelden hetzelfde als in de handleiding van de set. De exacte bestandsnamen en volgorde van de stilstaande beelden "
+            "hoeven niet precies overeen te komen met de videolijst, maar de betekenissen en situaties moeten wel in de bedoelde volgorde worden aangeboden.</li>"
+            "<li><b>Maak indien mogelijk een doorlopende back-upopname.</b> Naast het opnemen van één kort audiobestand per item in deze tool, "
+            "is het erg nuttig om ook een aparte, doorlopende audio- (en/of video-)opname van de hele elicitatie-sessie te maken. "
+            "Dit beschermt je als er iets misgaat met afzonderlijke bestanden.</li>"
+            "</ol>"
+            "<p>Voor voorbeelden van aanbevolen stimulussets en extra achtergrondinformatie, zie de sectie "
+            "<a href=\"https://sethjohnston.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
+            "op de projectwebsite.</p>"
+        ),
+        "ocenaudio_not_found_body": "Ocenaudio niet gevonden. Installeer het om deze functie te gebruiken.",
     },
     "Português (Brasil)": {
         "language_name": "Português (Brasil)",
@@ -352,6 +445,29 @@ LABELS_ALL = {
         "wav_mismatch_msg_prefix": "Os seguintes arquivos WAV não correspondem a nenhum nome de arquivo de vídeo e não foram importados:\n",
         "ffmpeg_not_found_msg": "FFmpeg não encontrado. Certifique-se de que o FFmpeg esteja instalado ou incluído no executável.",
         "save_combined_wav_dialog_title": "Salvar arquivo WAV combinado",
+        "video_fullscreen_tip": "<b>Dica:</b> Dê um clique duplo no vídeo para abri-lo em tela cheia. Use <b>+</b> e <b>-</b> para aproximar ou afastar na visualização em tela cheia.",
+        "image_fullscreen_tip": "<b>Dica:</b> Dê um clique duplo em uma imagem para abri-la em tela cheia. Use <b>+</b> e <b>-</b> para aproximar ou afastar na visualização em tela cheia.",
+        "image_show_filenames": "Mostrar nomes de arquivos",
+        "welcome_dialog_title": "Bem-vindo à Ferramenta de Anotação de Vídeo",
+        "welcome_dialog_body_html": (
+            "<p><b>Bem-vindo!</b> Esta ferramenta ajuda você a coletar exemplos claros e bem organizados "
+            "de como as pessoas falam e sinalizam em línguas minoritárias e pouco documentadas. "
+            "Você usará pequenos clipes de vídeo ou imagens estáticas (estímulos) para guiar falantes e sinalizantes "
+            "por situações ou significados específicos, para então estudar a gramática e o vocabulário.</p>"
+            "<p><b>Boas práticas:</b></p>"
+            "<ol>"
+            "<li><b>Siga as instruções do seu conjunto de estímulos.</b> Mantenha a sequência dos clipes de vídeo "
+            "e das imagens estáticas na mesma ordem do manual do conjunto. Os nomes de arquivo e a ordem exata das imagens estáticas "
+            "não precisam coincidir perfeitamente com a lista de vídeos, mas os significados e as situações devem ser apresentados na sequência pretendida.</li>"
+            "<li><b>Faça uma gravação contínua de reserva sempre que possível.</b> Além de gravar um arquivo de áudio curto por item nesta ferramenta, "
+            "é muito útil manter uma gravação separada e contínua de áudio (e/ou vídeo) de toda a sessão de elicitação. "
+            "Isso protege você caso algo dê errado com arquivos individuais.</li>"
+            "</ol>"
+            "<p>Para exemplos de conjuntos de estímulos recomendados e mais informações de contexto, consulte a seção "
+            "<a href=\"https://sethjohnston.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
+            "no site do projeto.</p>"
+        ),
+        "ocenaudio_not_found_body": "Ocenaudio não encontrado. Instale-o para usar este recurso.",
     },
     "Español (Latinoamérica)": {
         "language_name": "Español (Latinoamérica)",
@@ -414,6 +530,29 @@ LABELS_ALL = {
         "wav_mismatch_msg_prefix": "Los siguientes archivos WAV no coinciden con ningún nombre de archivo de video y no se importaron:\n",
         "ffmpeg_not_found_msg": "FFmpeg no encontrado. Asegúrate de que FFmpeg esté instalado o incluido con el ejecutable.",
         "save_combined_wav_dialog_title": "Guardar archivo WAV combinado",
+        "video_fullscreen_tip": "<b>Consejo:</b> Haz doble clic en el video para abrirlo en pantalla completa. Usa <b>+</b> y <b>-</b> para acercar y alejar en la vista de pantalla completa.",
+        "image_fullscreen_tip": "<b>Consejo:</b> Haz doble clic en una imagen para abrirla en pantalla completa. Usa <b>+</b> y <b>-</b> para acercar y alejar en la vista de pantalla completa.",
+        "image_show_filenames": "Mostrar nombres de archivo",
+        "welcome_dialog_title": "Bienvenido a la Herramienta de Anotación de Video",
+        "welcome_dialog_body_html": (
+            "<p><b>Bienvenido.</b> Esta herramienta te ayuda a recopilar ejemplos claros y bien organizados "
+            "de cómo las personas hablan y señan en lenguas minoritarias y poco documentadas. "
+            "Usarás videoclips cortos o imágenes fijas (estímulos) para guiar a los hablantes y signantes "
+            "a través de situaciones o significados específicos, de modo que puedas estudiar la gramática y el vocabulario.</p>"
+            "<p><b>Buenas prácticas:</b></p>"
+            "<ol>"
+            "<li><b>Sigue las instrucciones del conjunto de estímulos.</b> Mantén la secuencia de los videoclips "
+            "y de las imágenes fijas en el mismo orden que se indica en las instrucciones del conjunto. Los nombres de archivo y el orden exacto de las imágenes fijas "
+            "no tienen que coincidir perfectamente con la lista de videos, pero los significados y las situaciones sí deben presentarse en la secuencia prevista.</li>"
+            "<li><b>Haz una grabación continua de respaldo siempre que sea posible.</b> Además de grabar un archivo de audio corto por cada elemento en esta herramienta, "
+            "es muy útil mantener una grabación separada y continua de audio (y/o video) de toda la sesión de elicitación. "
+            "Esto te protege si algo sale mal con los archivos individuales.</li>"
+            "</ol>"
+            "<p>Para ver ejemplos de conjuntos de estímulos recomendados y más información de contexto, consulta la sección "
+            "<a href=\"https://sethjohnston.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
+            "en el sitio web del proyecto.</p>"
+        ),
+        "ocenaudio_not_found_body": "Ocenaudio no encontrado. Instálalo para usar esta función.",
     },
     "Afrikaans": {
         "language_name": "Afrikaans",
@@ -476,6 +615,29 @@ LABELS_ALL = {
         "wav_mismatch_msg_prefix": "Die volgende WAV-lêers stem met geen videolêernaam ooreen nie en is nie ingevoer nie:\n",
         "ffmpeg_not_found_msg": "FFmpeg nie gevind nie. Maak seker FFmpeg is geïnstalleer of saam met die uitvoerbare gebundel.",
         "save_combined_wav_dialog_title": "Stoor saamgevoegde WAV-lêer",
+        "video_fullscreen_tip": "<b>Wenk:</b> Dubbelklik op die video om dit op volle skerm oop te maak. Gebruik <b>+</b> en <b>-</b> om in en uit te zoem in die volskerm-aansig.",
+        "image_fullscreen_tip": "<b>Wenk:</b> Dubbelklik op 'n prent om dit op volle skerm oop te maak. Gebruik <b>+</b> en <b>-</b> om in en uit te zoem in die volskerm-aansig.",
+        "image_show_filenames": "Wys lêername",
+        "welcome_dialog_title": "Welkom by die Video Annotasie Hulpmiddel",
+        "welcome_dialog_body_html": (
+            "<p><b>Welkom!</b> Hierdie hulpmiddel help jou om duidelike, goed-geordende voorbeelde te versamel "
+            "van hoe mense praat en gebare maak in minderheidstale en ondergedokumenteerde tale. "
+            "Jy gebruik kort videoklankies of stilbeelde (stimuli) om sprekers en gebaarders te lei deur spesifieke situasies of betekenisse, "
+            "sodat jy hul grammatika en woordeskat kan bestudeer.</p>"
+            "<p><b>Aanbevole praktyke:</b></p>"
+            "<ol>"
+            "<li><b>Volg die instruksies van jou stimulusstel.</b> Hou die volgorde van die videoklankies "
+            "en stilbeelde dieselfde as in die stel se handleiding. Die presiese lêername en volgorde van die stilbeelde "
+            "hoef nie perfek met die videolys te ooreen te stem nie, maar die betekenisse en situasies moet in die bedoelde volgorde aangebied word.</li>"
+            "<li><b>Maak indien moontlik 'n aaneenlopende rugsteunopname.</b> Benewens die een kort oudiolêer per item in hierdie hulpmiddel, "
+            "is dit baie nuttig om ook 'n aparte, aaneenlopende oudio- (en/of video-)opname van die hele elisitasiesessie te maak. "
+            "Dit beskerm jou as daar iets met individuele lêers verkeerd loop.</li>"
+            "</ol>"
+            "<p>Vir voorbeelde van aanbevole stimulusstelle en agtergrondinligting, sien die afdeling "
+            "<a href=\"https://sethjohnston.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
+            "op die projek se webwerf.</p>"
+        ),
+        "ocenaudio_not_found_body": "Ocenaudio nie gevind nie. Installeer dit om hierdie funksie te gebruik.",
     },
 }
 
@@ -710,7 +872,11 @@ class VideoAnnotationApp(QMainWindow):
         videos_layout = QVBoxLayout(videos_tab)
         # Tip for fullscreen video
         self.video_fullscreen_tip = QLabel(
-            "<b>Tip:</b> Double-click the video to open fullscreen. Use <b>+</b> and <b>-</b> to zoom in/out in fullscreen view.")
+            self.LABELS.get(
+                "video_fullscreen_tip",
+                LABELS_ALL["English"]["video_fullscreen_tip"],
+            )
+        )
         self.video_fullscreen_tip.setStyleSheet("color: black; font-size: 13px; margin-bottom: 4px;")
         self.video_fullscreen_tip.setWordWrap(True)
         videos_layout.addWidget(self.video_fullscreen_tip)
@@ -809,7 +975,12 @@ class VideoAnnotationApp(QMainWindow):
         controls_row = QHBoxLayout()
         # Always show Show filenames toggle above controls
         self.show_image_labels = False
-        self.image_labels_toggle = QCheckBox("Show filenames")
+        self.image_labels_toggle = QCheckBox(
+            self.LABELS.get(
+                "image_show_filenames",
+                LABELS_ALL["English"]["image_show_filenames"],
+            )
+        )
         self.image_labels_toggle.setChecked(self.show_image_labels)
         self.image_labels_toggle.toggled.connect(self._toggle_image_labels)
         controls_and_tip.addWidget(self.image_labels_toggle)
@@ -834,7 +1005,11 @@ class VideoAnnotationApp(QMainWindow):
         controls_and_tip.addLayout(controls_row)
         # Tip below controls
         self.image_fullscreen_tip = QLabel(
-            "<b>Tip:</b> Double-click an image to open fullscreen. Use <b>+</b> and <b>-</b> to zoom in/out in fullscreen view.")
+            self.LABELS.get(
+                "image_fullscreen_tip",
+                LABELS_ALL["English"]["image_fullscreen_tip"],
+            )
+        )
         self.image_fullscreen_tip.setStyleSheet("color: black; font-size: 13px; margin: 4px 0 8px 0;")
         self.image_fullscreen_tip.setWordWrap(True)
         controls_and_tip.addWidget(self.image_fullscreen_tip)
@@ -952,6 +1127,37 @@ class VideoAnnotationApp(QMainWindow):
             self.edit_metadata_btn.setText(self.LABELS["edit_metadata"])
         if not self.current_video:
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
+        # Localized tips and checkbox labels
+        try:
+            if getattr(self, "video_fullscreen_tip", None) is not None:
+                self.video_fullscreen_tip.setText(
+                    self.LABELS.get(
+                        "video_fullscreen_tip",
+                        LABELS_ALL["English"]["video_fullscreen_tip"],
+                    )
+                )
+        except Exception:
+            pass
+        try:
+            if getattr(self, "image_fullscreen_tip", None) is not None:
+                self.image_fullscreen_tip.setText(
+                    self.LABELS.get(
+                        "image_fullscreen_tip",
+                        LABELS_ALL["English"]["image_fullscreen_tip"],
+                    )
+                )
+        except Exception:
+            pass
+        try:
+            if getattr(self, "image_labels_toggle", None) is not None:
+                self.image_labels_toggle.setText(
+                    self.LABELS.get(
+                        "image_show_filenames",
+                        LABELS_ALL["English"]["image_show_filenames"],
+                    )
+                )
+        except Exception:
+            pass
         self.update_folder_display()
     def update_folder_display(self):
         if getattr(self, 'folder_display_label', None) is None:
@@ -1566,7 +1772,14 @@ class VideoAnnotationApp(QMainWindow):
                     "Executable Files (*.exe);;All Files (*)" if sys.platform == "win32" else "All Files (*)"
                 )
                 if not ocenaudio_path:
-                    QMessageBox.warning(self, self.LABELS["ocenaudio_not_found_title"], "Ocenaudio not found. Please install it to use this feature.")
+                    QMessageBox.warning(
+                        self,
+                        self.LABELS["ocenaudio_not_found_title"],
+                        self.LABELS.get(
+                            "ocenaudio_not_found_body",
+                            LABELS_ALL["English"]["ocenaudio_not_found_body"],
+                        ),
+                    )
                     return
             self.ocenaudio_path = ocenaudio_path
             self.save_settings()
@@ -1952,33 +2165,15 @@ class VideoAnnotationApp(QMainWindow):
     def _show_welcome_dialog(self):
         """Display a brief purpose + best-practices message on startup."""
         try:
-            text = (
-                "<b>Purpose</b><br><br>"
-                "This tool helps you collect linguistic, especially grammatical, "
-                "data from minority languages using visual stimulus kits (for "
-                "example, those produced by the Max Planck Institute).<br><br>"
-                "<b>Best practices</b><br>"
-                "1. Follow the instructions that come with the stimulus kit as "
-                "closely as you can. The procedure matters, and the sequence of "
-                "video clips and still images should match the kit instructions. "
-                "However, the filenames and order of the still images may "
-                "vary from the list of video files, though much of the content "
-                "should be the same.<br><br>"
-                "2. If possible, keep another device (ideally a video camera) "
-                "recording the whole session. Many speakers experience this "
-                "exercise as one continuous speech event, with the same "
-                "participants and topics spanning multiple clips. A continuous "
-                "recording will help you study how they connect events and track "
-                "participants later.<br><br>"
-                "You can find a short list of recommended video stimulus kits "
-                "here: <a href=\"https://rulingants.github.io/videoannotationtool/#stimulus-kits\">"
-                "Recommended stimulus kits</a>."
+            title = self.LABELS.get(
+                "welcome_dialog_title",
+                LABELS_ALL["English"]["welcome_dialog_title"],
             )
-            QMessageBox.information(
-                self,
-                "Welcome to the Video Annotation Tool",
-                text,
+            body = self.LABELS.get(
+                "welcome_dialog_body_html",
+                LABELS_ALL["English"]["welcome_dialog_body_html"],
             )
+            QMessageBox.information(self, title, body)
         except Exception:
             pass
 
