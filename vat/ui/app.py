@@ -916,6 +916,11 @@ class VideoAnnotationApp(QMainWindow):
                 self._on_images_updated(self.fs.current_folder, imgs)
             except Exception:
                 pass
+        # Show a short welcome/best-practices message once on startup
+        try:
+            QTimer.singleShot(0, self._show_welcome_dialog)
+        except Exception:
+            pass
         # After the first population/layout pass, warm the cache for the
         # thumbnails that are actually visible.
         try:
@@ -1943,6 +1948,36 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             pass
         return super().eventFilter(obj, event)
+
+    def _show_welcome_dialog(self):
+        """Display a brief purpose + best-practices message on startup."""
+        try:
+            text = (
+                "<b>Purpose</b><br><br>"
+                "This tool helps you collect linguistic, especially grammatical, "
+                "data from minority languages using visual stimulus kits (for "
+                "example, those produced by the Max Planck Institute).<br><br>"
+                "<b>Best practices</b><br>"
+                "1. Follow the instructions that come with the stimulus kit as "
+                "closely as you can. The procedure matters, and the sequence of "
+                "video clips and still images should match the kit instructions. "
+                "However, the filenames and order of the still images may "
+                "vary from the list of video files, though much of the content"
+                "should be the same.<br><br>"
+                "2. If possible, keep another device (ideally a video camera) "
+                "recording the whole session. Many speakers experience this "
+                "exercise as one continuous speech event, with the same "
+                "participants and topics spanning multiple clips. A continuous "
+                "recording will help you study how they connect events and track "
+                "participants later."
+            )
+            QMessageBox.information(
+                self,
+                "Welcome to the Video Annotation Tool",
+                text,
+            )
+        except Exception:
+            pass
 
     # --- Images tab helpers (moved back into VideoAnnotationApp) ---
     def _open_fullscreen_video(self):
