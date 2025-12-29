@@ -1962,7 +1962,7 @@ class VideoAnnotationApp(QMainWindow):
                 "closely as you can. The procedure matters, and the sequence of "
                 "video clips and still images should match the kit instructions. "
                 "However, the filenames and order of the still images may "
-                "vary from the list of video files, though much of the content"
+                "vary from the list of video files, though much of the content "
                 "should be the same.<br><br>"
                 "2. If possible, keep another device (ideally a video camera) "
                 "recording the whole session. Many speakers experience this "
