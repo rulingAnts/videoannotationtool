@@ -36,7 +36,7 @@ from vat.utils.fs_access import (
 LABELS_ALL = {
     "English": {
         "language_name": "English",
-        "app_title": "Video Annotation Tool",
+        "app_title": "Visual Stimulus Kit Tool",
         "select_folder": "Select Folder",
         "open_ocenaudio": "Open all Recordings in Ocenaudio (To Normalize, Trim, Edit...)",
         "export_wavs": "Export Recorded Data",
@@ -101,7 +101,7 @@ LABELS_ALL = {
         "video_fullscreen_tip": "<b>Tip:</b> Double-click the video to open fullscreen. Use <b>+</b> and <b>-</b> to zoom in/out in fullscreen view.",
         "image_fullscreen_tip": "<b>Tip:</b> Double-click an image to open fullscreen. Use <b>+</b> and <b>-</b> to zoom in/out in fullscreen view.",
         "image_show_filenames": "Show filenames",
-        "welcome_dialog_title": "Welcome to the Video Annotation Tool",
+        "welcome_dialog_title": "Welcome to the Visual Stimulus Kit Tool",
         "welcome_dialog_body_html": (
             "<p><b>Welcome!</b> This tool helps you collect clear, well-organised "
             "examples of how people speak and sign in minority and under-documented languages. "
@@ -126,7 +126,7 @@ LABELS_ALL = {
     },
     "Bahasa Indonesia": {
         "language_name": "Bahasa Indonesia",
-        "app_title": "Alat Anotasi Video",
+        "app_title": "Alat Stimulus Visual",
         "select_folder": "Pilih Folder",
         "open_ocenaudio": "Buka semua rekaman di Ocenaudio (Untuk normalisasi, potong, edit...)",
         "export_wavs": "Ekspor Data Rekaman",
@@ -191,7 +191,7 @@ LABELS_ALL = {
         "video_fullscreen_tip": "<b>Tip:</b> Klik ganda video untuk membukanya dalam mode layar penuh. Gunakan <b>+</b> dan <b>-</b> untuk memperbesar atau memperkecil tampilan layar penuh.",
         "image_fullscreen_tip": "<b>Tip:</b> Klik ganda gambar untuk membukanya dalam mode layar penuh. Gunakan <b>+</b> dan <b>-</b> untuk memperbesar atau memperkecil tampilan layar penuh.",
         "image_show_filenames": "Tampilkan nama berkas",
-        "welcome_dialog_title": "Selamat datang di Alat Anotasi Video",
+        "welcome_dialog_title": "Selamat datang di Alat Stimulus Visual",
         "welcome_dialog_body_html": (
             "<p><b>Selamat datang!</b> Alat ini membantu Anda mengumpulkan contoh yang jelas dan teratur "
             "tentang bagaimana orang berbicara dan berbahasa isyarat dalam bahasa minoritas dan yang kurang terdokumentasi. "
@@ -214,7 +214,7 @@ LABELS_ALL = {
     },
     "한국어": {
         "language_name": "한국어",
-        "app_title": "비디오 주석 도구",
+        "app_title": "시각 자극 키트 도구",
         "select_folder": "폴더 선택",
         "open_ocenaudio": "모든 녹음을 Ocenaudio에서 열기 (정규화, 자르기, 편집...)",
         "export_wavs": "녹음 데이터 내보내기",
@@ -279,7 +279,7 @@ LABELS_ALL = {
         "video_fullscreen_tip": "<b>팁:</b> 비디오를 두 번 클릭하면 전체 화면으로 열립니다. 전체 화면에서 <b>+</b>와 <b>-</b> 키로 확대/축소할 수 있습니다.",
         "image_fullscreen_tip": "<b>팁:</b> 이미지를 두 번 클릭하면 전체 화면으로 열립니다. 전체 화면에서 <b>+</b>와 <b>-</b> 키로 확대/축소할 수 있습니다.",
         "image_show_filenames": "파일 이름 표시",
-        "welcome_dialog_title": "비디오 주석 도구에 오신 것을 환영합니다",
+        "welcome_dialog_title": "시각 자극 키트 도구에 오신 것을 환영합니다",
         "welcome_dialog_body_html": (
             "<p><b>환영합니다!</b> 이 도구는 소수 언어와 충분히 기록되지 않은 언어에서 사람들이 말하고 수어하는 방식을 "
             "명확하고 잘 정리된 예문으로 모을 수 있도록 도와줍니다. "
@@ -301,7 +301,7 @@ LABELS_ALL = {
     },
     "Nederlands": {
         "language_name": "Nederlands",
-        "app_title": "Video Annotatie Tool",
+        "app_title": "Visuele Stimuluskit Tool",
         "select_folder": "Selecteer Map",
         "open_ocenaudio": "Open alle opnamen in Ocenaudio (Normaliseren, Knippen, Bewerken...)",
         "export_wavs": "Opgenomen Data Exporteren",
@@ -363,7 +363,7 @@ LABELS_ALL = {
         "video_fullscreen_tip": "<b>Tip:</b> Dubbelklik op de video om deze op volledig scherm te openen. Gebruik <b>+</b> en <b>-</b> om in en uit te zoomen in de volledig-schermweergave.",
         "image_fullscreen_tip": "<b>Tip:</b> Dubbelklik op een afbeelding om deze op volledig scherm te openen. Gebruik <b>+</b> en <b>-</b> om in en uit te zoomen in de volledig-schermweergave.",
         "image_show_filenames": "Bestandsnamen tonen",
-        "welcome_dialog_title": "Welkom bij de Video Annotatie Tool",
+        "welcome_dialog_title": "Welkom bij de Visuele Stimuluskit Tool",
         "welcome_dialog_body_html": (
             "<p><b>Welkom!</b> Deze tool helpt je om duidelijke, goed geordende voorbeelden te verzamelen "
             "van hoe mensen spreken en gebaren in minderheids- en ondergedocumenteerde talen. "
@@ -386,7 +386,7 @@ LABELS_ALL = {
     },
     "Português (Brasil)": {
         "language_name": "Português (Brasil)",
-        "app_title": "Ferramenta de Anotação de Vídeo",
+        "app_title": "Ferramenta de Estímulos Visuais",
         "select_folder": "Selecionar Pasta",
         "open_ocenaudio": "Abrir todas as gravações no Ocenaudio (Para normalizar, cortar, editar...)",
         "export_wavs": "Exportar Dados Gravados",
@@ -448,7 +448,7 @@ LABELS_ALL = {
         "video_fullscreen_tip": "<b>Dica:</b> Dê um clique duplo no vídeo para abri-lo em tela cheia. Use <b>+</b> e <b>-</b> para aproximar ou afastar na visualização em tela cheia.",
         "image_fullscreen_tip": "<b>Dica:</b> Dê um clique duplo em uma imagem para abri-la em tela cheia. Use <b>+</b> e <b>-</b> para aproximar ou afastar na visualização em tela cheia.",
         "image_show_filenames": "Mostrar nomes de arquivos",
-        "welcome_dialog_title": "Bem-vindo à Ferramenta de Anotação de Vídeo",
+        "welcome_dialog_title": "Bem-vindo à Ferramenta de Estímulos Visuais",
         "welcome_dialog_body_html": (
             "<p><b>Bem-vindo!</b> Esta ferramenta ajuda você a coletar exemplos claros e bem organizados "
             "de como as pessoas falam e sinalizam em línguas minoritárias e pouco documentadas. "
@@ -471,7 +471,7 @@ LABELS_ALL = {
     },
     "Español (Latinoamérica)": {
         "language_name": "Español (Latinoamérica)",
-        "app_title": "Herramienta de Anotación de Video",
+        "app_title": "Herramienta de Estímulos Visuales",
         "select_folder": "Seleccionar Carpeta",
         "open_ocenaudio": "Abrir todas las grabaciones en Ocenaudio (Para normalizar, recortar, editar...)",
         "export_wavs": "Exportar Datos Grabados",
@@ -533,7 +533,7 @@ LABELS_ALL = {
         "video_fullscreen_tip": "<b>Consejo:</b> Haz doble clic en el video para abrirlo en pantalla completa. Usa <b>+</b> y <b>-</b> para acercar y alejar en la vista de pantalla completa.",
         "image_fullscreen_tip": "<b>Consejo:</b> Haz doble clic en una imagen para abrirla en pantalla completa. Usa <b>+</b> y <b>-</b> para acercar y alejar en la vista de pantalla completa.",
         "image_show_filenames": "Mostrar nombres de archivo",
-        "welcome_dialog_title": "Bienvenido a la Herramienta de Anotación de Video",
+        "welcome_dialog_title": "Bienvenido a la Herramienta de Estímulos Visuales",
         "welcome_dialog_body_html": (
             "<p><b>Bienvenido.</b> Esta herramienta te ayuda a recopilar ejemplos claros y bien organizados "
             "de cómo las personas hablan y señan en lenguas minoritarias y poco documentadas. "
@@ -556,7 +556,7 @@ LABELS_ALL = {
     },
     "Afrikaans": {
         "language_name": "Afrikaans",
-        "app_title": "Video Annotasie Hulpmiddel",
+        "app_title": "Visuele Stimulus Hulpmiddel",
         "select_folder": "Kies Gids",
         "open_ocenaudio": "Maak alle Opnames in Ocenaudio oop (Vir Normaliseer, Sny, Redigeer...)",
         "export_wavs": "Voer Opname Data Uit",
@@ -618,7 +618,7 @@ LABELS_ALL = {
         "video_fullscreen_tip": "<b>Wenk:</b> Dubbelklik op die video om dit op volle skerm oop te maak. Gebruik <b>+</b> en <b>-</b> om in en uit te zoem in die volskerm-aansig.",
         "image_fullscreen_tip": "<b>Wenk:</b> Dubbelklik op 'n prent om dit op volle skerm oop te maak. Gebruik <b>+</b> en <b>-</b> om in en uit te zoem in die volskerm-aansig.",
         "image_show_filenames": "Wys lêername",
-        "welcome_dialog_title": "Welkom by die Video Annotasie Hulpmiddel",
+        "welcome_dialog_title": "Welkom by die Visuele Stimulus Hulpmiddel",
         "welcome_dialog_body_html": (
             "<p><b>Welkom!</b> Hierdie hulpmiddel help jou om duidelike, goed-geordende voorbeelde te versamel "
             "van hoe mense praat en gebare maak in minderheidstale en ondergedokumenteerde tale. "

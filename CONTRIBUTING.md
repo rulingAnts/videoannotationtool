@@ -1,6 +1,6 @@
-# Contributing to the Video Annotation Tool
+# Contributing to the Visual Stimulus Kit Tool
 
-We welcome and appreciate all contributions to the Video Annotation Tool\! Your help is vital to making this project better for everyone. By contributing, you agree to abide by the project's [Code of Conduct](https://www.google.com/search?q=CODE_OF_CONDUCT.md) and license.
+We welcome and appreciate all contributions to the Visual Stimulus Kit Tool\! Your help is vital to making this project better for everyone. By contributing, you agree to abide by the project's [Code of Conduct](https://www.google.com/search?q=CODE_OF_CONDUCT.md) and license.
 
 ## How Can I Contribute?
 

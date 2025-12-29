@@ -10,7 +10,7 @@ from vat.utils.resources import configure_opencv_ffmpeg, configure_pydub_ffmpeg
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Video Annotation Tool")
+    parser = argparse.ArgumentParser(description="Visual Stimulus Kit Tool")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     parser.add_argument("--log-file", type=str, help="Log file path")
     args = parser.parse_args()
@@ -52,11 +52,11 @@ def main():
         stream_handler.setFormatter(YamlFormatter())
         handlers.append(stream_handler)
     logging.basicConfig(level=log_level, handlers=handlers)
-    logging.info("Starting Video Annotation Tool (PySide6 version)")
+    logging.info("Starting Visual Stimulus Kit Tool (PySide6 version)")
     configure_opencv_ffmpeg()
     configure_pydub_ffmpeg()
     app = QApplication(sys.argv)
-    app.setApplicationName("Video Annotation Tool")
+    app.setApplicationName("Visual Stimulus Kit Tool")
     window = VideoAnnotationApp()
     try:
         # Provide log file path to the in-app viewer regardless of CLI flags

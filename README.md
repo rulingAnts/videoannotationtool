@@ -1,6 +1,6 @@
-# Video Annotation Tool for Linguistic Fieldwork
+# Visual Stimulus Kit Tool for Linguistic Fieldwork
 
-A simple and robust video annotation tool designed to streamline data collection and analysis for linguistic fieldwork.
+A simple and robust tool for working with visual stimulus kits, designed to streamline data collection and analysis for linguistic fieldwork.
 
 Download the latest portable build for Windows (x64) [here](https://github.com/rulingAnts/videoannotationtool/releases/latest). 
 This runs right out of the download folder without any further installation or setup necessary.
