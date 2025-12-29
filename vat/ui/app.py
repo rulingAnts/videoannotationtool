@@ -119,7 +119,7 @@ LABELS_ALL = {
             "you if something goes wrong with individual files.</li>"
             "</ol>"
             "<p>For examples of recommended stimulus kits and more background, see the "
-            "<a href=\"https://sethjohnston.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
+            "<a href=\"https://rulingants.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
             "section on the project website.</p>"
         ),
         "ocenaudio_not_found_body": "Ocenaudio not found. Please install it to use this feature.",
@@ -207,7 +207,7 @@ LABELS_ALL = {
             "Ini melindungi Anda jika terjadi masalah dengan berkas individual.</li>"
             "</ol>"
             "<p>Untuk contoh paket stimulus yang direkomendasikan dan informasi lebih lanjut, lihat bagian "
-            "<a href=\"https://sethjohnston.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
+            "<a href=\"https://rulingants.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
             "di situs web proyek.</p>"
         ),
         "ocenaudio_not_found_body": "Ocenaudio tidak ditemukan. Silakan instal agar dapat menggunakan fitur ini.",
@@ -294,7 +294,7 @@ LABELS_ALL = {
             "이렇게 하면 개별 파일에 문제가 생겨도 자료를 잃지 않을 가능성이 커집니다.</li>"
             "</ol>"
             "<p>권장 자극 자료와 더 자세한 배경 설명은 프로젝트 웹사이트의 "
-            "<a href=\"https://sethjohnston.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
+            "<a href=\"https://rulingants.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
             "섹션에서 확인할 수 있습니다.</p>"
         ),
         "ocenaudio_not_found_body": "Ocenaudio를 찾을 수 없습니다. 이 기능을 사용하려면 먼저 설치해 주세요.",
@@ -379,7 +379,7 @@ LABELS_ALL = {
             "Dit beschermt je als er iets misgaat met afzonderlijke bestanden.</li>"
             "</ol>"
             "<p>Voor voorbeelden van aanbevolen stimulussets en extra achtergrondinformatie, zie de sectie "
-            "<a href=\"https://sethjohnston.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
+            "<a href=\"https://rulingants.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
             "op de projectwebsite.</p>"
         ),
         "ocenaudio_not_found_body": "Ocenaudio niet gevonden. Installeer het om deze functie te gebruiken.",
@@ -464,7 +464,7 @@ LABELS_ALL = {
             "Isso protege você caso algo dê errado com arquivos individuais.</li>"
             "</ol>"
             "<p>Para exemplos de conjuntos de estímulos recomendados e mais informações de contexto, consulte a seção "
-            "<a href=\"https://sethjohnston.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
+            "<a href=\"https://rulingants.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
             "no site do projeto.</p>"
         ),
         "ocenaudio_not_found_body": "Ocenaudio não encontrado. Instale-o para usar este recurso.",
@@ -549,7 +549,7 @@ LABELS_ALL = {
             "Esto te protege si algo sale mal con los archivos individuales.</li>"
             "</ol>"
             "<p>Para ver ejemplos de conjuntos de estímulos recomendados y más información de contexto, consulta la sección "
-            "<a href=\"https://sethjohnston.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
+            "<a href=\"https://rulingants.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
             "en el sitio web del proyecto.</p>"
         ),
         "ocenaudio_not_found_body": "Ocenaudio no encontrado. Instálalo para usar esta función.",
@@ -634,7 +634,7 @@ LABELS_ALL = {
             "Dit beskerm jou as daar iets met individuele lêers verkeerd loop.</li>"
             "</ol>"
             "<p>Vir voorbeelde van aanbevole stimulusstelle en agtergrondinligting, sien die afdeling "
-            "<a href=\"https://sethjohnston.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
+            "<a href=\"https://rulingants.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
             "op die projek se webwerf.</p>"
         ),
         "ocenaudio_not_found_body": "Ocenaudio nie gevind nie. Installeer dit om hierdie funksie te gebruik.",
