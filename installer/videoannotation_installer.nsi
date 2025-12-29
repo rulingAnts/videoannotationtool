@@ -6,7 +6,7 @@
 # Default to per-user
 !define APPNAME "Visual Stimulus Kit Tool"
 !define COMPANY "Seth Johnston"
-!define VERSION "2.0.2"
+!define VERSION "2.0.3"
 
 Name "Visual Stimulus Kit Tool"
 OutFile "Visual Stimulus Kit Tool Setup ${VERSION}.exe"
