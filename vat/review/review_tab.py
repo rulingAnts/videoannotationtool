@@ -1,4 +1,5 @@
 """Review Tab widget for quiz-based review sessions."""
+import logging
 
 import os
 import uuid
@@ -224,6 +225,25 @@ class ReviewTab(QWidget):
         except Exception:
             pass
 
+        # Also refresh thumbnails when other UI settings change (visual feedback)
+        for w in (
+            self.play_count_spin,
+            self.time_limit_spin,
+            self.limit_mode_combo,
+            self.sfx_check,
+            self.sfx_volume_slider,
+            self.sfx_tone_combo,
+            self.time_weight_spin,
+            self.ui_overhead_spin,
+        ):
+            try:
+                # Lightweight repaint; does not rebuild items
+                signal = getattr(w, 'valueChanged', None) or getattr(w, 'currentTextChanged', None) or getattr(w, 'toggled', None)
+                if signal:
+                    signal.connect(lambda *_: self.grid.list_widget.viewport().update())
+            except Exception:
+                pass
+
         # Initial population
         self._refresh_grid()
 
@@ -233,6 +253,10 @@ class ReviewTab(QWidget):
             items = self._get_recorded_items()
             self.grid.populate(items)
             self.grid.clear_feedback()
+            try:
+                logging.info(f"Review._refresh_grid: items={len(items)}; sample={[os.path.basename(p) for _, p, _ in items[:3]]}")
+            except Exception:
+                pass
             # Reset progress display outside sessions
             if not self.state.sessionActive:
                 self.progress_bar.setMaximum(max(1, len(items)))

@@ -91,10 +91,16 @@ class ThumbnailGridWidget(QWidget):
         
         for item_id, media_path, wav_path in items:
             name = os.path.basename(media_path)
-            item = QListWidgetItem(name)
+            # Do not show filename labels below thumbnails in Review tab
+            item = QListWidgetItem("")
             item.setData(Qt.UserRole, item_id)
             item.setData(Qt.UserRole + 1, media_path)
             item.setData(Qt.UserRole + 2, wav_path)
+            # Keep the name for accessibility via tooltip
+            try:
+                item.setToolTip(name)
+            except Exception:
+                pass
             
             # Load and cache thumbnail
             try:
