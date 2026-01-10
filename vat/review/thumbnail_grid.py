@@ -67,10 +67,9 @@ class ThumbnailGridWidget(QWidget):
         # Install custom delegate for feedback overlays
         self.list_widget.setItemDelegate(ReviewThumbnailDelegate(self))
         
-        # Connect signals
+        # Connect signals (do not use itemActivated to avoid double-click -> confirm)
         self.list_widget.currentItemChanged.connect(self._on_selection_changed)
         self.list_widget.itemDoubleClicked.connect(self._on_double_click)
-        self.list_widget.itemActivated.connect(self._on_item_activated)
         
         # Install event filter for right-click and modifier+click
         self.list_widget.viewport().installEventFilter(self)
@@ -176,15 +175,13 @@ class ThumbnailGridWidget(QWidget):
         if item_id:
             self.doubleClicked.emit(item_id)
     
-    def _on_item_activated(self, item: QListWidgetItem) -> None:
-        """Handle Enter key activation."""
-        item_id = item.data(Qt.UserRole)
-        if item_id:
-            self.activatedConfirm.emit(item_id, "keyboard")
+    # Removed: itemActivated → confirm, because it also fires on double-click.
+    # Keyboard confirmation is handled via eventFilter KeyPress below.
     
     def eventFilter(self, obj, event) -> bool:
         """Handle right-click and modifier+click for quick confirm."""
         if obj == self.list_widget.viewport():
+            # Handle quick confirm on right-click or Ctrl/Cmd+Click
             if event.type() == event.Type.MouseButtonPress:
                 is_mac = sys.platform == 'darwin'
                 
@@ -198,7 +195,27 @@ class ThumbnailGridWidget(QWidget):
                     if item:
                         item_id = item.data(Qt.UserRole)
                         if item_id:
+                            # Select the item before confirming (instant select+confirm)
+                            try:
+                                self.list_widget.setCurrentItem(item)
+                            except Exception:
+                                pass
                             self.activatedConfirm.emit(item_id, "mouse")
+                            return True
+            # Allow preview only on primary (left) double-click
+            if event.type() == event.Type.MouseButtonDblClick:
+                if event.button() != Qt.LeftButton:
+                    # Swallow non-left double-clicks so they don't trigger preview
+                    return True
+        # Keyboard Enter/Return → confirm current selection
+        if obj == self.list_widget.viewport() or obj == self.list_widget:
+            if event.type() == event.Type.KeyPress:
+                if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+                    item = self.list_widget.currentItem()
+                    if item:
+                        item_id = item.data(Qt.UserRole)
+                        if item_id:
+                            self.activatedConfirm.emit(item_id, "keyboard")
                             return True
         
         return super().eventFilter(obj, event)

@@ -34,7 +34,7 @@ class ReviewSessionState:
     playCountPerItem: int = 1
     perItemTimeLimitSec: float = 0.0
     limitMode: str = "soft"
-    timeWeightingPercent: int = 30
+    timeWeightingPercent: int = 20
     uiOverheadMs: int = 600
     sfxEnabled: bool = True
     sfxVolumePercent: int = 70
