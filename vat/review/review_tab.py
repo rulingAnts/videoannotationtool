@@ -6,6 +6,7 @@
 - [ ] Fix full-screen play/preview functionality in Review tab for videos.
 - [ ] Add ability to export current media into multiple separate folders in order to reduce it to manageable lessons (like if the user has too many in one folder).
 - [ ] Fix the QThread: Destroyed while thread '' is still running error on app quit.
+- [ ] Try to see if you can reduce space between image thumbnails in the grid so that there's less whitespace?
 """
 
 import logging

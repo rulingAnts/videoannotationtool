@@ -125,6 +125,13 @@ class ThumbnailGridWidget(QWidget):
             item.setData(Qt.UserRole, item_id)
             item.setData(Qt.UserRole + 1, media_path)
             item.setData(Qt.UserRole + 2, wav_path)
+            # Mark kind for visual distinction (video vs image)
+            try:
+                lower = (media_path or "").lower()
+                is_video = any(lower.endswith(ext) for ext in getattr(self.fs, 'VIDEO_EXTS', ()))
+                item.setData(Qt.UserRole + 3, 'video' if is_video else 'image')
+            except Exception:
+                item.setData(Qt.UserRole + 3, 'image')
             # Keep the name for accessibility via tooltip
             try:
                 item.setToolTip(name)
@@ -306,22 +313,52 @@ class ReviewThumbnailDelegate(QStyledItemDelegate):
         self.grid_widget = grid_widget
     
     def paint(self, painter, option, index):
-        """Paint item with optional feedback overlay."""
+        """Paint item, draw type badge, and optional feedback overlay."""
         # Default painting first
         super().paint(painter, option, index)
-        
-        # Get item_id and check for feedback
+
+        # Resolve common rects
+        r = option.rect
+        ds = option.decorationSize
+        iw = max(1, ds.width())
+        ih = max(1, ds.height())
+        x = r.x() + (r.width() - iw) // 2
+        y = r.y() + 5
+        icon_rect = QRect(x, y, iw, ih)
+
+        # Draw media type badge (video vs image)
+        try:
+            painter.save()
+            style = QApplication.style()
+            kind = index.data(Qt.UserRole + 3) or 'image'
+            if kind == 'video':
+                type_icon = style.standardIcon(QStyle.SP_MediaPlay)
+            else:
+                type_icon = style.standardIcon(QStyle.SP_FileIcon)
+            pix = type_icon.pixmap(18, 18)
+            # Badge background for legibility
+            bg = QColor(255, 255, 255, 180)
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(bg)
+            bx = icon_rect.left() + 6
+            by = icon_rect.bottom() - 6 - 20
+            badge_rect = QRect(bx - 2, by - 2, 22, 22)
+            painter.drawRoundedRect(badge_rect, 5, 5)
+            painter.drawPixmap(QPoint(bx, by), pix)
+        finally:
+            painter.restore()
+
+        # Draw feedback overlay if present
         item_id = index.data(Qt.UserRole)
         if not item_id:
             return
-        
+
         feedback = self.grid_widget._feedback_state.get(item_id)
         if not feedback:
             return
-        
+
         try:
             painter.save()
-            
             # Determine color and icon
             if feedback == "correct":
                 color = QColor("#2ecc71")  # Green
@@ -329,22 +366,14 @@ class ReviewThumbnailDelegate(QStyledItemDelegate):
             else:  # "wrong"
                 color = QColor("#e74c3c")  # Red
                 icon_type = QStyle.SP_DialogCancelButton
-            
+
             # Draw border around icon area
             pen = QPen(color)
             pen.setWidth(4)
             painter.setPen(pen)
             painter.setBrush(Qt.NoBrush)
-            
-            r = option.rect
-            ds = option.decorationSize
-            iw = max(1, ds.width())
-            ih = max(1, ds.height())
-            x = r.x() + (r.width() - iw) // 2
-            y = r.y() + 5
-            icon_rect = QRect(x, y, iw, ih)
             painter.drawRect(icon_rect.adjusted(2, 2, -2, -2))
-            
+
             # Draw check/X overlay
             try:
                 style = QApplication.style()
@@ -355,6 +384,5 @@ class ReviewThumbnailDelegate(QStyledItemDelegate):
                 painter.drawPixmap(QPoint(ox, oy), pix)
             except Exception:
                 pass
-        
         finally:
             painter.restore()
