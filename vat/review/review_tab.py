@@ -460,8 +460,9 @@ class ReviewTab(QWidget):
         if scope in ("images", "both"):
             images = self.fs.list_images()
             for img_path in images:
-                wav_path = self.fs.wav_path_for_image(img_path)
-                if os.path.exists(wav_path):
+                # Use compatibility resolver to find existing audio for image
+                wav_path = self.fs.find_existing_image_audio(img_path) or self.fs.wav_path_for_image(img_path)
+                if wav_path and os.path.exists(wav_path):
                     item_id = f"img_{os.path.basename(img_path)}"
                     items.append((item_id, img_path, wav_path))
         

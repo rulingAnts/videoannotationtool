@@ -5,8 +5,20 @@ import argparse
 import os
 from PySide6.QtWidgets import QApplication
 
-from vat.ui.app import VideoAnnotationApp
-from vat.utils.resources import configure_opencv_ffmpeg, configure_pydub_ffmpeg
+# Allow running this file directly (e.g., `python /path/to/vat/main.py`) by
+# ensuring the repository root is on sys.path so `import vat...` works.
+try:
+    from vat.ui.app import VideoAnnotationApp
+    from vat.utils.resources import configure_opencv_ffmpeg, configure_pydub_ffmpeg
+except ModuleNotFoundError as e:
+    if e.name == 'vat':
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if repo_root not in sys.path:
+            sys.path.insert(0, repo_root)
+        from vat.ui.app import VideoAnnotationApp
+        from vat.utils.resources import configure_opencv_ffmpeg, configure_pydub_ffmpeg
+    else:
+        raise
 
 
 def main():

@@ -2633,8 +2633,10 @@ class VideoAnnotationApp(QMainWindow):
                         path = sel.data(Qt.UserRole) or os.path.join(self.fs.current_folder or "", sel.text())
                     except Exception:
                         path = None
-            wav_path = self.fs.wav_path_for_image(path or "")
-            exists = os.path.exists(wav_path)
+            # Resolve existing audio with compatibility (legacy basename.wav, root folder)
+            resolved = self.fs.find_existing_image_audio(path or "")
+            wav_path = resolved or self.fs.wav_path_for_image(path or "")
+            exists = bool(resolved)
             # Play/Stop audio reflect wav existence
             self.play_image_audio_button.setEnabled(exists)
             self.stop_image_audio_button.setEnabled(exists)
@@ -2670,8 +2672,9 @@ class VideoAnnotationApp(QMainWindow):
             if not path:
                 name = sel.text()
                 path = os.path.join(self.fs.current_folder or "", name)
-            wav_path = self.fs.wav_path_for_image(path)
-            if not os.path.exists(wav_path):
+            # Resolve existing audio; play if found
+            wav_path = self.fs.find_existing_image_audio(path) or self.fs.wav_path_for_image(path)
+            if not (wav_path and os.path.exists(wav_path)):
                 return
             self.stop_audio()
             if not PYAUDIO_AVAILABLE:
@@ -2706,8 +2709,10 @@ class VideoAnnotationApp(QMainWindow):
             if not path:
                 name = sel.text()
                 path = os.path.join(self.fs.current_folder or "", name)
+            # If any existing audio (including legacy paths) exists, confirm overwrite
+            existing = self.fs.find_existing_image_audio(path)
             wav_path = self.fs.wav_path_for_image(path)
-            if os.path.exists(wav_path):
+            if existing and os.path.exists(existing):
                 reply = QMessageBox.question(self, self.LABELS["overwrite"], 
                                             self.LABELS["overwrite_audio"],
                                             QMessageBox.Yes | QMessageBox.No)
