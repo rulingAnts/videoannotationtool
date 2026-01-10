@@ -440,8 +440,16 @@ class ReviewTab(QWidget):
     
     def _on_grouped_export(self) -> None:
         """Open grouped export dialog."""
-        # TODO: Create a dialog for grouped export settings
-        QMessageBox.information(self, "Grouped Export", "Grouped export dialog not yet implemented.")
+        items = self._get_recorded_items()
+        if not items:
+            QMessageBox.information(self, "No Items", "No recorded items to export.")
+            return
+        
+        from vat.review.grouped_export_dialog import GroupedExportDialog
+        dialog = GroupedExportDialog(items, self.state.groupedDefaultItemsPerFolder, self)
+        if dialog.exec() == dialog.Accepted and dialog.result_metadata:
+            # Optionally save the metadata for the YAML export
+            pass
     
     def _get_recorded_items(self) -> List[Tuple[str, str, str]]:
         """Get list of recorded items based on scope."""
