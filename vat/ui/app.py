@@ -1294,7 +1294,7 @@ class VideoAnnotationApp(QMainWindow):
                     pass
             
             with open(self.settings_file, 'w') as f:
-                json.dump(settings, f, indent=2)
+                json.dump(settings, f, indent=2, sort_keys=True)
         except Exception as e:
             logging.warning(f"Failed to save settings: {e}")
     def select_folder(self):

@@ -1,6 +1,7 @@
 """Thumbnail grid widget for Review Tab."""
 
 import os
+import sys
 from typing import Optional, List, Tuple
 from PySide6.QtWidgets import (
     QWidget, QListWidget, QListWidgetItem, QListView,
@@ -151,7 +152,6 @@ class ThumbnailGridWidget(QWidget):
         """Handle right-click and modifier+click for quick confirm."""
         if obj == self.list_widget.viewport():
             if event.type() == event.Type.MouseButtonPress:
-                import sys
                 is_mac = sys.platform == 'darwin'
                 
                 # Right-click or Ctrl/Cmd+Click

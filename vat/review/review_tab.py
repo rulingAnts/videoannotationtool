@@ -2,6 +2,7 @@
 
 import os
 import uuid
+import tempfile
 import numpy as np
 from typing import Optional, List, Tuple
 from pydub import AudioSegment
@@ -558,7 +559,6 @@ class ReviewTab(QWidget):
             )
             
             # Save to temp file and play
-            import tempfile
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
                 tmp_path = tmp.name
                 audio_segment.export(tmp_path, format='wav')

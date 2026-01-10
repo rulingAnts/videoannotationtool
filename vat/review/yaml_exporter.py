@@ -87,7 +87,7 @@ class YAMLExporter:
         # Write YAML file
         os.makedirs(output_dir, exist_ok=True)
         with open(filepath, 'w', encoding='utf-8') as f:
-            yaml.safe_dump(report, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+            yaml.safe_dump(report, f, default_flow_style=False, allow_unicode=True, sort_keys=True)
         
         return filepath
     
