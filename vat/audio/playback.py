@@ -1,5 +1,5 @@
 import wave
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Signal, Slot
 from . import pyaudio, PYAUDIO_AVAILABLE
 
 class AudioPlaybackWorker(QObject):
@@ -11,6 +11,7 @@ class AudioPlaybackWorker(QObject):
         self.wav_path = wav_path
         self.should_stop = False
 
+    @Slot()
     def run(self):
         if not PYAUDIO_AVAILABLE:
             self.error.emit("PyAudio is not available")
@@ -38,5 +39,6 @@ class AudioPlaybackWorker(QObject):
         finally:
             self.finished.emit()
 
+    @Slot()
     def stop(self):
         self.should_stop = True

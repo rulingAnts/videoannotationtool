@@ -35,7 +35,7 @@ class ReviewSessionState:
     perItemTimeLimitSec: float = 0.0
     limitMode: str = "soft"
     timeWeightingPercent: int = 20
-    uiOverheadMs: int = 600
+    uiOverheadMs: int = 2000
     sfxEnabled: bool = True
     sfxVolumePercent: int = 70
     sfxTone: str = "default"

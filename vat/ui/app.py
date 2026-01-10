@@ -686,8 +686,8 @@ class VideoAnnotationApp(QMainWindow):
         self.load_settings()
         self.init_ui()
         self.setWindowTitle(self.LABELS["app_title"])
-        # Slightly reduced default window size (width and height)
-        self.resize(1120, 680)
+        # More compact default window size (about 25% narrower)
+        self.resize(840, 680)
         # Global shortcuts: work regardless of focus
         try:
             self._shortcut_log_ctrl = QShortcut(QKeySequence("Ctrl+Shift+L"), self)
@@ -832,6 +832,8 @@ class VideoAnnotationApp(QMainWindow):
             splitter.setContentsMargins(0, 0, 0, 0)
         except Exception:
             pass
+        self.main_splitter = splitter
+        self._splitter_prev_sizes = [400, 1000]
         main_layout.addWidget(splitter)
         left_panel = QWidget()
         self.left_panel = left_panel
@@ -893,7 +895,12 @@ class VideoAnnotationApp(QMainWindow):
         videos_layout.addWidget(self.video_fullscreen_tip)
         self.video_label = QLabel(self.LABELS["video_listbox_no_video"])
         self.video_label.setAlignment(Qt.AlignCenter)
-        self.video_label.setMinimumSize(640, 480)
+        # More compact default size for smaller screens; allow expanding
+        self.video_label.setMinimumSize(480, 360)
+        try:
+            self.video_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        except Exception:
+            pass
         self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
         videos_layout.addWidget(self.video_label)
         self.badge_label = QLabel(self.video_label)
@@ -1034,9 +1041,9 @@ class VideoAnnotationApp(QMainWindow):
             self.images_list.setResizeMode(QListView.Adjust)
             # Fill rows left-to-right to avoid a single tall column
             self.images_list.setFlow(QListView.LeftToRight)
-            # Initial placeholder sizes; will be recomputed adaptively
-            self.images_list.setIconSize(QSize(320, 240))
-            self.images_list.setGridSize(QSize(360, 280))
+            # Initial placeholder sizes; smaller defaults for compact UI (recomputed adaptively)
+            self.images_list.setIconSize(QSize(240, 180))
+            self.images_list.setGridSize(QSize(260, 190))
             self.images_list.setSpacing(6)
             self.images_list.setMovement(QListView.Static)
             self.images_list.setWrapping(True)
@@ -1090,6 +1097,25 @@ class VideoAnnotationApp(QMainWindow):
                 self.video_listbox.setEnabled(False)
             else:
                 self.video_listbox.setEnabled(True)
+            # Auto-collapse left panel in Review; restore on other tabs
+            try:
+                sizes = self.main_splitter.sizes()
+                total = sum(sizes) if sizes else 1400
+                if idx == 2:
+                    # Save previous sizes if left panel visible
+                    if sizes and sizes[0] > 0:
+                        self._splitter_prev_sizes = sizes
+                    # Collapse left panel
+                    self.main_splitter.setSizes([0, max(1, total)])
+                else:
+                    prev = getattr(self, '_splitter_prev_sizes', None)
+                    if prev and sum(prev) > 0:
+                        self.main_splitter.setSizes(prev)
+                    else:
+                        # Reasonable default restore
+                        self.main_splitter.setSizes([400, max(1, total - 400)])
+            except Exception:
+                pass
         self.right_panel.currentChanged.connect(_on_tab_changed)
         # Set initial state
         _on_tab_changed(self.right_panel.currentIndex())

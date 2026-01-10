@@ -54,8 +54,9 @@ class ThumbnailGridWidget(QWidget):
         self.list_widget.setViewMode(QListView.IconMode)
         self.list_widget.setResizeMode(QListView.Adjust)
         self.list_widget.setFlow(QListView.LeftToRight)
-        self.list_widget.setIconSize(QSize(240, 180))
-        self.list_widget.setGridSize(QSize(280, 220))
+        # More compact thumbnail sizes for smaller screens
+        self.list_widget.setIconSize(QSize(200, 150))
+        self.list_widget.setGridSize(QSize(230, 170))
         self.list_widget.setSpacing(6)
         self.list_widget.setMovement(QListView.Static)
         self.list_widget.setWrapping(True)
@@ -239,6 +240,17 @@ class ThumbnailGridWidget(QWidget):
         """Clear all feedback overlays."""
         self._feedback_state = {}
         self.list_widget.viewport().update()
+
+    def clear_wrong_feedback(self) -> None:
+        """Clear only 'wrong' feedback overlays, keep 'correct' if present."""
+        try:
+            to_clear = [item_id for item_id, state in self._feedback_state.items() if state == "wrong"]
+            for item_id in to_clear:
+                self._feedback_state.pop(item_id, None)
+            self.list_widget.viewport().update()
+        except Exception:
+            # Fallback: if anything goes wrong, clear all feedback
+            self.clear_feedback()
     
     def get_item_by_id(self, item_id: str) -> Optional[QListWidgetItem]:
         """Get list item by item_id."""

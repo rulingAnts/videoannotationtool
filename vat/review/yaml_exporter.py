@@ -105,6 +105,7 @@ class YAMLExporter:
             "sfxVolumePercent": state.sfxVolumePercent,
             "sfxTone": state.sfxTone,
             "quickConfirmMode": state.quickConfirmMode,
+            "groupedDefaultItemsPerFolder": state.groupedDefaultItemsPerFolder,
             "gradingThresholds": {
                 "A+": 0.95,
                 "A": 0.90,

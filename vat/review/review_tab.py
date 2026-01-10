@@ -1,4 +1,12 @@
 """Review Tab widget for quiz-based review sessions."""
+
+"""
+- [ ] Visually distinguish video thumbnails from still image thumbnails somehow in Review tab.
+- [ ] Consider adding a "Reset to Defaults" button in the Review settings UI to restore default settings easily.
+- [ ] Fix full-screen play/preview functionality in Review tab for videos.
+- [ ] Add ability to export current media into multiple separate folders in order to reduce it to manageable lessons (like if the user has too many in one folder).
+"""
+
 import logging
 
 import os
@@ -56,12 +64,19 @@ class ReviewTab(QWidget):
         self.waiting_for_prompt_audio: bool = False
         
         # Audio playback
-        self.audio_thread: Optional[QThread] = None
+        # Persistent audio thread to avoid destruction while running
+        self.audio_thread: Optional[QThread] = QThread(self)
         self.audio_worker: Optional[AudioPlaybackWorker] = None
         self.audio_kind: Optional[str] = None  # 'prompt', 'prompt_replay', 'sfx'
         
         self._init_ui()
         self._connect_signals()
+        # Start persistent audio thread
+        try:
+            if self.audio_thread and not self.audio_thread.isRunning():
+                self.audio_thread.start()
+        except Exception:
+            pass
     
     def _init_ui(self) -> None:
         """Initialize the UI."""
@@ -159,8 +174,8 @@ class ReviewTab(QWidget):
         
         row2.addWidget(QLabel("UI Overhead (ms):"))
         self.ui_overhead_spin = QSpinBox()
-        self.ui_overhead_spin.setRange(0, 2000)
-        self.ui_overhead_spin.setValue(600)
+        self.ui_overhead_spin.setRange(0, 5000)
+        self.ui_overhead_spin.setValue(2000)
         row2.addWidget(self.ui_overhead_spin)
         
         row2.addStretch()
@@ -362,6 +377,11 @@ class ReviewTab(QWidget):
     
     def _on_prompt_ready(self, item_id: str, wav_path: str) -> None:
         """Handle a new prompt."""
+        # Clear any lingering feedback from previous prompt
+        try:
+            self.grid.clear_feedback()
+        except Exception:
+            pass
         self.current_item_id = item_id
         self.elapsed_time = 0.0
         self.current_wav_path = wav_path
@@ -378,6 +398,11 @@ class ReviewTab(QWidget):
         if not self.state.sessionActive or self.state.paused:
             return
         
+        try:
+            logging.info(f"Review.confirm: method={method}; current_item={self.current_item_id}; audio_kind={self.audio_kind}")
+        except Exception:
+            pass
+
         # Stop any ongoing prompt/replay audio immediately
         self._stop_audio()
 
@@ -398,6 +423,11 @@ class ReviewTab(QWidget):
             self._play_sfx("correct" if correct else "wrong")
         
         if correct:
+            # Remove any previous red 'wrong' marks once the correct item is chosen
+            try:
+                self.grid.clear_wrong_feedback()
+            except Exception:
+                pass
             # Move to next prompt
             self.timer.stop()
             QTimer.singleShot(500, self._advance_prompt)
@@ -572,23 +602,23 @@ class ReviewTab(QWidget):
         if not PYAUDIO_AVAILABLE:
             return
         
-        # Stop any existing playback
+        # Stop any existing playback (do not quit persistent thread)
         if self.audio_worker:
+            try:
+                logging.info("Review.audio: pre-stop existing playback before starting new")
+            except Exception:
+                pass
             try:
                 self.audio_worker.stop()
             except RuntimeError:
                 pass
         
-        if self.audio_thread:
-            try:
-                if self.audio_thread.isRunning():
-                    self.audio_thread.quit()
-                    self.audio_thread.wait()
-            except RuntimeError:
-                pass
-        
         # Set current audio kind
         self.audio_kind = kind
+        try:
+            logging.info(f"Review.audio: start kind={kind}; path={os.path.basename(wav_path)}")
+        except Exception:
+            pass
         
         # If replaying prompt, pause timer during playback
         if kind == 'prompt_replay' and self.state.sessionActive and not self.state.paused:
@@ -597,16 +627,25 @@ class ReviewTab(QWidget):
             except Exception:
                 pass
         
-        # Start new playback
-        self.audio_thread = QThread()
+        # Start new playback on persistent thread
         self.audio_worker = AudioPlaybackWorker(wav_path)
         self.audio_worker.moveToThread(self.audio_thread)
-        self.audio_thread.started.connect(self.audio_worker.run)
-        self.audio_worker.finished.connect(self.audio_thread.quit)
-        self.audio_worker.finished.connect(self.audio_worker.deleteLater)
-        self.audio_thread.finished.connect(self.audio_thread.deleteLater)
-        self.audio_thread.finished.connect(self._on_audio_finished)
-        self.audio_thread.start()
+        # Run worker in the thread via queued connection
+        try:
+            from PySide6.QtCore import QMetaObject
+            QMetaObject.invokeMethod(self.audio_worker, "run", Qt.QueuedConnection)
+        except Exception:
+            # Fallback: start thread if needed
+            if self.audio_thread and not self.audio_thread.isRunning():
+                self.audio_thread.start()
+            self.audio_thread.started.connect(self.audio_worker.run)
+        # Notify when finished
+        self.audio_worker.finished.connect(self._on_audio_finished)
+        try:
+            # Log errors from worker
+            self.audio_worker.error.connect(lambda msg: logging.error(f"Review.audio: worker error: {msg}"))
+        except Exception:
+            pass
     
     def _on_audio_finished(self) -> None:
         """Handle audio playback finished."""
@@ -623,37 +662,28 @@ class ReviewTab(QWidget):
                     self.stats.resume_timer()
             except Exception:
                 pass
+        try:
+            logging.info(f"Review.audio: finished kind={self.audio_kind}; waiting_for_prompt_audio={self.waiting_for_prompt_audio}")
+        except Exception:
+            pass
         
-        self.audio_thread = None
         self.audio_worker = None
         self.audio_kind = None
 
     def _stop_audio(self) -> None:
         """Stop any ongoing audio playback immediately."""
         try:
+            logging.info("Review.audio: stop requested")
             # Signal the worker to stop reading/writing audio data
             if self.audio_worker:
                 try:
                     self.audio_worker.stop()
                 except RuntimeError:
                     pass
-            # Wait for the thread to finish cleanly; avoid destroying while running
-            if self.audio_thread:
-                try:
-                    # Wait up to 2s for clean finish; if still running, force terminate as a last resort
-                    finished = self.audio_thread.wait(2000)
-                    if not finished and self.audio_thread.isRunning():
-                        try:
-                            self.audio_thread.terminate()
-                        except Exception:
-                            pass
-                        self.audio_thread.wait(1000)
-                except RuntimeError:
-                    pass
+            # We keep a persistent thread; do not quit/destroy it here
         finally:
             # Only clear references if the thread has actually stopped
             if not (self.audio_thread and self.audio_thread.isRunning()):
-                self.audio_thread = None
                 self.audio_worker = None
                 self.audio_kind = None
     
@@ -783,6 +813,10 @@ class ReviewTab(QWidget):
         """Replay the current prompt audio and pause timer during playback."""
         if not self.current_wav_path:
             return
+        try:
+            logging.info("Review.replay: requested; stopping current audio and replaying prompt")
+        except Exception:
+            pass
         self._stop_audio()
         self._play_audio(self.current_wav_path, kind='prompt_replay')
 
