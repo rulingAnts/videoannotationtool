@@ -51,10 +51,13 @@ class ReviewTab(QWidget):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._on_timer_tick)
         self.elapsed_time: float = 0.0
+        self.current_wav_path: Optional[str] = None
+        self.waiting_for_prompt_audio: bool = False
         
         # Audio playback
         self.audio_thread: Optional[QThread] = None
         self.audio_worker: Optional[AudioPlaybackWorker] = None
+        self.audio_kind: Optional[str] = None  # 'prompt', 'prompt_replay', 'sfx'
         
         self._init_ui()
         self._connect_signals()
@@ -70,7 +73,7 @@ class ReviewTab(QWidget):
         # Tip
         tip = QLabel(
             "<b>Tip:</b> Single-click selects. Right-click, Ctrl/Cmd+Click, or Enter confirms. "
-            "Double-click opens preview/fullscreen."
+            "Double-click opens preview/fullscreen. Press 'R' to replay prompt."
         )
         tip.setWordWrap(True)
         tip.setStyleSheet("color: #555; font-size: 12px; padding: 4px;")
@@ -179,6 +182,11 @@ class ReviewTab(QWidget):
         self.stop_btn.setEnabled(False)
         row3.addWidget(self.stop_btn)
         
+        self.replay_btn = QPushButton("Replay Prompt")
+        self.replay_btn.clicked.connect(self._on_replay_clicked)
+        self.replay_btn.setEnabled(False)
+        row3.addWidget(self.replay_btn)
+
         self.reset_btn = QPushButton("Reset")
         self.reset_btn.clicked.connect(self._on_reset)
         row3.addWidget(self.reset_btn)
@@ -246,6 +254,12 @@ class ReviewTab(QWidget):
 
         # Initial population
         self._refresh_grid()
+
+        # Ensure the tab can receive key events for shortcuts
+        try:
+            self.setFocusPolicy(Qt.StrongFocus)
+        except Exception:
+            pass
 
     def _refresh_grid(self) -> None:
         """Populate the thumbnail grid with recorded items for current scope."""
@@ -334,13 +348,11 @@ class ReviewTab(QWidget):
         """Handle a new prompt."""
         self.current_item_id = item_id
         self.elapsed_time = 0.0
+        self.current_wav_path = wav_path
+        self.waiting_for_prompt_audio = True
         
-        # Play audio
-        self._play_audio(wav_path)
-        
-        # Start timing
-        self.stats.start_prompt(item_id)
-        self.timer.start(100)  # Update every 100ms
+        # Play audio; timing will start when playback finishes
+        self._play_audio(wav_path, kind='prompt')
         
         # Update progress
         self._update_progress()
@@ -350,6 +362,9 @@ class ReviewTab(QWidget):
         if not self.state.sessionActive or self.state.paused:
             return
         
+        # Stop any ongoing prompt/replay audio immediately
+        self._stop_audio()
+
         correct = (item_id == self.current_item_id)
         
         # Record response
@@ -535,8 +550,8 @@ class ReviewTab(QWidget):
         
         return items
     
-    def _play_audio(self, wav_path: str) -> None:
-        """Play audio file."""
+    def _play_audio(self, wav_path: str, kind: str = 'prompt') -> None:
+        """Play audio file with kind control ('prompt', 'prompt_replay', 'sfx')."""
         if not PYAUDIO_AVAILABLE:
             return
         
@@ -555,6 +570,16 @@ class ReviewTab(QWidget):
             except RuntimeError:
                 pass
         
+        # Set current audio kind
+        self.audio_kind = kind
+        
+        # If replaying prompt, pause timer during playback
+        if kind == 'prompt_replay' and self.state.sessionActive and not self.state.paused:
+            try:
+                self.stats.pause_timer()
+            except Exception:
+                pass
+        
         # Start new playback
         self.audio_thread = QThread()
         self.audio_worker = AudioPlaybackWorker(wav_path)
@@ -568,8 +593,42 @@ class ReviewTab(QWidget):
     
     def _on_audio_finished(self) -> None:
         """Handle audio playback finished."""
+        # Resume or start timer based on audio kind
+        if self.state.sessionActive and not self.state.paused:
+            try:
+                if self.audio_kind == 'prompt' and self.waiting_for_prompt_audio and self.current_item_id:
+                    # Start timing only after initial prompt audio finishes
+                    self.waiting_for_prompt_audio = False
+                    self.stats.start_prompt(self.current_item_id)
+                    self.timer.start(100)
+                elif self.audio_kind == 'prompt_replay':
+                    # Resume timing after replay finishes
+                    self.stats.resume_timer()
+            except Exception:
+                pass
+        
         self.audio_thread = None
         self.audio_worker = None
+        self.audio_kind = None
+
+    def _stop_audio(self) -> None:
+        """Stop any ongoing audio playback immediately."""
+        try:
+            if self.audio_worker:
+                try:
+                    self.audio_worker.stop()
+                except RuntimeError:
+                    pass
+            if self.audio_thread and self.audio_thread.isRunning():
+                try:
+                    self.audio_thread.quit()
+                    self.audio_thread.wait()
+                except RuntimeError:
+                    pass
+        finally:
+            self.audio_thread = None
+            self.audio_worker = None
+            self.audio_kind = None
     
     def _play_sfx(self, effect: str) -> None:
         """Play sound effect."""
@@ -622,8 +681,8 @@ class ReviewTab(QWidget):
                 tmp_path = tmp.name
                 audio_segment.export(tmp_path, format='wav')
             
-            # Play the temp file
-            self._play_audio(tmp_path)
+            # Play the temp file as SFX
+            self._play_audio(tmp_path, kind='sfx')
             
             # Clean up temp file after a delay
             QTimer.singleShot(1000, lambda: self._cleanup_temp_file(tmp_path))
@@ -678,6 +737,7 @@ class ReviewTab(QWidget):
         self.start_btn.setEnabled(not in_session)
         self.pause_btn.setEnabled(in_session)
         self.stop_btn.setEnabled(in_session)
+        self.replay_btn.setEnabled(in_session)
         
         # Disable settings during session
         self.scope_combo.setEnabled(not in_session)
@@ -691,3 +751,21 @@ class ReviewTab(QWidget):
         self.progress_bar.setMaximum(total)
         self.progress_bar.setValue(current)
         self.progress_bar.setFormat(f"{current}/{total} prompts")
+
+    def _on_replay_clicked(self) -> None:
+        """Replay the current prompt audio and pause timer during playback."""
+        if not self.current_wav_path:
+            return
+        self._stop_audio()
+        self._play_audio(self.current_wav_path, kind='prompt_replay')
+
+    def keyPressEvent(self, event) -> None:
+        """Handle keyboard shortcuts for the review tab."""
+        try:
+            if event.key() == Qt.Key_R:
+                # Replay prompt on 'R'
+                self._on_replay_clicked()
+                return
+        except Exception:
+            pass
+        super().keyPressEvent(event)
