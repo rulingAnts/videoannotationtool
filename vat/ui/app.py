@@ -833,7 +833,7 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             pass
         self.main_splitter = splitter
-        self._splitter_prev_sizes = [400, 1000]
+        self._splitter_prev_sizes = [240, 600]
         main_layout.addWidget(splitter)
         left_panel = QWidget()
         self.left_panel = left_panel
@@ -1089,7 +1089,8 @@ class VideoAnnotationApp(QMainWindow):
         right_panel.addTab(self.review_tab, "Review")
         
         splitter.addWidget(right_panel)
-        splitter.setSizes([400, 1000])
+        # Initial splitter sizes aligned with narrower window (sum ≈ 840)
+        splitter.setSizes([240, 600])
         # Connect tab change to enable/disable video_listbox
         def _on_tab_changed(idx):
             # 0 = Videos, 1 = Images, 2 = Review (assume order)
