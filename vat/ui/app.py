@@ -31,6 +31,7 @@ from vat.utils.fs_access import (
     FolderPermissionError,
     FolderNotFoundError,
 )
+from vat.review import ReviewTab
 
 # UI labels for easy translation, with language names in their own language
 LABELS_ALL = {
@@ -1069,12 +1070,23 @@ class VideoAnnotationApp(QMainWindow):
             pass
         images_layout.addWidget(self.images_list)
         right_panel.addTab(images_tab, self.LABELS.get("images_tab_title", "Images"))
+        
+        # Review tab
+        try:
+            from vat import VERSION
+            app_version = VERSION
+        except Exception:
+            app_version = "2.0.3"
+        
+        self.review_tab = ReviewTab(self.fs, app_version, self)
+        right_panel.addTab(self.review_tab, "Review")
+        
         splitter.addWidget(right_panel)
         splitter.setSizes([400, 1000])
         # Connect tab change to enable/disable video_listbox
         def _on_tab_changed(idx):
-            # 0 = Videos, 1 = Images (assume order)
-            if idx == 1:
+            # 0 = Videos, 1 = Images, 2 = Review (assume order)
+            if idx in (1, 2):
                 self.video_listbox.setEnabled(False)
             else:
                 self.video_listbox.setEnabled(True)
