@@ -9,7 +9,9 @@ from PySide6.QtWidgets import (
     QApplication
 )
 from PySide6.QtCore import Qt, Signal, QSize, QRect, QPoint
-from PySide6.QtGui import QIcon, QPixmap, QPen, QColor, QImageReader
+from PySide6.QtGui import QIcon, QPixmap, QPen, QColor, QImageReader, QImage
+import cv2
+import numpy as np
 
 from vat.utils.fs_access import FolderAccessManager
 
@@ -109,24 +111,50 @@ class ThumbnailGridWidget(QWidget):
             self.list_widget.setCurrentRow(0)
     
     def _load_pixmap(self, path: str) -> Optional[QPixmap]:
-        """Load or retrieve cached pixmap."""
+        """Load or retrieve cached pixmap for images or videos.
+
+        - Images: load via QPixmap/QImageReader
+        - Videos: generate thumbnail from first frame via OpenCV
+        """
         if path in self._pixmap_cache:
             return self._pixmap_cache[path]
-        
+
         try:
+            lower = (path or "").lower()
+            is_video = any(lower.endswith(ext) for ext in getattr(self.fs, 'VIDEO_EXTS', ()))
+            if is_video:
+                # Generate video thumbnail from first frame
+                try:
+                    cap = cv2.VideoCapture(path)
+                    ret, frame = cap.read()
+                    cap.release()
+                    if ret and frame is not None:
+                        # BGR -> RGB
+                        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        h, w, _ = rgb.shape
+                        bytes_per_line = 3 * w
+                        qimg = QImage(rgb.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
+                        pix = QPixmap.fromImage(qimg)
+                        if pix and not pix.isNull():
+                            self._pixmap_cache[path] = pix
+                            return pix
+                except Exception:
+                    pass
+
+            # Fallback: treat as image
             pix = QPixmap(path)
             if pix.isNull():
                 reader = QImageReader(path)
                 img = reader.read()
                 if img and not img.isNull():
                     pix = QPixmap.fromImage(img)
-            
+
             if pix and not pix.isNull():
                 self._pixmap_cache[path] = pix
                 return pix
         except Exception:
             pass
-        
+
         return None
     
     def _on_selection_changed(self, current, previous) -> None:

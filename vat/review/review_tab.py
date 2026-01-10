@@ -206,6 +206,40 @@ class ReviewTab(QWidget):
         self.grid.doubleClicked.connect(self._on_preview)
         self.queue.promptReady.connect(self._on_prompt_ready)
         self.queue.queueFinished.connect(self._on_queue_finished)
+        # Auto-refresh the grid when scope changes or folder contents update
+        try:
+            self.scope_combo.currentTextChanged.connect(lambda _t: self._refresh_grid())
+        except Exception:
+            pass
+        try:
+            self.fs.folderChanged.connect(lambda _p: self._refresh_grid())
+        except Exception:
+            pass
+        try:
+            self.fs.imagesUpdated.connect(lambda *_args: self._refresh_grid())
+        except Exception:
+            pass
+        try:
+            self.fs.videosUpdated.connect(lambda *_args: self._refresh_grid())
+        except Exception:
+            pass
+
+        # Initial population
+        self._refresh_grid()
+
+    def _refresh_grid(self) -> None:
+        """Populate the thumbnail grid with recorded items for current scope."""
+        try:
+            items = self._get_recorded_items()
+            self.grid.populate(items)
+            self.grid.clear_feedback()
+            # Reset progress display outside sessions
+            if not self.state.sessionActive:
+                self.progress_bar.setMaximum(max(1, len(items)))
+                self.progress_bar.setValue(0)
+                self.progress_bar.setFormat(f"0/{len(items)} prompts")
+        except Exception:
+            pass
     
     def _on_start(self) -> None:
         """Start a review session."""
@@ -227,7 +261,7 @@ class ReviewTab(QWidget):
             media_type = "video" if media_path.lower().endswith(self.fs.VIDEO_EXTS) else "image"
             self.stats.add_item(item_id, media_type, media_path, wav_path)
         
-        # Populate grid
+        # Populate grid (already populated by _refresh_grid; refresh to ensure order matches queue)
         self.grid.populate(items)
         self.grid.clear_feedback()
         
