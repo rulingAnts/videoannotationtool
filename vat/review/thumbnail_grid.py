@@ -326,27 +326,26 @@ class ReviewThumbnailDelegate(QStyledItemDelegate):
         y = r.y() + 5
         icon_rect = QRect(x, y, iw, ih)
 
-        # Draw media type badge (video vs image)
+        # Draw media type badge only for videos
         try:
-            painter.save()
-            style = QApplication.style()
             kind = index.data(Qt.UserRole + 3) or 'image'
             if kind == 'video':
+                painter.save()
+                style = QApplication.style()
                 type_icon = style.standardIcon(QStyle.SP_MediaPlay)
-            else:
-                type_icon = style.standardIcon(QStyle.SP_FileIcon)
-            pix = type_icon.pixmap(18, 18)
-            # Badge background for legibility
-            bg = QColor(255, 255, 255, 180)
-            painter.setPen(Qt.NoPen)
-            painter.setBrush(bg)
-            bx = icon_rect.left() + 6
-            by = icon_rect.bottom() - 6 - 20
-            badge_rect = QRect(bx - 2, by - 2, 22, 22)
-            painter.drawRoundedRect(badge_rect, 5, 5)
-            painter.drawPixmap(QPoint(bx, by), pix)
-        finally:
-            painter.restore()
+                pix = type_icon.pixmap(18, 18)
+                # Badge background for legibility
+                bg = QColor(255, 255, 255, 180)
+                painter.setPen(Qt.NoPen)
+                painter.setBrush(bg)
+                bx = icon_rect.left() + 6
+                by = icon_rect.bottom() - 6 - 20
+                badge_rect = QRect(bx - 2, by - 2, 22, 22)
+                painter.drawRoundedRect(badge_rect, 5, 5)
+                painter.drawPixmap(QPoint(bx, by), pix)
+                painter.restore()
+        except Exception:
+            pass
 
         # Draw feedback overlay if present
         item_id = index.data(Qt.UserRole)

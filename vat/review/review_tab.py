@@ -842,7 +842,9 @@ class ReviewTab(QWidget):
             logging.info("Review.replay: requested; stopping current audio and replaying prompt")
         except Exception:
             pass
+        # Stop any current audio, then play prompt again as a replay
         self._stop_audio()
+        self._play_audio(self.current_wav_path, kind='prompt_replay')
 
     def _on_thumb_scale_changed(self, value: int) -> None:
         try:
@@ -852,7 +854,7 @@ class ReviewTab(QWidget):
             self.grid.recompute_layout()
         except Exception:
             pass
-        self._play_audio(self.current_wav_path, kind='prompt_replay')
+        # Do not auto-replay when changing thumbnail scale
 
     def keyPressEvent(self, event) -> None:
         """Handle keyboard shortcuts for the review tab."""
