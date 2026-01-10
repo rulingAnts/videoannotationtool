@@ -5,6 +5,7 @@
 - [ ] Consider adding a "Reset to Defaults" button in the Review settings UI to restore default settings easily.
 - [ ] Fix full-screen play/preview functionality in Review tab for videos.
 - [ ] Add ability to export current media into multiple separate folders in order to reduce it to manageable lessons (like if the user has too many in one folder).
+- [ ] Fix the QThread: Destroyed while thread '' is still running error on app quit.
 """
 
 import logging

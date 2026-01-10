@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QListWidget, QListWidgetItem, QLabel, QTextEdit, QMessageBox,
     QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle, QSizePolicy,
-    QListView, QStyledItemDelegate, QApplication, QCheckBox
+    QListView, QStyledItemDelegate, QApplication, QCheckBox, QGraphicsDropShadowEffect
 )
 from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize, QRect, QPoint, QLocale
 from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence, QImageReader, QPen, QColor
@@ -746,6 +746,11 @@ class VideoAnnotationApp(QMainWindow):
             self._shortcut_ff_ctrl.activated.connect(self._show_ffmpeg_diagnostics)
             self._shortcut_ff_meta = QShortcut(QKeySequence("Meta+Shift+F"), self)
             self._shortcut_ff_meta.activated.connect(self._show_ffmpeg_diagnostics)
+            # Drawer toggle shortcut: Ctrl+D and Cmd+D (Meta+D on macOS)
+            self._shortcut_drawer_ctrl = QShortcut(QKeySequence("Ctrl+D"), self)
+            self._shortcut_drawer_ctrl.activated.connect(self._toggle_drawer)
+            self._shortcut_drawer_meta = QShortcut(QKeySequence("Meta+D"), self)
+            self._shortcut_drawer_meta.activated.connect(self._toggle_drawer)
         except Exception:
             pass
 
@@ -819,6 +824,12 @@ class VideoAnnotationApp(QMainWindow):
             # Clamp width on any resize to avoid expansion (e.g., due to content policies)
             try:
                 self._enforce_window_width_cap()
+            except Exception:
+                pass
+            # Keep drawer and scrim geometry in sync on resize
+            try:
+                if getattr(self, 'drawer_layer', None) is not None and self.drawer_layer.isVisible():
+                    self._position_drawer()
             except Exception:
                 pass
         self.ui_info.connect(self._show_info)
@@ -964,6 +975,11 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             pass
         header_row.addWidget(self.drawer_toggle_btn)
+        # Small spacing between hamburger and folder name
+        try:
+            header_row.addSpacing(8)
+        except Exception:
+            pass
         # Folder label follows the drawer button on the left
         header_row.addWidget(self.folder_display_label)
         try:
@@ -979,36 +995,67 @@ class VideoAnnotationApp(QMainWindow):
         self.main_splitter = splitter
         self._splitter_prev_sizes = [240, 600]
         main_layout.addWidget(splitter)
+        # Build left panel content (will live inside an overlay drawer)
         left_panel = QWidget()
         self.left_panel = left_panel
         left_layout = QVBoxLayout(left_panel)
         try:
-            left_layout.setContentsMargins(0, 0, 0, 0)
-            left_layout.setSpacing(4)
+            left_layout.setContentsMargins(8, 8, 8, 8)
+            left_layout.setSpacing(8)
         except Exception:
             pass
         self.select_button = QPushButton(self.LABELS["select_folder"])
         self.select_button.clicked.connect(self.select_folder)
+        try:
+            self.select_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.select_button.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.select_button)
         self.open_ocenaudio_button = QPushButton(self.LABELS["open_ocenaudio"])
         self.open_ocenaudio_button.clicked.connect(self.open_in_ocenaudio)
         self.open_ocenaudio_button.setEnabled(False)
+        try:
+            self.open_ocenaudio_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.open_ocenaudio_button.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.open_ocenaudio_button)
         self.export_wavs_button = QPushButton(self.LABELS["export_wavs"])
         self.export_wavs_button.clicked.connect(self.export_wavs)
         self.export_wavs_button.setEnabled(False)
+        try:
+            self.export_wavs_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.export_wavs_button.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.export_wavs_button)
         self.clear_wavs_button = QPushButton(self.LABELS["clear_wavs"])
         self.clear_wavs_button.clicked.connect(self.clear_wavs)
         self.clear_wavs_button.setEnabled(False)
+        try:
+            self.clear_wavs_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.clear_wavs_button.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.clear_wavs_button)
         self.import_wavs_button = QPushButton(self.LABELS["import_wavs"])
         self.import_wavs_button.clicked.connect(self.import_wavs)
         self.import_wavs_button.setEnabled(False)
+        try:
+            self.import_wavs_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.import_wavs_button.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.import_wavs_button)
         self.join_wavs_button = QPushButton(self.LABELS["join_wavs"])
         self.join_wavs_button.clicked.connect(self.join_all_wavs)
         self.join_wavs_button.setEnabled(False)
+        try:
+            self.join_wavs_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.join_wavs_button.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.join_wavs_button)
         self.video_listbox = QListWidget()
         try:
@@ -1021,8 +1068,64 @@ class VideoAnnotationApp(QMainWindow):
         self.edit_metadata_btn = QPushButton(self.LABELS["edit_metadata"])
         self.edit_metadata_btn.clicked.connect(self.open_metadata_dialog)
         self.edit_metadata_btn.setEnabled(False)
+        try:
+            self.edit_metadata_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.edit_metadata_btn.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.edit_metadata_btn)
-        splitter.addWidget(left_panel)
+        # Drawer overlay (appears over UI instead of resizing splitter)
+        try:
+            self.drawer_layer = QWidget(central_widget)
+            self.drawer_layer.setVisible(False)
+            self.drawer_layer.setAttribute(Qt.WA_StyledBackground, True)
+            # Targeted style on the drawer container only to avoid affecting child controls
+            self.drawer_layer.setObjectName("drawer_layer")
+            self.drawer_layer.setStyleSheet("#drawer_layer { background-color: rgba(248,248,248, 0.95); border-right: 1px solid #ccc; }")
+            dl = QVBoxLayout(self.drawer_layer)
+            dl.setContentsMargins(8, 8, 8, 8)
+            dl.setSpacing(6)
+            dl.addWidget(left_panel)
+            # Ensure child buttons use native style (clear any inherited QSS side-effects)
+            try:
+                for btn in (
+                    self.select_button,
+                    self.open_ocenaudio_button,
+                    self.export_wavs_button,
+                    self.clear_wavs_button,
+                    self.import_wavs_button,
+                    self.join_wavs_button,
+                    self.edit_metadata_btn,
+                ):
+                    btn.setStyleSheet("")
+                    btn.setAutoDefault(False)
+            except Exception:
+                pass
+            # Subtle shadow for visual depth
+            try:
+                shadow = QGraphicsDropShadowEffect(self.drawer_layer)
+                shadow.setBlurRadius(16)
+                shadow.setOffset(0, 0)
+                shadow.setColor(QColor(0, 0, 0, 80))
+                self.drawer_layer.setGraphicsEffect(shadow)
+            except Exception:
+                pass
+            # Background scrim to dim UI and capture clicks to close
+            self.drawer_scrim = QWidget(central_widget)
+            self.drawer_scrim.setVisible(False)
+            self.drawer_scrim.setAttribute(Qt.WA_StyledBackground, True)
+            self.drawer_scrim.setStyleSheet("background-color: rgba(0,0,0,0.15);")
+            self.drawer_scrim.installEventFilter(self)
+        except Exception:
+            self.drawer_layer = None
+            self.drawer_scrim = None
+        # Placeholder on the splitter's left, to keep API stable
+        self._drawer_placeholder = QWidget()
+        try:
+            self._drawer_placeholder.setMinimumWidth(0)
+        except Exception:
+            pass
+        splitter.addWidget(self._drawer_placeholder)
         right_panel = QTabWidget()
         self.right_panel = right_panel
         videos_tab = QWidget()
@@ -1263,6 +1366,11 @@ class VideoAnnotationApp(QMainWindow):
                 self.video_listbox.setEnabled(idx == 0)
             except Exception:
                 pass
+            # Keep drawer overlay position in sync
+            try:
+                self._position_drawer()
+            except Exception:
+                pass
         self.right_panel.currentChanged.connect(_on_tab_changed)
         # Set initial state
         _on_tab_changed(self.right_panel.currentIndex())
@@ -1315,26 +1423,33 @@ class VideoAnnotationApp(QMainWindow):
         self.save_settings()
 
     def _toggle_drawer(self):
-        """Toggle the left drawer collapsed/expanded state."""
+        """Toggle the left drawer overlay visibility."""
         try:
-            sizes = self.main_splitter.sizes()
-            total = sum(sizes) if sizes else 1000
-            if sizes and sizes[0] > 0:
-                # Collapse and remember
-                self._splitter_prev_sizes = sizes
-                self.main_splitter.setSizes([0, max(1, total)])
+            if getattr(self, 'drawer_layer', None) is None:
+                return
+            vis = self.drawer_layer.isVisible()
+            if vis:
+                self.drawer_layer.hide()
+                try:
+                    if getattr(self, 'drawer_scrim', None) is not None:
+                        self.drawer_scrim.hide()
+                except Exception:
+                    pass
                 try:
                     self.drawer_toggle_btn.setToolTip("Show drawer")
                 except Exception:
                     pass
             else:
-                prev = getattr(self, '_splitter_prev_sizes', None)
-                left = 240
-                right = max(1, total - left)
-                if prev and sum(prev) > 0:
-                    left = max(120, prev[0])
-                    right = max(1, total - left)
-                self.main_splitter.setSizes([left, right])
+                self._position_drawer()
+                # Show scrim behind drawer
+                try:
+                    if getattr(self, 'drawer_scrim', None) is not None:
+                        self.drawer_scrim.show()
+                        self.drawer_scrim.raise_()
+                except Exception:
+                    pass
+                self.drawer_layer.show()
+                self.drawer_layer.raise_()
                 try:
                     self.drawer_toggle_btn.setToolTip("Hide drawer")
                 except Exception:
@@ -1365,6 +1480,44 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             return QIcon()
 
+    def _position_drawer(self):
+        """Position the drawer overlay anchored to the left inside the central widget."""
+        try:
+            if getattr(self, 'drawer_layer', None) is None:
+                return
+            cw = getattr(self, '_central_widget', None)
+            if cw is None:
+                return
+            # Default drawer width: proportional to window, with sensible bounds
+            dw = min(max(400, int(cw.width() * 0.40)), 600)
+            # Compute top offset based on header row metrics
+            try:
+                # Use the lower edge of the highest header element
+                lbl = getattr(self, 'folder_display_label', None)
+                dd = getattr(self, 'language_dropdown', None)
+                btn = getattr(self, 'drawer_toggle_btn', None)
+                candidates = []
+                for w in (lbl, dd, btn):
+                    if w is not None:
+                        p = w.mapTo(cw, QPoint(0, 0))
+                        candidates.append(p.y() + w.height())
+                header_bottom = max(candidates) if candidates else 50
+                top_margin = header_bottom + 6
+            except Exception:
+                top_margin = 50
+            h = cw.height() - top_margin
+            h = max(200, h)
+            self.drawer_layer.setGeometry(8, top_margin, dw, h)
+            # Keep scrim covering the central widget
+            try:
+                if getattr(self, 'drawer_scrim', None) is not None:
+                    # Leave header/hamburger clickable: scrim starts below header
+                    self.drawer_scrim.setGeometry(0, top_margin, cw.width(), cw.height() - top_margin)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
     def _on_images_thumb_scale_changed(self, value: int):
         try:
             self.images_thumb_scale = max(0.5, min(1.8, value / 100.0))
@@ -1374,27 +1527,31 @@ class VideoAnnotationApp(QMainWindow):
             pass
 
     def eventFilter(self, obj, event):
-        # Collapse drawer when clicking outside left panel
+        # Collapse drawer when clicking outside the drawer overlay
         try:
-            if obj is getattr(self, '_central_widget', None):
+            target_central = getattr(self, '_central_widget', None)
+            target_scrim = getattr(self, 'drawer_scrim', None)
+            if obj is target_central or obj is target_scrim:
                 if event.type() == QEvent.MouseButtonPress:
-                    sizes = self.main_splitter.sizes() if hasattr(self, 'main_splitter') else []
-                    if sizes and sizes[0] > 0:
-                        # Map left panel geometry to central widget coords
-                        lp = self.left_panel
-                        if lp is not None:
-                            g = lp.mapTo(self._central_widget, QPoint(0, 0))
-                            rect = QRect(g, lp.size())
-                            pos = event.position() if hasattr(event, 'position') else event.pos()
-                            p = QPoint(int(pos.x()), int(pos.y()))
-                            if not rect.contains(p):
-                                total = sum(sizes)
-                                self.main_splitter.setSizes([0, max(1, total)])
-                                try:
-                                    self.drawer_toggle_btn.setToolTip("Show drawer")
-                                except Exception:
-                                    pass
-                                return True
+                    dl = getattr(self, 'drawer_layer', None)
+                    if dl is not None and dl.isVisible():
+                        # Map drawer geometry to the coordinate space of the clicked widget
+                        top_left_in_obj = dl.mapTo(obj, QPoint(0, 0))
+                        rect = QRect(top_left_in_obj, dl.size())
+                        pos = event.position() if hasattr(event, 'position') else event.pos()
+                        p = QPoint(int(pos.x()), int(pos.y()))
+                        if not rect.contains(p):
+                            dl.hide()
+                            try:
+                                if target_scrim is not None:
+                                    target_scrim.hide()
+                            except Exception:
+                                pass
+                            try:
+                                self.drawer_toggle_btn.setToolTip("Show drawer")
+                            except Exception:
+                                pass
+                            return True
         except Exception:
             pass
         try:
