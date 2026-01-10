@@ -2,13 +2,15 @@
 
 import os
 import uuid
+import numpy as np
 from typing import Optional, List, Tuple
+from pydub import AudioSegment
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QComboBox, QSpinBox, QDoubleSpinBox, QSlider, QCheckBox,
     QProgressBar, QMessageBox, QFileDialog, QGroupBox, QRadioButton
 )
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QTimer, Signal, QThread
 
 from vat.utils.fs_access import FolderAccessManager
 from vat.review.session_state import ReviewSessionState
@@ -17,6 +19,8 @@ from vat.review.stats import ReviewStats
 from vat.review.yaml_exporter import YAMLExporter
 from vat.review.grouped_exporter import GroupedExporter
 from vat.review.thumbnail_grid import ThumbnailGridWidget
+from vat.audio import PYAUDIO_AVAILABLE
+from vat.audio.playback import AudioPlaybackWorker
 
 
 class ReviewTab(QWidget):
@@ -45,6 +49,10 @@ class ReviewTab(QWidget):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._on_timer_tick)
         self.elapsed_time: float = 0.0
+        
+        # Audio playback
+        self.audio_thread: Optional[QThread] = None
+        self.audio_worker: Optional[AudioPlaybackWorker] = None
         
         self._init_ui()
         self._connect_signals()
@@ -311,9 +319,54 @@ class ReviewTab(QWidget):
         if self.state.sessionActive and not self.state.paused:
             self.stats.pause_timer()
         
-        # TODO: Show fullscreen viewer
-        # For now, just resume timer after a delay
-        QTimer.singleShot(1000, lambda: self.stats.resume_timer() if self.state.sessionActive else None)
+        # Get item details
+        item = self.grid.get_item_by_id(item_id)
+        if not item:
+            return
+        
+        media_path = item.data(Qt.UserRole + 1)
+        if not media_path or not os.path.exists(media_path):
+            return
+        
+        # Determine media type and show appropriate viewer
+        try:
+            if media_path.lower().endswith(self.fs.VIDEO_EXTS):
+                from vat.ui.fullscreen import FullscreenVideoViewer
+                viewer = FullscreenVideoViewer(media_path)
+                
+                # Connect to playingChanged signal for timer pause/resume
+                try:
+                    viewer.playingChanged.connect(self._on_fullscreen_playing_changed)
+                except Exception:
+                    pass
+                
+                viewer.showFullScreen()
+                viewer.destroyed.connect(self._on_fullscreen_closed)
+            else:
+                from vat.ui.fullscreen import FullscreenImageViewer
+                viewer = FullscreenImageViewer(media_path)
+                viewer.showFullScreen()
+                viewer.destroyed.connect(self._on_fullscreen_closed)
+        except Exception:
+            # Resume timer if preview fails
+            if self.state.sessionActive and not self.state.paused:
+                self.stats.resume_timer()
+    
+    def _on_fullscreen_playing_changed(self, is_playing: bool) -> None:
+        """Handle fullscreen video playing state change."""
+        if not self.state.sessionActive or self.state.paused:
+            return
+        
+        if is_playing:
+            self.stats.pause_timer()
+        else:
+            self.stats.resume_timer()
+    
+    def _on_fullscreen_closed(self) -> None:
+        """Handle fullscreen viewer closed."""
+        # Resume timer when fullscreen closes
+        if self.state.sessionActive and not self.state.paused:
+            self.stats.resume_timer()
     
     def _on_queue_finished(self) -> None:
         """Handle queue completion."""
@@ -416,13 +469,109 @@ class ReviewTab(QWidget):
     
     def _play_audio(self, wav_path: str) -> None:
         """Play audio file."""
-        # TODO: Integrate with existing audio playback
-        pass
+        if not PYAUDIO_AVAILABLE:
+            return
+        
+        # Stop any existing playback
+        if self.audio_worker:
+            try:
+                self.audio_worker.stop()
+            except RuntimeError:
+                pass
+        
+        if self.audio_thread:
+            try:
+                if self.audio_thread.isRunning():
+                    self.audio_thread.quit()
+                    self.audio_thread.wait()
+            except RuntimeError:
+                pass
+        
+        # Start new playback
+        self.audio_thread = QThread()
+        self.audio_worker = AudioPlaybackWorker(wav_path)
+        self.audio_worker.moveToThread(self.audio_thread)
+        self.audio_thread.started.connect(self.audio_worker.run)
+        self.audio_worker.finished.connect(self.audio_thread.quit)
+        self.audio_worker.finished.connect(self.audio_worker.deleteLater)
+        self.audio_thread.finished.connect(self.audio_thread.deleteLater)
+        self.audio_thread.finished.connect(self._on_audio_finished)
+        self.audio_thread.start()
+    
+    def _on_audio_finished(self) -> None:
+        """Handle audio playback finished."""
+        self.audio_thread = None
+        self.audio_worker = None
     
     def _play_sfx(self, effect: str) -> None:
         """Play sound effect."""
-        # TODO: Implement sound effects
-        pass
+        if not self.state.sfxEnabled or not PYAUDIO_AVAILABLE:
+            return
+        
+        try:
+            # Generate sound effect based on tone and effect type
+            if effect == "correct":
+                if self.state.sfxTone == "gentle":
+                    freq = 600  # Gentler, lower tone
+                else:
+                    freq = 800  # Default higher tone
+                duration_ms = 150
+            else:  # "wrong"
+                if self.state.sfxTone == "gentle":
+                    freq = 300  # Gentler, lower buzz
+                else:
+                    freq = 200  # Default lower buzz
+                duration_ms = 200
+            
+            # Generate sound with pydub
+            rate = 44100
+            t = np.linspace(0, duration_ms / 1000, int(rate * duration_ms / 1000), endpoint=False)
+            
+            if effect == "correct":
+                # Pleasant ding with envelope
+                sine_wave = np.sin(2 * np.pi * freq * t)
+                decay = np.linspace(1, 0, len(sine_wave))
+                click_data = sine_wave * decay
+            else:
+                # Buzzer with slight vibrato
+                vibrato = 1 + 0.1 * np.sin(2 * np.pi * 5 * t)
+                sine_wave = np.sin(2 * np.pi * freq * vibrato * t)
+                click_data = sine_wave
+            
+            # Apply volume
+            volume = self.state.sfxVolumePercent / 100.0
+            click_data = (click_data * volume * 0.5 * (2**15 - 1)).astype(np.int16).tobytes()
+            
+            audio_segment = AudioSegment(
+                data=click_data,
+                sample_width=2,
+                frame_rate=rate,
+                channels=1
+            )
+            
+            # Save to temp file and play
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
+                tmp_path = tmp.name
+                audio_segment.export(tmp_path, format='wav')
+            
+            # Play the temp file
+            self._play_audio(tmp_path)
+            
+            # Clean up temp file after a delay
+            QTimer.singleShot(1000, lambda: self._cleanup_temp_file(tmp_path))
+        
+        except Exception:
+            # Silently fail on sound effect errors
+            pass
+    
+    def _cleanup_temp_file(self, path: str) -> None:
+        """Clean up temporary audio file."""
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+        except Exception:
+            pass
     
     def _sync_state_from_ui(self) -> None:
         """Update state from UI controls."""

@@ -1218,6 +1218,14 @@ class VideoAnnotationApp(QMainWindow):
                 zoom = settings.get('fullscreen_zoom')
                 if isinstance(zoom, (int, float)) and zoom > 0:
                     self.fullscreen_zoom = float(zoom)
+                
+                # Load review settings if review tab exists
+                if hasattr(self, 'review_tab') and settings:
+                    try:
+                        self.review_tab.state.load_from_json(settings)
+                        self.review_tab._sync_ui_from_state()
+                    except Exception:
+                        pass
             else:
                 # No saved language preference: try to match system UI language
                 try:
@@ -1267,15 +1275,26 @@ class VideoAnnotationApp(QMainWindow):
     def save_settings(self):
         try:
             os.makedirs(os.path.dirname(self.settings_file), exist_ok=True)
+            
+            settings = {
+                'ocenaudio_path': self.ocenaudio_path,
+                'language': self.language,
+                'last_folder': self.fs.current_folder,
+                'last_video': self.current_video,
+                # Persist the last used fullscreen zoom if set
+                'fullscreen_zoom': self.fullscreen_zoom if isinstance(self.fullscreen_zoom, (int, float)) else None,
+            }
+            
+            # Save review settings if review tab exists
+            if hasattr(self, 'review_tab'):
+                try:
+                    self.review_tab._sync_state_from_ui()
+                    settings = self.review_tab.state.save_to_json(settings)
+                except Exception:
+                    pass
+            
             with open(self.settings_file, 'w') as f:
-                json.dump({
-                    'ocenaudio_path': self.ocenaudio_path,
-                    'language': self.language,
-                    'last_folder': self.fs.current_folder,
-                    'last_video': self.current_video,
-                    # Persist the last used fullscreen zoom if set
-                    'fullscreen_zoom': self.fullscreen_zoom if isinstance(self.fullscreen_zoom, (int, float)) else None,
-                }, f)
+                json.dump(settings, f, indent=2)
         except Exception as e:
             logging.warning(f"Failed to save settings: {e}")
     def select_folder(self):
@@ -1804,10 +1823,24 @@ class VideoAnnotationApp(QMainWindow):
             active_index = self.right_panel.currentIndex() if getattr(self, 'right_panel', None) else 0
         except Exception:
             active_index = 0
-        if active_index == 1:
+        
+        # Determine which recordings to open based on active tab
+        if active_index == 1:  # Images tab
             file_paths = self.fs.image_recordings_in()
-        else:
+        elif active_index == 2:  # Review tab
+            # Get recordings from Review tab's filtered scope
+            try:
+                review_tab = getattr(self, 'review_tab', None)
+                if review_tab:
+                    items = review_tab._get_recorded_items()
+                    file_paths = [wav_path for _, _, wav_path in items]
+                else:
+                    file_paths = self.fs.recordings_in()
+            except Exception:
+                file_paths = self.fs.recordings_in()
+        else:  # Videos tab (default)
             file_paths = self.fs.video_recordings_in()
+        
         if not file_paths:
             QMessageBox.information(self, self.LABELS["no_files"], self.LABELS["no_wavs_found"]) 
             return
@@ -2048,7 +2081,23 @@ class VideoAnnotationApp(QMainWindow):
             active_index = self.right_panel.currentIndex() if getattr(self, 'right_panel', None) else 0
         except Exception:
             active_index = 0
-        wav_paths = self.fs.image_recordings_in() if active_index == 1 else self.fs.video_recordings_in()
+        
+        # Determine which recordings to join based on active tab
+        if active_index == 1:  # Images tab
+            wav_paths = self.fs.image_recordings_in()
+        elif active_index == 2:  # Review tab
+            # Get recordings from Review tab's filtered scope
+            try:
+                review_tab = getattr(self, 'review_tab', None)
+                if review_tab:
+                    items = review_tab._get_recorded_items()
+                    wav_paths = [wav_path for _, _, wav_path in items]
+                else:
+                    wav_paths = self.fs.recordings_in()
+            except Exception:
+                wav_paths = self.fs.recordings_in()
+        else:  # Videos tab (default)
+            wav_paths = self.fs.video_recordings_in()
         if not wav_paths:
             QMessageBox.information(self, self.LABELS["no_files"], self.LABELS["no_wavs_found"]) 
             return
