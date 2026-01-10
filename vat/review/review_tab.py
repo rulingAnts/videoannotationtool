@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QProgressBar, QMessageBox, QFileDialog, QGroupBox, QRadioButton
 )
 from PySide6.QtCore import Qt, QTimer, Signal, QThread
+from PySide6.QtGui import QShortcut, QKeySequence
 
 from vat.utils.fs_access import FolderAccessManager
 from vat.review.session_state import ReviewSessionState
@@ -73,7 +74,7 @@ class ReviewTab(QWidget):
         # Tip
         tip = QLabel(
             "<b>Tip:</b> Single-click selects. Right-click, Ctrl/Cmd+Click, or Enter confirms. "
-            "Double-click opens preview/fullscreen. Press 'R' to replay prompt."
+            "Double-click opens preview/fullscreen. Press Space to replay prompt."
         )
         tip.setWordWrap(True)
         tip.setStyleSheet("color: #555; font-size: 12px; padding: 4px;")
@@ -261,6 +262,18 @@ class ReviewTab(QWidget):
         except Exception:
             pass
 
+        # Add keyboard shortcuts that work when any child has focus
+        try:
+            self.shortcut_space = QShortcut(QKeySequence(Qt.Key_Space), self)
+            self.shortcut_space.setContext(Qt.WidgetWithChildrenShortcut)
+            self.shortcut_space.activated.connect(self._on_replay_clicked)
+
+            self.shortcut_r = QShortcut(QKeySequence("R"), self)
+            self.shortcut_r.setContext(Qt.WidgetWithChildrenShortcut)
+            self.shortcut_r.activated.connect(self._on_replay_clicked)
+        except Exception:
+            pass
+
     def _refresh_grid(self) -> None:
         """Populate the thumbnail grid with recorded items for current scope."""
         try:
@@ -325,6 +338,8 @@ class ReviewTab(QWidget):
     
     def _on_stop(self) -> None:
         """Stop the session."""
+        # Ensure any audio playback is stopped
+        self._stop_audio()
         self.state.reset_session()
         self.timer.stop()
         self.current_item_id = None
@@ -334,6 +349,7 @@ class ReviewTab(QWidget):
     
     def _on_reset(self) -> None:
         """Reset the session."""
+        self._stop_audio()
         self._on_stop()
         self.queue.reset()
         self.stats = ReviewStats()
@@ -444,6 +460,7 @@ class ReviewTab(QWidget):
     
     def _on_queue_finished(self) -> None:
         """Handle queue completion."""
+        self._stop_audio()
         self.timer.stop()
         self.state.sessionActive = False
         self._update_controls_state()
@@ -614,21 +631,31 @@ class ReviewTab(QWidget):
     def _stop_audio(self) -> None:
         """Stop any ongoing audio playback immediately."""
         try:
+            # Signal the worker to stop reading/writing audio data
             if self.audio_worker:
                 try:
                     self.audio_worker.stop()
                 except RuntimeError:
                     pass
-            if self.audio_thread and self.audio_thread.isRunning():
+            # Wait for the thread to finish cleanly; avoid destroying while running
+            if self.audio_thread:
                 try:
-                    self.audio_thread.quit()
-                    self.audio_thread.wait()
+                    # Wait up to 2s for clean finish; if still running, force terminate as a last resort
+                    finished = self.audio_thread.wait(2000)
+                    if not finished and self.audio_thread.isRunning():
+                        try:
+                            self.audio_thread.terminate()
+                        except Exception:
+                            pass
+                        self.audio_thread.wait(1000)
                 except RuntimeError:
                     pass
         finally:
-            self.audio_thread = None
-            self.audio_worker = None
-            self.audio_kind = None
+            # Only clear references if the thread has actually stopped
+            if not (self.audio_thread and self.audio_thread.isRunning()):
+                self.audio_thread = None
+                self.audio_worker = None
+                self.audio_kind = None
     
     def _play_sfx(self, effect: str) -> None:
         """Play sound effect."""
@@ -762,8 +789,8 @@ class ReviewTab(QWidget):
     def keyPressEvent(self, event) -> None:
         """Handle keyboard shortcuts for the review tab."""
         try:
-            if event.key() == Qt.Key_R:
-                # Replay prompt on 'R'
+            if event.key() in (Qt.Key_Space, Qt.Key_R):
+                # Replay prompt on Space (preferred) or 'R'
                 self._on_replay_clicked()
                 return
         except Exception:
