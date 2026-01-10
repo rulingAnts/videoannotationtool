@@ -55,9 +55,9 @@ class ThumbnailGridWidget(QWidget):
         self.list_widget.setResizeMode(QListView.Adjust)
         self.list_widget.setFlow(QListView.LeftToRight)
         # More compact thumbnail sizes for smaller screens
-        self.list_widget.setIconSize(QSize(200, 150))
-        self.list_widget.setGridSize(QSize(230, 170))
-        self.list_widget.setSpacing(6)
+        self.list_widget.setIconSize(QSize(160, 120))
+        self.list_widget.setGridSize(QSize(180, 135))
+        self.list_widget.setSpacing(5)
         self.list_widget.setMovement(QListView.Static)
         self.list_widget.setWrapping(True)
         self.list_widget.setUniformItemSizes(False)

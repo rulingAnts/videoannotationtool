@@ -686,8 +686,53 @@ class VideoAnnotationApp(QMainWindow):
         self.load_settings()
         self.init_ui()
         self.setWindowTitle(self.LABELS["app_title"])
-        # More compact default window size (about 25% narrower)
-        self.resize(840, 680)
+        # More compact default window size; adapt to screen width
+        try:
+            from PySide6.QtGui import QGuiApplication
+            screen = QGuiApplication.primaryScreen()
+            avail = screen.availableGeometry() if screen else None
+            if avail:
+                # Aim for ~70% of screen width with a hard upper cap
+                target_w = max(720, min(int(avail.width() * 0.70), 1200))
+                target_h = min(680, avail.height())
+                self.resize(target_w, target_h)
+                # Prevent initial over-expansion beyond target width
+                try:
+                    self.setMaximumWidth(target_w)
+                    self.setFixedWidth(target_w)
+                except Exception:
+                    pass
+                # Adjust splitter sizes proportionally to target width
+                try:
+                    left = max(160, int(target_w * 0.26))
+                    right = max(1, target_w - left)
+                    if hasattr(self, 'main_splitter'):
+                        self.main_splitter.setSizes([left, right])
+                        self._splitter_prev_sizes = [left, right]
+                except Exception:
+                    pass
+                try:
+                    logging.info(f"UI.window: screen_w={avail.width()}, target_w={target_w}, final_w={self.size().width()}, splitter_sizes={getattr(self, 'main_splitter').sizes() if hasattr(self, 'main_splitter') else 'n/a'}")
+                except Exception:
+                    pass
+                # Enforce width cap again after initial layout to avoid expansion
+                try:
+                    QTimer.singleShot(0, self._enforce_window_width_cap)
+                except Exception:
+                    pass
+            else:
+                # Fallback if screen info unavailable
+                self.resize(840, 680)
+                try:
+                    logging.info(f"UI.window: no screen info; final_w={self.size().width()}")
+                except Exception:
+                    pass
+        except Exception:
+            self.resize(840, 680)
+            try:
+                logging.info(f"UI.window: sizing exception; final_w={self.size().width()}")
+            except Exception:
+                pass
         # Global shortcuts: work regardless of focus
         try:
             self._shortcut_log_ctrl = QShortcut(QKeySequence("Ctrl+Shift+L"), self)
@@ -700,6 +745,68 @@ class VideoAnnotationApp(QMainWindow):
             self._shortcut_ff_meta.activated.connect(self._show_ffmpeg_diagnostics)
         except Exception:
             pass
+
+        def _enforce_window_width_cap(self):
+            """Enforce a hard maximum width after layouts settle.
+
+            Prevents child widgets with Expanding policies from widening the
+            main window beyond our desired cap.
+            """
+            try:
+                from PySide6.QtGui import QGuiApplication
+                screen = QGuiApplication.primaryScreen()
+                avail = screen.availableGeometry() if screen else None
+                if avail:
+                    # Cap aligned with target: ~70% of screen, max 1200px
+                    cap_w = max(720, min(int(avail.width() * 0.70), 1200))
+                else:
+                    cap_w = 840
+                # Apply cap
+                try:
+                    self.setMaximumWidth(cap_w)
+                    # Also set a fixed width to prevent Expanding children widening the window
+                    self.setFixedWidth(cap_w)
+                except Exception:
+                    pass
+                if self.width() > cap_w:
+                    self.resize(cap_w, self.height())
+                # Keep splitter aligned with new width
+                try:
+                    left = max(180, int(cap_w * 0.26))
+                    right = max(1, cap_w - left)
+                    if hasattr(self, 'main_splitter'):
+                        self.main_splitter.setSizes([left, right])
+                except Exception:
+                    pass
+                try:
+                    logging.info(f"UI.window.cap: applied cap_w={cap_w}, final_w={self.size().width()}")
+                except Exception:
+                    pass
+            except Exception:
+                # Best effort only; avoid crashing UI
+                pass
+
+        def showEvent(self, event):
+            try:
+                super().showEvent(event)
+            except Exception:
+                pass
+            # Enforce width immediately on show
+            try:
+                self._enforce_window_width_cap()
+            except Exception:
+                pass
+
+        def resizeEvent(self, event):
+            try:
+                super().resizeEvent(event)
+            except Exception:
+                pass
+            # Clamp width on any resize to avoid expansion (e.g., due to content policies)
+            try:
+                self._enforce_window_width_cap()
+            except Exception:
+                pass
         self.ui_info.connect(self._show_info)
         self.ui_warning.connect(self._show_warning)
         self.ui_error.connect(self._show_error)
