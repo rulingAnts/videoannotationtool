@@ -41,6 +41,7 @@ class ReviewSessionState:
     sfxTone: str = "default"
     quickConfirmMode: bool = True
     groupedDefaultItemsPerFolder: int = 12
+    reviewThumbScale: float = 1.0
     
     # Transient state
     sessionActive: bool = False
@@ -63,6 +64,7 @@ class ReviewSessionState:
             "sfxTone": defaults.sfxTone,
             "quickConfirmMode": defaults.quickConfirmMode,
             "groupedDefaultItemsPerFolder": defaults.groupedDefaultItemsPerFolder,
+            "reviewThumbScale": defaults.reviewThumbScale,
         }
     
     def load_from_json(self, settings: Dict[str, Any]) -> None:
@@ -82,6 +84,7 @@ class ReviewSessionState:
         self.sfxTone = sfx.get("tone", self.sfxTone)
         
         self.quickConfirmMode = review_settings.get("quickConfirmMode", self.quickConfirmMode)
+        self.reviewThumbScale = review_settings.get("reviewThumbScale", self.reviewThumbScale)
         
         grouped = review_settings.get("grouped", {})
         self.groupedDefaultItemsPerFolder = grouped.get("defaultItemsPerFolder", self.groupedDefaultItemsPerFolder)
@@ -105,6 +108,7 @@ class ReviewSessionState:
         settings["review"]["timeWeightingPercent"] = self.timeWeightingPercent
         settings["review"]["uiOverheadMs"] = self.uiOverheadMs
         settings["review"]["quickConfirmMode"] = self.quickConfirmMode
+        settings["review"]["reviewThumbScale"] = float(self.reviewThumbScale)
         
         if "sfx" not in settings["review"]:
             settings["review"]["sfx"] = {}

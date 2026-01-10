@@ -43,6 +43,7 @@ class ThumbnailGridWidget(QWidget):
         self._feedback_state: dict = {}  # item_id -> "correct" | "wrong"
         self._pixmap_cache: dict = {}
         
+        self._scale: float = 1.0
         self._init_ui()
     
     def _init_ui(self) -> None:
@@ -54,7 +55,7 @@ class ThumbnailGridWidget(QWidget):
         self.list_widget.setViewMode(QListView.IconMode)
         self.list_widget.setResizeMode(QListView.Adjust)
         self.list_widget.setFlow(QListView.LeftToRight)
-        # More compact thumbnail sizes for smaller screens
+        # More compact thumbnail sizes for smaller screens; adaptive via scale
         self.list_widget.setIconSize(QSize(160, 120))
         self.list_widget.setGridSize(QSize(180, 135))
         self.list_widget.setSpacing(5)
@@ -74,8 +75,36 @@ class ThumbnailGridWidget(QWidget):
         
         # Install event filter for right-click and modifier+click
         self.list_widget.viewport().installEventFilter(self)
+        # Recompute layout on resize for auto-adjust columns
+        self.list_widget.installEventFilter(self)
         
         layout.addWidget(self.list_widget)
+
+    def set_thumb_scale(self, scale: float) -> None:
+        """Set thumbnail scale (0.5 - 1.8)."""
+        self._scale = max(0.5, min(1.8, float(scale or 1.0)))
+        self.recompute_layout()
+
+    def recompute_layout(self) -> None:
+        """Recompute icon and grid sizes based on viewport width and scale."""
+        try:
+            vp = self.list_widget.viewport()
+            vpw = vp.width() if vp is not None else self.list_widget.width()
+            spacing = int(self.list_widget.spacing()) if hasattr(self.list_widget, 'spacing') else 6
+            usable = max(120, vpw - spacing * 3)
+            min_col_w = int(160 * self._scale)
+            cols = max(1, usable // max(120, min_col_w))
+            total_spacing = spacing * (cols + 1)
+            usable = max(120, vpw - total_spacing)
+            col_w = max(min_col_w, usable // max(1, cols))
+            icon_w = int(col_w * 0.90)
+            icon_h = int(icon_w * 3 / 4)
+            grid_w = max(100, col_w)
+            grid_h = icon_h + 8
+            self.list_widget.setIconSize(QSize(icon_w, icon_h))
+            self.list_widget.setGridSize(QSize(grid_w, grid_h))
+        except Exception:
+            pass
     
     def populate(self, items: List[Tuple[str, str, str]]) -> None:
         """Populate grid with recorded items.
@@ -180,7 +209,14 @@ class ThumbnailGridWidget(QWidget):
     # Keyboard confirmation is handled via eventFilter KeyPress below.
     
     def eventFilter(self, obj, event) -> bool:
-        """Handle right-click and modifier+click for quick confirm."""
+        """Handle quick confirm, keyboard confirm, and resize-driven layout."""
+        # Resize → recompute layout
+        if obj in (self.list_widget, self.list_widget.viewport()):
+            if event.type() == event.Type.Resize:
+                try:
+                    self.recompute_layout()
+                except Exception:
+                    pass
         if obj == self.list_widget.viewport():
             # Handle quick confirm on right-click or Ctrl/Cmd+Click
             if event.type() == event.Type.MouseButtonPress:
@@ -218,6 +254,7 @@ class ThumbnailGridWidget(QWidget):
                         if item_id:
                             self.activatedConfirm.emit(item_id, "keyboard")
                             return True
+        
         
         return super().eventFilter(obj, event)
     

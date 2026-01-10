@@ -704,11 +704,14 @@ class VideoAnnotationApp(QMainWindow):
                     pass
                 # Adjust splitter sizes proportionally to target width
                 try:
-                    left = max(160, int(target_w * 0.26))
-                    right = max(1, target_w - left)
                     if hasattr(self, 'main_splitter'):
-                        self.main_splitter.setSizes([left, right])
-                        self._splitter_prev_sizes = [left, right]
+                        sizes = self.main_splitter.sizes()
+                        # Respect collapsed default: only adjust if left is visible
+                        if sizes and sizes[0] > 0:
+                            left = max(160, int(target_w * 0.26))
+                            right = max(1, target_w - left)
+                            self.main_splitter.setSizes([left, right])
+                            self._splitter_prev_sizes = [left, right]
                 except Exception:
                     pass
                 try:
@@ -770,12 +773,14 @@ class VideoAnnotationApp(QMainWindow):
                     pass
                 if self.width() > cap_w:
                     self.resize(cap_w, self.height())
-                # Keep splitter aligned with new width
+                # Keep splitter aligned only if left panel is visible
                 try:
-                    left = max(180, int(cap_w * 0.26))
-                    right = max(1, cap_w - left)
                     if hasattr(self, 'main_splitter'):
-                        self.main_splitter.setSizes([left, right])
+                        sizes = self.main_splitter.sizes()
+                        if sizes and sizes[0] > 0:
+                            left = max(180, int(cap_w * 0.26))
+                            right = max(1, cap_w - left)
+                            self.main_splitter.setSizes([left, right])
                 except Exception:
                     pass
                 try:
@@ -794,6 +799,15 @@ class VideoAnnotationApp(QMainWindow):
             # Enforce width immediately on show
             try:
                 self._enforce_window_width_cap()
+            except Exception:
+                pass
+            # Ensure drawer starts collapsed
+            try:
+                if hasattr(self, 'main_splitter'):
+                    sizes = self.main_splitter.sizes()
+                    total = sum(sizes) if sizes else self.width()
+                    self.main_splitter.setSizes([0, max(1, total)])
+                    self.drawer_toggle_btn.setToolTip("Show drawer")
             except Exception:
                 pass
 
@@ -924,6 +938,7 @@ class VideoAnnotationApp(QMainWindow):
             main_layout.addSpacing(6)
         except Exception:
             pass
+        # Folder label + drawer toggle row
         self.folder_display_label = QLabel(self.LABELS["no_folder_selected"])
         self.folder_display_label.setAlignment(Qt.AlignLeft)
         self.folder_display_label.setToolTip("")
@@ -933,7 +948,29 @@ class VideoAnnotationApp(QMainWindow):
             self.folder_display_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         except Exception:
             pass
-        main_layout.addWidget(self.folder_display_label)
+        header_row = QHBoxLayout()
+        # Drawer toggle button (top-left)
+        self.drawer_toggle_btn = QToolButton()
+        try:
+            self.drawer_toggle_btn.setToolTip("Show drawer")
+            # Use a custom hamburger icon (three horizontal lines)
+            try:
+                self.drawer_toggle_btn.setIcon(self._hamburger_icon())
+            except Exception:
+                self.drawer_toggle_btn.setIcon(self.style().standardIcon(QStyle.SP_TitleBarMenuButton))
+            self.drawer_toggle_btn.setFixedSize(28, 28)
+            self.drawer_toggle_btn.setAutoRaise(True)
+            self.drawer_toggle_btn.clicked.connect(self._toggle_drawer)
+        except Exception:
+            pass
+        header_row.addWidget(self.drawer_toggle_btn)
+        # Folder label follows the drawer button on the left
+        header_row.addWidget(self.folder_display_label)
+        try:
+            header_row.addStretch(1)
+        except Exception:
+            pass
+        main_layout.addLayout(header_row)
         splitter = QSplitter(Qt.Horizontal)
         try:
             splitter.setContentsMargins(0, 0, 0, 0)
@@ -1004,6 +1041,11 @@ class VideoAnnotationApp(QMainWindow):
         self.video_label.setAlignment(Qt.AlignCenter)
         # More compact default size for smaller screens; allow expanding
         self.video_label.setMinimumSize(480, 360)
+        # Avoid cropping: do not auto-stretch, we will scale pixmaps ourselves
+        try:
+            self.video_label.setScaledContents(False)
+        except Exception:
+            pass
         try:
             self.video_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         except Exception:
@@ -1140,6 +1182,21 @@ class VideoAnnotationApp(QMainWindow):
         controls_and_tip.addWidget(self.image_fullscreen_tip)
         image_banner.addLayout(controls_and_tip)
         images_layout.addLayout(image_banner)
+        # Thumbnail size slider
+        try:
+            thumb_row = QHBoxLayout()
+            thumb_row.addWidget(QLabel("Thumb Size:"))
+            self.images_thumb_slider = QSlider(Qt.Horizontal)
+            self.images_thumb_slider.setRange(60, 180)  # percent
+            self.images_thumb_slider.setValue(100)
+            self.images_thumb_slider.setMaximumWidth(140)
+            thumb_row.addWidget(self.images_thumb_slider)
+            thumb_row.addStretch(1)
+            images_layout.addLayout(thumb_row)
+            self.images_thumb_scale = 1.0
+            self.images_thumb_slider.valueChanged.connect(self._on_images_thumb_scale_changed)
+        except Exception:
+            self.images_thumb_scale = 1.0
         # Grid of thumbnails
         self.images_list = QListWidget()
         try:
@@ -1196,32 +1253,14 @@ class VideoAnnotationApp(QMainWindow):
         right_panel.addTab(self.review_tab, "Review")
         
         splitter.addWidget(right_panel)
-        # Initial splitter sizes aligned with narrower window (sum ≈ 840)
-        splitter.setSizes([240, 600])
+        # Start with drawer collapsed; remember previous sizes for temporary expand
+        splitter.setSizes([0, 600])
+        self._splitter_prev_sizes = [240, 600]
         # Connect tab change to enable/disable video_listbox
         def _on_tab_changed(idx):
             # 0 = Videos, 1 = Images, 2 = Review (assume order)
-            if idx in (1, 2):
-                self.video_listbox.setEnabled(False)
-            else:
-                self.video_listbox.setEnabled(True)
-            # Auto-collapse left panel in Review; restore on other tabs
             try:
-                sizes = self.main_splitter.sizes()
-                total = sum(sizes) if sizes else 1400
-                if idx == 2:
-                    # Save previous sizes if left panel visible
-                    if sizes and sizes[0] > 0:
-                        self._splitter_prev_sizes = sizes
-                    # Collapse left panel
-                    self.main_splitter.setSizes([0, max(1, total)])
-                else:
-                    prev = getattr(self, '_splitter_prev_sizes', None)
-                    if prev and sum(prev) > 0:
-                        self.main_splitter.setSizes(prev)
-                    else:
-                        # Reasonable default restore
-                        self.main_splitter.setSizes([400, max(1, total - 400)])
+                self.video_listbox.setEnabled(idx == 0)
             except Exception:
                 pass
         self.right_panel.currentChanged.connect(_on_tab_changed)
@@ -1258,6 +1297,13 @@ class VideoAnnotationApp(QMainWindow):
             QTimer.singleShot(0, self._preload_visible_images)
         except Exception:
             pass
+
+        # Collapse drawer on outside click
+        try:
+            central_widget.installEventFilter(self)
+            self._central_widget = central_widget
+        except Exception:
+            pass
     def change_language(self, selected_name):
         for key, labels in LABELS_ALL.items():
             if labels["language_name"] == selected_name:
@@ -1267,6 +1313,94 @@ class VideoAnnotationApp(QMainWindow):
         self.setWindowTitle(self.LABELS["app_title"])
         self.refresh_ui_texts()
         self.save_settings()
+
+    def _toggle_drawer(self):
+        """Toggle the left drawer collapsed/expanded state."""
+        try:
+            sizes = self.main_splitter.sizes()
+            total = sum(sizes) if sizes else 1000
+            if sizes and sizes[0] > 0:
+                # Collapse and remember
+                self._splitter_prev_sizes = sizes
+                self.main_splitter.setSizes([0, max(1, total)])
+                try:
+                    self.drawer_toggle_btn.setToolTip("Show drawer")
+                except Exception:
+                    pass
+            else:
+                prev = getattr(self, '_splitter_prev_sizes', None)
+                left = 240
+                right = max(1, total - left)
+                if prev and sum(prev) > 0:
+                    left = max(120, prev[0])
+                    right = max(1, total - left)
+                self.main_splitter.setSizes([left, right])
+                try:
+                    self.drawer_toggle_btn.setToolTip("Hide drawer")
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def _hamburger_icon(self):
+        """Create a simple hamburger icon (three stacked lines)."""
+        try:
+            size = 24
+            pm = QPixmap(size, size)
+            pm.fill(Qt.transparent)
+            from PySide6.QtGui import QPainter
+            painter = QPainter(pm)
+            try:
+                painter.setRenderHint(QPainter.Antialiasing, True)
+                pen = QPen(QColor('#444'))
+                pen.setWidth(2)
+                painter.setPen(pen)
+                # Draw three lines
+                y_positions = [6, 12, 18]
+                for y in y_positions:
+                    painter.drawLine(5, y, size - 5, y)
+            finally:
+                painter.end()
+            return QIcon(pm)
+        except Exception:
+            return QIcon()
+
+    def _on_images_thumb_scale_changed(self, value: int):
+        try:
+            self.images_thumb_scale = max(0.5, min(1.8, value / 100.0))
+            self._recompute_image_grid_sizes()
+            self.save_settings()
+        except Exception:
+            pass
+
+    def eventFilter(self, obj, event):
+        # Collapse drawer when clicking outside left panel
+        try:
+            if obj is getattr(self, '_central_widget', None):
+                if event.type() == QEvent.MouseButtonPress:
+                    sizes = self.main_splitter.sizes() if hasattr(self, 'main_splitter') else []
+                    if sizes and sizes[0] > 0:
+                        # Map left panel geometry to central widget coords
+                        lp = self.left_panel
+                        if lp is not None:
+                            g = lp.mapTo(self._central_widget, QPoint(0, 0))
+                            rect = QRect(g, lp.size())
+                            pos = event.position() if hasattr(event, 'position') else event.pos()
+                            p = QPoint(int(pos.x()), int(pos.y()))
+                            if not rect.contains(p):
+                                total = sum(sizes)
+                                self.main_splitter.setSizes([0, max(1, total)])
+                                try:
+                                    self.drawer_toggle_btn.setToolTip("Show drawer")
+                                except Exception:
+                                    pass
+                                return True
+        except Exception:
+            pass
+        try:
+            return super().eventFilter(obj, event)
+        except Exception:
+            return False
     def refresh_ui_texts(self):
         self.select_button.setText(self.LABELS["select_folder"])
         self.open_ocenaudio_button.setText(self.LABELS["open_ocenaudio"])
@@ -1360,6 +1494,16 @@ class VideoAnnotationApp(QMainWindow):
                         self.review_tab._sync_ui_from_state()
                     except Exception:
                         pass
+                # Images thumbnail scale (persisted)
+                try:
+                    img_scale = settings.get('images_thumb_scale')
+                    if isinstance(img_scale, (int, float)):
+                        self.images_thumb_scale = max(0.5, min(1.8, float(img_scale)))
+                        if hasattr(self, 'images_thumb_slider'):
+                            self.images_thumb_slider.setValue(int(self.images_thumb_scale * 100))
+                        self._recompute_image_grid_sizes()
+                except Exception:
+                    pass
             else:
                 # No saved language preference: try to match system UI language
                 try:
@@ -1417,6 +1561,7 @@ class VideoAnnotationApp(QMainWindow):
                 'last_video': self.current_video,
                 # Persist the last used fullscreen zoom if set
                 'fullscreen_zoom': self.fullscreen_zoom if isinstance(self.fullscreen_zoom, (int, float)) else None,
+                'images_thumb_scale': getattr(self, 'images_thumb_scale', 1.0),
             }
             
             # Save review settings if review tab exists
@@ -1621,11 +1766,17 @@ class VideoAnnotationApp(QMainWindow):
                 self.video_label.setText("Loading preview…")
                 return
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame = cv2.resize(frame, (640, 480))
             h, w, ch = frame.shape
             bytes_per_line = ch * w
             qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
             pixmap = QPixmap.fromImage(qt_image)
+            # Scale pixmap to fit the label while preserving aspect ratio
+            try:
+                target = self.video_label.contentsRect().size()
+                if target.width() > 0 and target.height() > 0:
+                    pixmap = pixmap.scaled(target, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            except Exception:
+                pass
             self.video_label.setPixmap(pixmap)
         except Exception as e:
             logging.error(f"Failed to load first frame for {video_path}: {e}")
@@ -1741,11 +1892,17 @@ class VideoAnnotationApp(QMainWindow):
                     self.video_label.setText(self.LABELS.get("cannot_open_video", "Cannot open video file."))
                     return
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frame = cv2.resize(frame, (640, 480))
                 h, w, ch = frame.shape
                 bytes_per_line = ch * w
                 qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
                 pixmap = QPixmap.fromImage(qt_image)
+                # Scale pixmap to fit the label while preserving aspect ratio
+                try:
+                    target = self.video_label.contentsRect().size()
+                    if target.width() > 0 and target.height() > 0:
+                        pixmap = pixmap.scaled(target, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                except Exception:
+                    pass
                 self.video_label.setPixmap(pixmap)
         except Exception as e:
             logging.error(f"Video frame update failed: {e}")
@@ -2674,11 +2831,13 @@ class VideoAnnotationApp(QMainWindow):
                 spacing = int(self.images_list.spacing())
             except Exception:
                 spacing = 8
-            cols = 2
+            # Auto-adjust columns based on available width and user scale
+            usable = max(120, vpw - spacing * 3)
+            min_col_w = int(160 * max(0.5, min(1.8, getattr(self, 'images_thumb_scale', 1.0))))
+            cols = max(1, usable // max(120, min_col_w))
             total_spacing = spacing * (cols + 1)
             usable = max(120, vpw - total_spacing)
-            min_col_w = 160
-            col_w = max(min_col_w, usable // cols)
+            col_w = max(min_col_w, usable // max(1, cols))
             icon_w = int(col_w * 0.90)
             icon_h = int(icon_w * 3 / 4)
             label_h = 18 if getattr(self, 'show_image_labels', False) else 0

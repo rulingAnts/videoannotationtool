@@ -177,6 +177,14 @@ class ReviewTab(QWidget):
         self.ui_overhead_spin.setRange(0, 5000)
         self.ui_overhead_spin.setValue(2000)
         row2.addWidget(self.ui_overhead_spin)
+
+        # Thumbnail size slider
+        row2.addWidget(QLabel("Thumb Size:"))
+        self.thumb_size_slider = QSlider(Qt.Horizontal)
+        self.thumb_size_slider.setRange(60, 180)  # percent
+        self.thumb_size_slider.setValue(int(self.state.reviewThumbScale * 100))
+        self.thumb_size_slider.setMaximumWidth(120)
+        row2.addWidget(self.thumb_size_slider)
         
         row2.addStretch()
         layout.addLayout(row2)
@@ -286,6 +294,12 @@ class ReviewTab(QWidget):
             self.shortcut_r = QShortcut(QKeySequence("R"), self)
             self.shortcut_r.setContext(Qt.WidgetWithChildrenShortcut)
             self.shortcut_r.activated.connect(self._on_replay_clicked)
+        except Exception:
+            pass
+
+        # Thumb slider → adjust grid scale
+        try:
+            self.thumb_size_slider.valueChanged.connect(lambda v: self._on_thumb_scale_changed(v))
         except Exception:
             pass
 
@@ -767,6 +781,10 @@ class ReviewTab(QWidget):
         self.state.sfxTone = self.sfx_tone_combo.currentText().lower()
         self.state.timeWeightingPercent = self.time_weight_spin.value()
         self.state.uiOverheadMs = self.ui_overhead_spin.value()
+        try:
+            self.state.reviewThumbScale = max(0.5, min(1.8, self.thumb_size_slider.value() / 100.0))
+        except Exception:
+            pass
     
     def _sync_ui_from_state(self) -> None:
         """Update UI controls from state."""
@@ -786,6 +804,11 @@ class ReviewTab(QWidget):
         
         self.time_weight_spin.setValue(self.state.timeWeightingPercent)
         self.ui_overhead_spin.setValue(self.state.uiOverheadMs)
+        try:
+            self.thumb_size_slider.setValue(int(self.state.reviewThumbScale * 100))
+            self._on_thumb_scale_changed(self.thumb_size_slider.value())
+        except Exception:
+            pass
     
     def _update_controls_state(self) -> None:
         """Update enabled state of controls."""
@@ -818,6 +841,15 @@ class ReviewTab(QWidget):
         except Exception:
             pass
         self._stop_audio()
+
+    def _on_thumb_scale_changed(self, value: int) -> None:
+        try:
+            scale = max(0.5, min(1.8, value / 100.0))
+            self.state.reviewThumbScale = scale
+            self.grid.set_thumb_scale(scale)
+            self.grid.recompute_layout()
+        except Exception:
+            pass
         self._play_audio(self.current_wav_path, kind='prompt_replay')
 
     def keyPressEvent(self, event) -> None:
