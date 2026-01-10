@@ -129,6 +129,98 @@ Implementation Notes
 - Persist new settings (scope, play count, limits, SFX, time weighting, UI overhead) via existing JSON helpers.
 - Keep YAML in English; localize all added UI strings; provide a “Reset to Defaults” button.
 
+Randomization Fairness (Stakeholder Note)
+- Goal: ensure each recorded item gets a balanced number of prompts without clustering, improving recall and reducing frustration.
+- Method: per-round shuffle without replacement; if Play Count > 1, create multiple rounds and rotate order across rounds to avoid positional bias; never serve the same item twice in a row unless item count is too small.
+- Optional: allow a debug seed for reproducible sessions.
+
+Implementation Scope
+- Review tab with recorded-only grid, header controls, quick confirm, progress bar, per-item timer (soft/hard), sound effects, YAML stats export, grouped export, Ocenaudio/single-WAV scope-awareness, settings persistence, and Reset to Defaults.
+
+Architecture & Components
+- ReviewTab (UI): Header controls, tip, progress/timer, grid; wires events and orchestrates session.
+- ThumbnailGridWidget: Encapsulates icon-mode grid, selection, double-click preview, quick confirm handlers; exposes signals.
+- ReviewSessionState: Holds persisted settings (scope, play count, limit, weighting, overhead, SFX) and transient session state.
+- ReviewQueue: Builds randomized audio queue from recorded items; enforces fairness rules; emits next prompt.
+- ReviewStats: Tracks per-item stats, aggregates overall metrics, computes composite grade.
+- YAMLExporter: Produces human-readable YAML report per plan specs.
+- GroupedExporter: Splits filtered scope into folders by items-per-folder or number-of-folders; copies media + matching WAVs.
+
+Signals & Slots
+- ThumbnailGridWidget
+  - signals: selectionChanged(itemId), activatedConfirm(itemId, method)
+  - events: mousePress (right-click, Ctrl/Cmd+Click), itemActivated (Enter/Return), doubleClicked (preview)
+- ReviewQueue
+  - signals: promptReady(itemId, wavPath), queueFinished()
+- ReviewTab
+  - slots: onStart(), onPauseResume(), onStop(), onReset(), onResetDefaults()
+  - slots: onConfirm(itemId), onPromptAdvance(), onTimeout()
+  - signals: feedbackChanged(itemId, state), statsUpdated(overall)
+- FullscreenVideoViewer
+  - signals: playingChanged(isPlaying) for timer pause/resume
+
+Settings Keys (JSON)
+- review.scope: "Images" | "Videos" | "Both"
+- review.playCountPerItem: int
+- review.perItemTimeLimitSec: int or null
+- review.limitMode: "Soft" | "Hard"
+- review.timeWeightingPercent: 0–100
+- review.uiOverheadMs: int
+- review.sfx.enabled: bool
+- review.sfx.volumePercent: 0–100
+- review.sfx.tone: "Default" | "Gentle"
+- review.quickConfirmMode: bool
+- review.grouped.defaultItemsPerFolder: int (default 12)
+- review.resetDefaultsLastUsed: timestamp (optional)
+
+I18n Keys (Labels/Tips)
+- review.scope.label, review.scope.images, review.scope.videos, review.scope.both
+- review.playCount.label
+- review.timeLimit.label, review.limitMode.soft, review.limitMode.hard
+- review.sfx.enabled.label, review.sfx.volume.label, review.sfx.tone.label, review.sfx.tone.default, review.sfx.tone.gentle
+- review.timeWeighting.label, review.uiOverhead.label
+- review.controls.start, review.controls.pause, review.controls.resume, review.controls.stop, review.controls.reset, review.controls.resetDefaults
+- review.export.yaml.label, review.export.grouped.label
+- review.tip.quickConfirm
+- review.progress.label, review.timer.label
+- review.feedback.correct, review.feedback.wrong, review.feedback.timeout, review.feedback.overtime
+- review.dialog.stop.keepStats
+- review.notification.scopeEmpty, review.notification.missingWav, review.notification.exportDone, review.notification.exportError
+
+Error Handling
+- Non-blocking status messages for minor issues (e.g., missing WAV in scope); dialogs for confirmations (Stop/Reset) and critical failures (export write errors).
+- Graceful skips on corrupt media/WAVs with a count summary at end.
+- Validate destination paths for grouped export; preflight free space where feasible.
+
+Performance
+- Preload visible thumbnails and small audio buffers; lazy-load when scrolling.
+- Avoid repaint thrash by batching feedback updates; use timers judiciously.
+- Ensure audio playback runs in worker threads; UI only receives signals.
+
+Testing Plan
+- Unit: fs_access filtering (recorded-only), ReviewQueue fairness (no duplicates in a round, even distribution across repeats), YAMLExporter (schema + example), GroupedExporter (correct grouping and remainder), Stats aggregation (composite score, letter grade), timer pause/resume on playingChanged.
+- UI smoke: selection, quick confirm (right-click, Ctrl/Cmd+Click, Enter), double-click preview, progress/timer behavior, soft vs hard limit.
+- Integration: scope-aware Ocenaudio/single-WAV export sources from Review tab.
+- Error paths: missing/invalid WAVs, export failures, invalid destination paths; verify non-blocking notifications.
+
+Acceptance Criteria
+- Recorded-only grid and queue; only items with WAVs are displayed and quizzed.
+- Quick confirm works via right-click, Ctrl/Cmd+Click, Enter; double-click previews only.
+- Timer pauses during fullscreen video playback; UI overhead subtraction applied; soft/hard modes behave per spec.
+- Fairness: per-round shuffle without replacement; no immediate repeats; repeats distributed evenly when Play Count > 1.
+- Stats and grade computed per plan; Trouble Items sorted by time then wrongs.
+- YAML export includes all specified fields in English; file named with session timestamp; validated against example.
+- Grouped export splits scope into folders with default 12 items; remainder reported; media + WAV copied; optional move toggle gated by warning.
+- Persistent settings saved/loaded; Reset to Defaults restores baseline.
+- Localization present for all UI strings; switching language updates review UI.
+- Non-blocking notifications for minor issues; blocking dialogs only for confirmations/critical errors.
+
+Delegation Notes (for Coding Agent)
+- Implement components and wire signals/slots per Architecture.
+- Add settings keys and i18n labels; update language switching to refresh review UI.
+- Integrate scope-aware buttons for Ocenaudio and single-WAV export to use Review tab’s filtered set.
+- Provide unit tests for fairness, YAML, grouped export, and stats; basic UI smoke checks where feasible.
+
 YAML Export Fields
 - Overview: Human-readable, English-only, designed for downstream aggregation.
 - Top-level keys:
