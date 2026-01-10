@@ -178,6 +178,41 @@ class FolderAccessManager(QObject):
         filename = os.path.basename(image_or_name)
         return os.path.join(folder, filename + ".wav")
 
+    def find_existing_image_audio(self, image_or_name: str) -> Optional[str]:
+        """Try to find a recorded WAV for the given image using multiple patterns.
+
+        Compatibility strategy:
+        - Prefer same-directory, extension-preserving naming: "name.ext.wav"
+        - Fallback to basename-only naming in same directory: "name.wav"
+        - Fallback to basename-only naming in current folder root: "name.wav"
+        - Fallback to extension-preserving naming in current folder root: "name.ext.wav"
+
+        Returns the first existing path found, or None if none exist.
+        """
+        try:
+            img_dir = os.path.dirname(image_or_name)
+            folder = img_dir if img_dir else (self.current_folder or "")
+            filename = os.path.basename(image_or_name)
+            basename = os.path.splitext(filename)[0]
+
+            candidates = [
+                os.path.join(folder, filename + ".wav"),
+                os.path.join(folder, basename + ".wav"),
+            ]
+            root = self.current_folder or ""
+            if root:
+                candidates.extend([
+                    os.path.join(root, basename + ".wav"),
+                    os.path.join(root, filename + ".wav"),
+                ])
+
+            for p in candidates:
+                if p and os.path.exists(p):
+                    return p
+        except Exception:
+            pass
+        return None
+
     def has_image_audio(self, image_or_name: str) -> bool:
         return os.path.exists(self.wav_path_for_image(image_or_name))
 

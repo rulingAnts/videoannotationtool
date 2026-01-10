@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QListWidget, QListWidgetItem, QLabel, QTextEdit, QMessageBox,
     QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle, QSizePolicy,
-    QListView, QStyledItemDelegate, QApplication, QCheckBox
+    QListView, QStyledItemDelegate, QApplication, QCheckBox, QGraphicsDropShadowEffect
 )
 from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize, QRect, QPoint, QLocale
 from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence, QImageReader, QPen, QColor
@@ -31,6 +31,7 @@ from vat.utils.fs_access import (
     FolderPermissionError,
     FolderNotFoundError,
 )
+from vat.review import ReviewTab
 
 # UI labels for easy translation, with language names in their own language
 LABELS_ALL = {
@@ -685,8 +686,56 @@ class VideoAnnotationApp(QMainWindow):
         self.load_settings()
         self.init_ui()
         self.setWindowTitle(self.LABELS["app_title"])
-        # Slightly reduced default window size (width and height)
-        self.resize(1120, 680)
+        # More compact default window size; adapt to screen width
+        try:
+            from PySide6.QtGui import QGuiApplication
+            screen = QGuiApplication.primaryScreen()
+            avail = screen.availableGeometry() if screen else None
+            if avail:
+                # Aim for ~70% of screen width with a hard upper cap
+                target_w = max(720, min(int(avail.width() * 0.70), 1200))
+                target_h = min(680, avail.height())
+                self.resize(target_w, target_h)
+                # Prevent initial over-expansion beyond target width
+                try:
+                    self.setMaximumWidth(target_w)
+                    self.setFixedWidth(target_w)
+                except Exception:
+                    pass
+                # Adjust splitter sizes proportionally to target width
+                try:
+                    if hasattr(self, 'main_splitter'):
+                        sizes = self.main_splitter.sizes()
+                        # Respect collapsed default: only adjust if left is visible
+                        if sizes and sizes[0] > 0:
+                            left = max(160, int(target_w * 0.26))
+                            right = max(1, target_w - left)
+                            self.main_splitter.setSizes([left, right])
+                            self._splitter_prev_sizes = [left, right]
+                except Exception:
+                    pass
+                try:
+                    logging.info(f"UI.window: screen_w={avail.width()}, target_w={target_w}, final_w={self.size().width()}, splitter_sizes={getattr(self, 'main_splitter').sizes() if hasattr(self, 'main_splitter') else 'n/a'}")
+                except Exception:
+                    pass
+                # Enforce width cap again after initial layout to avoid expansion
+                try:
+                    QTimer.singleShot(0, self._enforce_window_width_cap)
+                except Exception:
+                    pass
+            else:
+                # Fallback if screen info unavailable
+                self.resize(840, 680)
+                try:
+                    logging.info(f"UI.window: no screen info; final_w={self.size().width()}")
+                except Exception:
+                    pass
+        except Exception:
+            self.resize(840, 680)
+            try:
+                logging.info(f"UI.window: sizing exception; final_w={self.size().width()}")
+            except Exception:
+                pass
         # Global shortcuts: work regardless of focus
         try:
             self._shortcut_log_ctrl = QShortcut(QKeySequence("Ctrl+Shift+L"), self)
@@ -697,8 +746,92 @@ class VideoAnnotationApp(QMainWindow):
             self._shortcut_ff_ctrl.activated.connect(self._show_ffmpeg_diagnostics)
             self._shortcut_ff_meta = QShortcut(QKeySequence("Meta+Shift+F"), self)
             self._shortcut_ff_meta.activated.connect(self._show_ffmpeg_diagnostics)
+            # Drawer toggle shortcut: Ctrl+D and Cmd+D (Meta+D on macOS)
+            self._shortcut_drawer_ctrl = QShortcut(QKeySequence("Ctrl+D"), self)
+            self._shortcut_drawer_ctrl.activated.connect(self._toggle_drawer)
+            self._shortcut_drawer_meta = QShortcut(QKeySequence("Meta+D"), self)
+            self._shortcut_drawer_meta.activated.connect(self._toggle_drawer)
         except Exception:
             pass
+
+        def _enforce_window_width_cap(self):
+            """Enforce a hard maximum width after layouts settle.
+
+            Prevents child widgets with Expanding policies from widening the
+            main window beyond our desired cap.
+            """
+            try:
+                from PySide6.QtGui import QGuiApplication
+                screen = QGuiApplication.primaryScreen()
+                avail = screen.availableGeometry() if screen else None
+                if avail:
+                    # Cap aligned with target: ~70% of screen, max 1200px
+                    cap_w = max(720, min(int(avail.width() * 0.70), 1200))
+                else:
+                    cap_w = 840
+                # Apply cap
+                try:
+                    self.setMaximumWidth(cap_w)
+                    # Also set a fixed width to prevent Expanding children widening the window
+                    self.setFixedWidth(cap_w)
+                except Exception:
+                    pass
+                if self.width() > cap_w:
+                    self.resize(cap_w, self.height())
+                # Keep splitter aligned only if left panel is visible
+                try:
+                    if hasattr(self, 'main_splitter'):
+                        sizes = self.main_splitter.sizes()
+                        if sizes and sizes[0] > 0:
+                            left = max(180, int(cap_w * 0.26))
+                            right = max(1, cap_w - left)
+                            self.main_splitter.setSizes([left, right])
+                except Exception:
+                    pass
+                try:
+                    logging.info(f"UI.window.cap: applied cap_w={cap_w}, final_w={self.size().width()}")
+                except Exception:
+                    pass
+            except Exception:
+                # Best effort only; avoid crashing UI
+                pass
+
+        def showEvent(self, event):
+            try:
+                super().showEvent(event)
+            except Exception:
+                pass
+            # Enforce width immediately on show
+            try:
+                self._enforce_window_width_cap()
+            except Exception:
+                pass
+            # Ensure drawer starts collapsed
+            try:
+                if hasattr(self, 'main_splitter'):
+                    sizes = self.main_splitter.sizes()
+                    total = sum(sizes) if sizes else self.width()
+                    self.main_splitter.setSizes([0, max(1, total)])
+                    self.drawer_toggle_btn.setToolTip("Show drawer")
+            except Exception:
+                pass
+
+        def resizeEvent(self, event):
+            try:
+                super().resizeEvent(event)
+            except Exception:
+                pass
+            # Clamp width on any resize to avoid expansion (e.g., due to content policies)
+            try:
+                self._enforce_window_width_cap()
+            except Exception:
+                pass
+            # Keep drawer and scrim geometry in sync on resize
+            try:
+                if getattr(self, 'drawer_layer', None) is not None and self.drawer_layer.isVisible():
+                    self._position_drawer()
+            except Exception:
+                pass
         self.ui_info.connect(self._show_info)
         self.ui_warning.connect(self._show_warning)
         self.ui_error.connect(self._show_error)
@@ -816,6 +949,7 @@ class VideoAnnotationApp(QMainWindow):
             main_layout.addSpacing(6)
         except Exception:
             pass
+        # Folder label + drawer toggle row
         self.folder_display_label = QLabel(self.LABELS["no_folder_selected"])
         self.folder_display_label.setAlignment(Qt.AlignLeft)
         self.folder_display_label.setToolTip("")
@@ -825,43 +959,103 @@ class VideoAnnotationApp(QMainWindow):
             self.folder_display_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         except Exception:
             pass
-        main_layout.addWidget(self.folder_display_label)
+        header_row = QHBoxLayout()
+        # Drawer toggle button (top-left)
+        self.drawer_toggle_btn = QToolButton()
+        try:
+            self.drawer_toggle_btn.setToolTip("Show drawer")
+            # Use a custom hamburger icon (three horizontal lines)
+            try:
+                self.drawer_toggle_btn.setIcon(self._hamburger_icon())
+            except Exception:
+                self.drawer_toggle_btn.setIcon(self.style().standardIcon(QStyle.SP_TitleBarMenuButton))
+            self.drawer_toggle_btn.setFixedSize(28, 28)
+            self.drawer_toggle_btn.setAutoRaise(True)
+            self.drawer_toggle_btn.clicked.connect(self._toggle_drawer)
+        except Exception:
+            pass
+        header_row.addWidget(self.drawer_toggle_btn)
+        # Small spacing between hamburger and folder name
+        try:
+            header_row.addSpacing(8)
+        except Exception:
+            pass
+        # Folder label follows the drawer button on the left
+        header_row.addWidget(self.folder_display_label)
+        try:
+            header_row.addStretch(1)
+        except Exception:
+            pass
+        main_layout.addLayout(header_row)
         splitter = QSplitter(Qt.Horizontal)
         try:
             splitter.setContentsMargins(0, 0, 0, 0)
         except Exception:
             pass
+        self.main_splitter = splitter
+        self._splitter_prev_sizes = [240, 600]
         main_layout.addWidget(splitter)
+        # Build left panel content (will live inside an overlay drawer)
         left_panel = QWidget()
         self.left_panel = left_panel
         left_layout = QVBoxLayout(left_panel)
         try:
-            left_layout.setContentsMargins(0, 0, 0, 0)
-            left_layout.setSpacing(4)
+            left_layout.setContentsMargins(8, 8, 8, 8)
+            left_layout.setSpacing(8)
         except Exception:
             pass
         self.select_button = QPushButton(self.LABELS["select_folder"])
         self.select_button.clicked.connect(self.select_folder)
+        try:
+            self.select_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.select_button.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.select_button)
         self.open_ocenaudio_button = QPushButton(self.LABELS["open_ocenaudio"])
         self.open_ocenaudio_button.clicked.connect(self.open_in_ocenaudio)
         self.open_ocenaudio_button.setEnabled(False)
+        try:
+            self.open_ocenaudio_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.open_ocenaudio_button.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.open_ocenaudio_button)
         self.export_wavs_button = QPushButton(self.LABELS["export_wavs"])
         self.export_wavs_button.clicked.connect(self.export_wavs)
         self.export_wavs_button.setEnabled(False)
+        try:
+            self.export_wavs_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.export_wavs_button.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.export_wavs_button)
         self.clear_wavs_button = QPushButton(self.LABELS["clear_wavs"])
         self.clear_wavs_button.clicked.connect(self.clear_wavs)
         self.clear_wavs_button.setEnabled(False)
+        try:
+            self.clear_wavs_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.clear_wavs_button.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.clear_wavs_button)
         self.import_wavs_button = QPushButton(self.LABELS["import_wavs"])
         self.import_wavs_button.clicked.connect(self.import_wavs)
         self.import_wavs_button.setEnabled(False)
+        try:
+            self.import_wavs_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.import_wavs_button.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.import_wavs_button)
         self.join_wavs_button = QPushButton(self.LABELS["join_wavs"])
         self.join_wavs_button.clicked.connect(self.join_all_wavs)
         self.join_wavs_button.setEnabled(False)
+        try:
+            self.join_wavs_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.join_wavs_button.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.join_wavs_button)
         self.video_listbox = QListWidget()
         try:
@@ -874,8 +1068,64 @@ class VideoAnnotationApp(QMainWindow):
         self.edit_metadata_btn = QPushButton(self.LABELS["edit_metadata"])
         self.edit_metadata_btn.clicked.connect(self.open_metadata_dialog)
         self.edit_metadata_btn.setEnabled(False)
+        try:
+            self.edit_metadata_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.edit_metadata_btn.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.edit_metadata_btn)
-        splitter.addWidget(left_panel)
+        # Drawer overlay (appears over UI instead of resizing splitter)
+        try:
+            self.drawer_layer = QWidget(central_widget)
+            self.drawer_layer.setVisible(False)
+            self.drawer_layer.setAttribute(Qt.WA_StyledBackground, True)
+            # Targeted style on the drawer container only to avoid affecting child controls
+            self.drawer_layer.setObjectName("drawer_layer")
+            self.drawer_layer.setStyleSheet("#drawer_layer { background-color: rgba(248,248,248, 0.95); border-right: 1px solid #ccc; }")
+            dl = QVBoxLayout(self.drawer_layer)
+            dl.setContentsMargins(8, 8, 8, 8)
+            dl.setSpacing(6)
+            dl.addWidget(left_panel)
+            # Ensure child buttons use native style (clear any inherited QSS side-effects)
+            try:
+                for btn in (
+                    self.select_button,
+                    self.open_ocenaudio_button,
+                    self.export_wavs_button,
+                    self.clear_wavs_button,
+                    self.import_wavs_button,
+                    self.join_wavs_button,
+                    self.edit_metadata_btn,
+                ):
+                    btn.setStyleSheet("")
+                    btn.setAutoDefault(False)
+            except Exception:
+                pass
+            # Subtle shadow for visual depth
+            try:
+                shadow = QGraphicsDropShadowEffect(self.drawer_layer)
+                shadow.setBlurRadius(16)
+                shadow.setOffset(0, 0)
+                shadow.setColor(QColor(0, 0, 0, 80))
+                self.drawer_layer.setGraphicsEffect(shadow)
+            except Exception:
+                pass
+            # Background scrim to dim UI and capture clicks to close
+            self.drawer_scrim = QWidget(central_widget)
+            self.drawer_scrim.setVisible(False)
+            self.drawer_scrim.setAttribute(Qt.WA_StyledBackground, True)
+            self.drawer_scrim.setStyleSheet("background-color: rgba(0,0,0,0.15);")
+            self.drawer_scrim.installEventFilter(self)
+        except Exception:
+            self.drawer_layer = None
+            self.drawer_scrim = None
+        # Placeholder on the splitter's left, to keep API stable
+        self._drawer_placeholder = QWidget()
+        try:
+            self._drawer_placeholder.setMinimumWidth(0)
+        except Exception:
+            pass
+        splitter.addWidget(self._drawer_placeholder)
         right_panel = QTabWidget()
         self.right_panel = right_panel
         videos_tab = QWidget()
@@ -892,7 +1142,17 @@ class VideoAnnotationApp(QMainWindow):
         videos_layout.addWidget(self.video_fullscreen_tip)
         self.video_label = QLabel(self.LABELS["video_listbox_no_video"])
         self.video_label.setAlignment(Qt.AlignCenter)
-        self.video_label.setMinimumSize(640, 480)
+        # More compact default size for smaller screens; allow expanding
+        self.video_label.setMinimumSize(480, 360)
+        # Avoid cropping: do not auto-stretch, we will scale pixmaps ourselves
+        try:
+            self.video_label.setScaledContents(False)
+        except Exception:
+            pass
+        try:
+            self.video_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        except Exception:
+            pass
         self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
         videos_layout.addWidget(self.video_label)
         self.badge_label = QLabel(self.video_label)
@@ -1025,6 +1285,21 @@ class VideoAnnotationApp(QMainWindow):
         controls_and_tip.addWidget(self.image_fullscreen_tip)
         image_banner.addLayout(controls_and_tip)
         images_layout.addLayout(image_banner)
+        # Thumbnail size slider
+        try:
+            thumb_row = QHBoxLayout()
+            thumb_row.addWidget(QLabel("Thumb Size:"))
+            self.images_thumb_slider = QSlider(Qt.Horizontal)
+            self.images_thumb_slider.setRange(60, 180)  # percent
+            self.images_thumb_slider.setValue(100)
+            self.images_thumb_slider.setMaximumWidth(140)
+            thumb_row.addWidget(self.images_thumb_slider)
+            thumb_row.addStretch(1)
+            images_layout.addLayout(thumb_row)
+            self.images_thumb_scale = 1.0
+            self.images_thumb_slider.valueChanged.connect(self._on_images_thumb_scale_changed)
+        except Exception:
+            self.images_thumb_scale = 1.0
         # Grid of thumbnails
         self.images_list = QListWidget()
         try:
@@ -1033,9 +1308,9 @@ class VideoAnnotationApp(QMainWindow):
             self.images_list.setResizeMode(QListView.Adjust)
             # Fill rows left-to-right to avoid a single tall column
             self.images_list.setFlow(QListView.LeftToRight)
-            # Initial placeholder sizes; will be recomputed adaptively
-            self.images_list.setIconSize(QSize(320, 240))
-            self.images_list.setGridSize(QSize(360, 280))
+            # Initial placeholder sizes; smaller defaults for compact UI (recomputed adaptively)
+            self.images_list.setIconSize(QSize(240, 180))
+            self.images_list.setGridSize(QSize(260, 190))
             self.images_list.setSpacing(6)
             self.images_list.setMovement(QListView.Static)
             self.images_list.setWrapping(True)
@@ -1069,15 +1344,33 @@ class VideoAnnotationApp(QMainWindow):
             pass
         images_layout.addWidget(self.images_list)
         right_panel.addTab(images_tab, self.LABELS.get("images_tab_title", "Images"))
+        
+        # Review tab
+        try:
+            from vat import VERSION
+            app_version = VERSION
+        except Exception:
+            app_version = "2.0.3"
+        
+        self.review_tab = ReviewTab(self.fs, app_version, self)
+        right_panel.addTab(self.review_tab, "Review")
+        
         splitter.addWidget(right_panel)
-        splitter.setSizes([400, 1000])
+        # Start with drawer collapsed; remember previous sizes for temporary expand
+        splitter.setSizes([0, 600])
+        self._splitter_prev_sizes = [240, 600]
         # Connect tab change to enable/disable video_listbox
         def _on_tab_changed(idx):
-            # 0 = Videos, 1 = Images (assume order)
-            if idx == 1:
-                self.video_listbox.setEnabled(False)
-            else:
-                self.video_listbox.setEnabled(True)
+            # 0 = Videos, 1 = Images, 2 = Review (assume order)
+            try:
+                self.video_listbox.setEnabled(idx == 0)
+            except Exception:
+                pass
+            # Keep drawer overlay position in sync
+            try:
+                self._position_drawer()
+            except Exception:
+                pass
         self.right_panel.currentChanged.connect(_on_tab_changed)
         # Set initial state
         _on_tab_changed(self.right_panel.currentIndex())
@@ -1112,6 +1405,13 @@ class VideoAnnotationApp(QMainWindow):
             QTimer.singleShot(0, self._preload_visible_images)
         except Exception:
             pass
+
+        # Collapse drawer on outside click
+        try:
+            central_widget.installEventFilter(self)
+            self._central_widget = central_widget
+        except Exception:
+            pass
     def change_language(self, selected_name):
         for key, labels in LABELS_ALL.items():
             if labels["language_name"] == selected_name:
@@ -1121,6 +1421,143 @@ class VideoAnnotationApp(QMainWindow):
         self.setWindowTitle(self.LABELS["app_title"])
         self.refresh_ui_texts()
         self.save_settings()
+
+    def _toggle_drawer(self):
+        """Toggle the left drawer overlay visibility."""
+        try:
+            if getattr(self, 'drawer_layer', None) is None:
+                return
+            vis = self.drawer_layer.isVisible()
+            if vis:
+                self.drawer_layer.hide()
+                try:
+                    if getattr(self, 'drawer_scrim', None) is not None:
+                        self.drawer_scrim.hide()
+                except Exception:
+                    pass
+                try:
+                    self.drawer_toggle_btn.setToolTip("Show drawer")
+                except Exception:
+                    pass
+            else:
+                self._position_drawer()
+                # Show scrim behind drawer
+                try:
+                    if getattr(self, 'drawer_scrim', None) is not None:
+                        self.drawer_scrim.show()
+                        self.drawer_scrim.raise_()
+                except Exception:
+                    pass
+                self.drawer_layer.show()
+                self.drawer_layer.raise_()
+                try:
+                    self.drawer_toggle_btn.setToolTip("Hide drawer")
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def _hamburger_icon(self):
+        """Create a simple hamburger icon (three stacked lines)."""
+        try:
+            size = 24
+            pm = QPixmap(size, size)
+            pm.fill(Qt.transparent)
+            from PySide6.QtGui import QPainter
+            painter = QPainter(pm)
+            try:
+                painter.setRenderHint(QPainter.Antialiasing, True)
+                pen = QPen(QColor('#444'))
+                pen.setWidth(2)
+                painter.setPen(pen)
+                # Draw three lines
+                y_positions = [6, 12, 18]
+                for y in y_positions:
+                    painter.drawLine(5, y, size - 5, y)
+            finally:
+                painter.end()
+            return QIcon(pm)
+        except Exception:
+            return QIcon()
+
+    def _position_drawer(self):
+        """Position the drawer overlay anchored to the left inside the central widget."""
+        try:
+            if getattr(self, 'drawer_layer', None) is None:
+                return
+            cw = getattr(self, '_central_widget', None)
+            if cw is None:
+                return
+            # Default drawer width: proportional to window, with sensible bounds
+            dw = min(max(400, int(cw.width() * 0.40)), 600)
+            # Compute top offset based on header row metrics
+            try:
+                # Use the lower edge of the highest header element
+                lbl = getattr(self, 'folder_display_label', None)
+                dd = getattr(self, 'language_dropdown', None)
+                btn = getattr(self, 'drawer_toggle_btn', None)
+                candidates = []
+                for w in (lbl, dd, btn):
+                    if w is not None:
+                        p = w.mapTo(cw, QPoint(0, 0))
+                        candidates.append(p.y() + w.height())
+                header_bottom = max(candidates) if candidates else 50
+                top_margin = header_bottom + 6
+            except Exception:
+                top_margin = 50
+            h = cw.height() - top_margin
+            h = max(200, h)
+            self.drawer_layer.setGeometry(8, top_margin, dw, h)
+            # Keep scrim covering the central widget
+            try:
+                if getattr(self, 'drawer_scrim', None) is not None:
+                    # Leave header/hamburger clickable: scrim starts below header
+                    self.drawer_scrim.setGeometry(0, top_margin, cw.width(), cw.height() - top_margin)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def _on_images_thumb_scale_changed(self, value: int):
+        try:
+            self.images_thumb_scale = max(0.5, min(1.8, value / 100.0))
+            self._recompute_image_grid_sizes()
+            self.save_settings()
+        except Exception:
+            pass
+
+    def eventFilter(self, obj, event):
+        # Collapse drawer when clicking outside the drawer overlay
+        try:
+            target_central = getattr(self, '_central_widget', None)
+            target_scrim = getattr(self, 'drawer_scrim', None)
+            if obj is target_central or obj is target_scrim:
+                if event.type() == QEvent.MouseButtonPress:
+                    dl = getattr(self, 'drawer_layer', None)
+                    if dl is not None and dl.isVisible():
+                        # Map drawer geometry to the coordinate space of the clicked widget
+                        top_left_in_obj = dl.mapTo(obj, QPoint(0, 0))
+                        rect = QRect(top_left_in_obj, dl.size())
+                        pos = event.position() if hasattr(event, 'position') else event.pos()
+                        p = QPoint(int(pos.x()), int(pos.y()))
+                        if not rect.contains(p):
+                            dl.hide()
+                            try:
+                                if target_scrim is not None:
+                                    target_scrim.hide()
+                            except Exception:
+                                pass
+                            try:
+                                self.drawer_toggle_btn.setToolTip("Show drawer")
+                            except Exception:
+                                pass
+                            return True
+        except Exception:
+            pass
+        try:
+            return super().eventFilter(obj, event)
+        except Exception:
+            return False
     def refresh_ui_texts(self):
         self.select_button.setText(self.LABELS["select_folder"])
         self.open_ocenaudio_button.setText(self.LABELS["open_ocenaudio"])
@@ -1206,6 +1643,24 @@ class VideoAnnotationApp(QMainWindow):
                 zoom = settings.get('fullscreen_zoom')
                 if isinstance(zoom, (int, float)) and zoom > 0:
                     self.fullscreen_zoom = float(zoom)
+                
+                # Load review settings if review tab exists
+                if hasattr(self, 'review_tab') and settings:
+                    try:
+                        self.review_tab.state.load_from_json(settings)
+                        self.review_tab._sync_ui_from_state()
+                    except Exception:
+                        pass
+                # Images thumbnail scale (persisted)
+                try:
+                    img_scale = settings.get('images_thumb_scale')
+                    if isinstance(img_scale, (int, float)):
+                        self.images_thumb_scale = max(0.5, min(1.8, float(img_scale)))
+                        if hasattr(self, 'images_thumb_slider'):
+                            self.images_thumb_slider.setValue(int(self.images_thumb_scale * 100))
+                        self._recompute_image_grid_sizes()
+                except Exception:
+                    pass
             else:
                 # No saved language preference: try to match system UI language
                 try:
@@ -1255,15 +1710,27 @@ class VideoAnnotationApp(QMainWindow):
     def save_settings(self):
         try:
             os.makedirs(os.path.dirname(self.settings_file), exist_ok=True)
+            
+            settings = {
+                'ocenaudio_path': self.ocenaudio_path,
+                'language': self.language,
+                'last_folder': self.fs.current_folder,
+                'last_video': self.current_video,
+                # Persist the last used fullscreen zoom if set
+                'fullscreen_zoom': self.fullscreen_zoom if isinstance(self.fullscreen_zoom, (int, float)) else None,
+                'images_thumb_scale': getattr(self, 'images_thumb_scale', 1.0),
+            }
+            
+            # Save review settings if review tab exists
+            if hasattr(self, 'review_tab'):
+                try:
+                    self.review_tab._sync_state_from_ui()
+                    settings = self.review_tab.state.save_to_json(settings)
+                except Exception:
+                    pass
+            
             with open(self.settings_file, 'w') as f:
-                json.dump({
-                    'ocenaudio_path': self.ocenaudio_path,
-                    'language': self.language,
-                    'last_folder': self.fs.current_folder,
-                    'last_video': self.current_video,
-                    # Persist the last used fullscreen zoom if set
-                    'fullscreen_zoom': self.fullscreen_zoom if isinstance(self.fullscreen_zoom, (int, float)) else None,
-                }, f)
+                json.dump(settings, f, indent=2, sort_keys=True)
         except Exception as e:
             logging.warning(f"Failed to save settings: {e}")
     def select_folder(self):
@@ -1456,11 +1923,17 @@ class VideoAnnotationApp(QMainWindow):
                 self.video_label.setText("Loading preview…")
                 return
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame = cv2.resize(frame, (640, 480))
             h, w, ch = frame.shape
             bytes_per_line = ch * w
             qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
             pixmap = QPixmap.fromImage(qt_image)
+            # Scale pixmap to fit the label while preserving aspect ratio
+            try:
+                target = self.video_label.contentsRect().size()
+                if target.width() > 0 and target.height() > 0:
+                    pixmap = pixmap.scaled(target, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            except Exception:
+                pass
             self.video_label.setPixmap(pixmap)
         except Exception as e:
             logging.error(f"Failed to load first frame for {video_path}: {e}")
@@ -1576,11 +2049,17 @@ class VideoAnnotationApp(QMainWindow):
                     self.video_label.setText(self.LABELS.get("cannot_open_video", "Cannot open video file."))
                     return
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frame = cv2.resize(frame, (640, 480))
                 h, w, ch = frame.shape
                 bytes_per_line = ch * w
                 qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
                 pixmap = QPixmap.fromImage(qt_image)
+                # Scale pixmap to fit the label while preserving aspect ratio
+                try:
+                    target = self.video_label.contentsRect().size()
+                    if target.width() > 0 and target.height() > 0:
+                        pixmap = pixmap.scaled(target, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                except Exception:
+                    pass
                 self.video_label.setPixmap(pixmap)
         except Exception as e:
             logging.error(f"Video frame update failed: {e}")
@@ -1792,10 +2271,24 @@ class VideoAnnotationApp(QMainWindow):
             active_index = self.right_panel.currentIndex() if getattr(self, 'right_panel', None) else 0
         except Exception:
             active_index = 0
-        if active_index == 1:
+        
+        # Determine which recordings to open based on active tab
+        if active_index == 1:  # Images tab
             file_paths = self.fs.image_recordings_in()
-        else:
+        elif active_index == 2:  # Review tab
+            # Get recordings from Review tab's filtered scope
+            try:
+                review_tab = getattr(self, 'review_tab', None)
+                if review_tab:
+                    items = review_tab._get_recorded_items()
+                    file_paths = [wav_path for _, _, wav_path in items]
+                else:
+                    file_paths = self.fs.recordings_in()
+            except Exception:
+                file_paths = self.fs.recordings_in()
+        else:  # Videos tab (default)
             file_paths = self.fs.video_recordings_in()
+        
         if not file_paths:
             QMessageBox.information(self, self.LABELS["no_files"], self.LABELS["no_wavs_found"]) 
             return
@@ -2036,7 +2529,23 @@ class VideoAnnotationApp(QMainWindow):
             active_index = self.right_panel.currentIndex() if getattr(self, 'right_panel', None) else 0
         except Exception:
             active_index = 0
-        wav_paths = self.fs.image_recordings_in() if active_index == 1 else self.fs.video_recordings_in()
+        
+        # Determine which recordings to join based on active tab
+        if active_index == 1:  # Images tab
+            wav_paths = self.fs.image_recordings_in()
+        elif active_index == 2:  # Review tab
+            # Get recordings from Review tab's filtered scope
+            try:
+                review_tab = getattr(self, 'review_tab', None)
+                if review_tab:
+                    items = review_tab._get_recorded_items()
+                    wav_paths = [wav_path for _, _, wav_path in items]
+                else:
+                    wav_paths = self.fs.recordings_in()
+            except Exception:
+                wav_paths = self.fs.recordings_in()
+        else:  # Videos tab (default)
+            wav_paths = self.fs.video_recordings_in()
         if not wav_paths:
             QMessageBox.information(self, self.LABELS["no_files"], self.LABELS["no_wavs_found"]) 
             return
@@ -2479,11 +2988,13 @@ class VideoAnnotationApp(QMainWindow):
                 spacing = int(self.images_list.spacing())
             except Exception:
                 spacing = 8
-            cols = 2
+            # Auto-adjust columns based on available width and user scale
+            usable = max(120, vpw - spacing * 3)
+            min_col_w = int(160 * max(0.5, min(1.8, getattr(self, 'images_thumb_scale', 1.0))))
+            cols = max(1, usable // max(120, min_col_w))
             total_spacing = spacing * (cols + 1)
             usable = max(120, vpw - total_spacing)
-            min_col_w = 160
-            col_w = max(min_col_w, usable // cols)
+            col_w = max(min_col_w, usable // max(1, cols))
             icon_w = int(col_w * 0.90)
             icon_h = int(icon_w * 3 / 4)
             label_h = 18 if getattr(self, 'show_image_labels', False) else 0
@@ -2572,8 +3083,10 @@ class VideoAnnotationApp(QMainWindow):
                         path = sel.data(Qt.UserRole) or os.path.join(self.fs.current_folder or "", sel.text())
                     except Exception:
                         path = None
-            wav_path = self.fs.wav_path_for_image(path or "")
-            exists = os.path.exists(wav_path)
+            # Resolve existing audio with compatibility (legacy basename.wav, root folder)
+            resolved = self.fs.find_existing_image_audio(path or "")
+            wav_path = resolved or self.fs.wav_path_for_image(path or "")
+            exists = bool(resolved)
             # Play/Stop audio reflect wav existence
             self.play_image_audio_button.setEnabled(exists)
             self.stop_image_audio_button.setEnabled(exists)
@@ -2609,8 +3122,9 @@ class VideoAnnotationApp(QMainWindow):
             if not path:
                 name = sel.text()
                 path = os.path.join(self.fs.current_folder or "", name)
-            wav_path = self.fs.wav_path_for_image(path)
-            if not os.path.exists(wav_path):
+            # Resolve existing audio; play if found
+            wav_path = self.fs.find_existing_image_audio(path) or self.fs.wav_path_for_image(path)
+            if not (wav_path and os.path.exists(wav_path)):
                 return
             self.stop_audio()
             if not PYAUDIO_AVAILABLE:
@@ -2645,8 +3159,10 @@ class VideoAnnotationApp(QMainWindow):
             if not path:
                 name = sel.text()
                 path = os.path.join(self.fs.current_folder or "", name)
+            # If any existing audio (including legacy paths) exists, confirm overwrite
+            existing = self.fs.find_existing_image_audio(path)
             wav_path = self.fs.wav_path_for_image(path)
-            if os.path.exists(wav_path):
+            if existing and os.path.exists(existing):
                 reply = QMessageBox.question(self, self.LABELS["overwrite"], 
                                             self.LABELS["overwrite_audio"],
                                             QMessageBox.Yes | QMessageBox.No)
