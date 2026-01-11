@@ -15,12 +15,13 @@ import uuid
 import tempfile
 import numpy as np
 from typing import Optional, List, Tuple, Dict, Any
+import yaml
 from pydub import AudioSegment
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QComboBox, QSpinBox, QDoubleSpinBox, QSlider, QCheckBox,
     QProgressBar, QMessageBox, QFileDialog, QGroupBox, QRadioButton,
-    QToolButton, QFrame, QStyle
+    QToolButton, QFrame, QStyle, QSizePolicy, QLineEdit
 )
 from PySide6.QtCore import Qt, QTimer, Signal, QThread
 from PySide6.QtGui import QShortcut, QKeySequence
@@ -55,6 +56,8 @@ class ReviewTab(QWidget):
         self.state = ReviewSessionState()
         self.queue = ReviewQueue(self)
         self.stats = ReviewStats()
+        # Per-folder names for virtual sessions (sets)
+        self.set_names: Dict[int, str] = {}
         
         # Session tracking
         self.current_item_id: Optional[str] = None
@@ -113,6 +116,11 @@ class ReviewTab(QWidget):
         # Thumbnail grid
         self.grid = ThumbnailGridWidget(self.fs, self)
         layout.addWidget(self.grid, 1)
+        # Load per-folder set/grouping settings, if present
+        try:
+            self._load_sets_yaml()
+        except Exception:
+            pass
     
     def _create_header_controls(self) -> QWidget:
         """Create header controls with a collapsible settings drawer."""
@@ -163,6 +171,12 @@ class ReviewTab(QWidget):
         self.settings_toggle_btn.setToolTip("Show settings")
         # Use a gear glyph instead of a desktop icon
         self.settings_toggle_btn.setText("⚙")
+        # Make the gear visibly larger for easier access
+        try:
+            self.settings_toggle_btn.setStyleSheet("font-size: 22px; padding: 2px 6px;")
+            self.settings_toggle_btn.setMinimumSize(28, 28)
+        except Exception:
+            pass
         self.settings_toggle_btn.setAutoRaise(True)
         self.settings_toggle_btn.clicked.connect(self._toggle_settings_panel)
         top.addWidget(self.settings_toggle_btn)
@@ -215,8 +229,12 @@ class ReviewTab(QWidget):
         self.sfx_volume_slider = QSlider(Qt.Horizontal)
         self.sfx_volume_slider.setRange(0, 100)
         self.sfx_volume_slider.setValue(70)
-        self.sfx_volume_slider.setMaximumWidth(100)
-        row2.addWidget(self.sfx_volume_slider)
+        # Let the slider expand to give users a wide range
+        try:
+            self.sfx_volume_slider.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        except Exception:
+            pass
+        row2.addWidget(self.sfx_volume_slider, 1)
 
         row2.addWidget(QLabel("SFX Tone:"))
         self.sfx_tone_combo = QComboBox()
@@ -262,6 +280,16 @@ class ReviewTab(QWidget):
         rowSess.addWidget(self.sessions_label)
         self.session_select = QComboBox()
         rowSess.addWidget(self.session_select)
+        # Current set label and rename field
+        self.current_set_label = QLabel("Set 1")
+        rowSess.addWidget(self.current_set_label)
+        self.set_name_edit = QLineEdit()
+        self.set_name_edit.setPlaceholderText("Rename set…")
+        try:
+            self.set_name_edit.setMinimumWidth(160)
+        except Exception:
+            pass
+        rowSess.addWidget(self.set_name_edit, 1)
         settings_layout.addLayout(rowSess)
 
         # Row Actions inside settings: Stop/Reset/Defaults/Export
@@ -326,7 +354,7 @@ class ReviewTab(QWidget):
         except Exception:
             pass
         try:
-            self.fs.folderChanged.connect(lambda _p: self._refresh_grid())
+            self.fs.folderChanged.connect(lambda _p: (self._load_sets_yaml(), self._refresh_grid()))
         except Exception:
             pass
         try:
@@ -344,9 +372,14 @@ class ReviewTab(QWidget):
         except Exception:
             pass
 
-        # Change set → refresh grid slice
+        # Change set → refresh grid slice and update label/editor
         try:
-            self.session_select.currentIndexChanged.connect(lambda _i: self._refresh_grid())
+            self.session_select.currentIndexChanged.connect(self._on_session_index_changed)
+        except Exception:
+            pass
+        # Rename commit → save to YAML
+        try:
+            self.set_name_edit.editingFinished.connect(self._on_set_name_commit)
         except Exception:
             pass
 
@@ -471,6 +504,22 @@ class ReviewTab(QWidget):
             pass
         self._update_sessions_ui()
         self._refresh_grid()
+        # Persist change to YAML
+        try:
+            self._save_sets_yaml()
+        except Exception:
+            pass
+
+    def _on_session_index_changed(self, _i: int) -> None:
+        """Update current set label and editor when selection changes."""
+        self._refresh_grid()
+        try:
+            idx = max(0, self.session_select.currentIndex())
+            name = self.set_names.get(idx) or f"Set {idx+1}"
+            self.current_set_label.setText(name)
+            self.set_name_edit.setText(name)
+        except Exception:
+            pass
 
     def _update_sessions_ui(self) -> None:
         """Update sessions count and selection based on items and slider value."""
@@ -483,11 +532,12 @@ class ReviewTab(QWidget):
         self.sessions_label.setText(
             f"Sessions: {sessions}  |  Items/session: {per}  |  Last: {last_items}"
         )
-        # Populate selector
+        # Populate selector (use custom names when available)
         self.session_select.blockSignals(True)
         self.session_select.clear()
         for i in range(1, sessions + 1):
-            self.session_select.addItem(f"Set {i}", i - 1)
+            label = self.set_names.get(i - 1) or f"Set {i}"
+            self.session_select.addItem(label, i - 1)
         self.session_select.blockSignals(False)
         # Ensure valid selection
         try:
@@ -497,6 +547,95 @@ class ReviewTab(QWidget):
             pass
         # Refresh grid slice to reflect new grouping
         self._refresh_grid()
+        # Reflect current selection in the label and editor
+        try:
+            idx = max(0, self.session_select.currentIndex())
+            name = self.set_names.get(idx) or f"Set {idx+1}"
+            self.current_set_label.setText(name)
+            self.set_name_edit.setText(name)
+        except Exception:
+            pass
+
+    def _on_set_name_commit(self) -> None:
+        """Persist the edited set name and update UI/YAML."""
+        try:
+            idx = max(0, self.session_select.currentIndex())
+            name = (self.set_name_edit.text() or "").strip() or f"Set {idx+1}"
+            self.set_names[idx] = name
+            try:
+                self.session_select.setItemText(idx, name)
+            except Exception:
+                pass
+            self.current_set_label.setText(name)
+            self._save_sets_yaml()
+        except Exception:
+            pass
+
+    def _sets_yaml_path(self) -> Optional[str]:
+        try:
+            folder = getattr(self.fs, 'current_folder', None)
+        except Exception:
+            folder = None
+        if not folder:
+            return None
+        return os.path.join(folder, 'review_sets.yaml')
+
+    def _load_sets_yaml(self) -> None:
+        """Load per-folder grouping settings from YAML (items per session + names)."""
+        try:
+            path = self._sets_yaml_path()
+            if not path or not os.path.exists(path):
+                # Clear names when switching to a folder without YAML
+                self.set_names = {}
+                return
+            with open(path, 'r') as f:
+                data = yaml.safe_load(f) or {}
+            ips = data.get('items_per_session')
+            if isinstance(ips, int) and ips > 0:
+                self.state.itemsPerSession = ips
+                try:
+                    self.items_per_session_slider.blockSignals(True)
+                    self.items_per_session_slider.setValue(ips)
+                    self.items_per_session_slider.blockSignals(False)
+                except Exception:
+                    pass
+            names = data.get('set_names') or {}
+            if isinstance(names, dict):
+                normalized: Dict[int, str] = {}
+                for k, v in names.items():
+                    try:
+                        idx = int(k)
+                    except Exception:
+                        continue
+                    normalized[idx] = str(v)
+                self.set_names = normalized
+            # Update selector and labels to reflect loaded data
+            self._update_sessions_ui()
+        except Exception:
+            pass
+
+    def _save_sets_yaml(self) -> None:
+        """Save per-folder grouping settings to YAML in the current folder."""
+        try:
+            path = self._sets_yaml_path()
+            if not path:
+                return
+            data = {
+                'items_per_session': int(self.state.itemsPerSession),
+                'set_names': {int(k): v for k, v in self.set_names.items()},
+            }
+            with open(path, 'w') as f:
+                yaml.safe_dump(data, f, sort_keys=True)
+        except Exception:
+            pass
+        # Reflect current selection in the label and editor
+        try:
+            idx = max(0, self.session_select.currentIndex())
+            name = self.set_names.get(idx) or f"Set {idx+1}"
+            self.current_set_label.setText(name)
+            self.set_name_edit.setText(name)
+        except Exception:
+            pass
 
     def _on_export_sets(self) -> None:
         """Export current virtual session grouping to folders or zip files."""
@@ -1088,13 +1227,20 @@ class ReviewTab(QWidget):
             pass
 
     def _position_settings_panel(self) -> None:
-        """Position the settings overlay anchored to the right side."""
+        """Position the settings overlay anchored to the right side.
+        Make it wide enough for full button labels and roomy sliders."""
         try:
             if not hasattr(self, 'settings_layer'):
                 return
             cw = self
-            # Width proportional to parent with bounds
-            dw = int(max(320, min(520, cw.width() * 0.42)))
+            # Compute desired width: prefer generous portion of parent width
+            # but never exceed available space. Also consider content's hint.
+            try:
+                hint_w = self.settings_panel.sizeHint().width() + 32
+            except Exception:
+                hint_w = 600
+            desired = max(600, int(cw.width() * 0.62), hint_w)
+            dw = min(cw.width() - 16, desired)
             # Place below header controls
             top_margin = getattr(self, '_header_widget', None).height() + 8 if hasattr(self, '_header_widget') else 56
             h = cw.height() - top_margin - 8
