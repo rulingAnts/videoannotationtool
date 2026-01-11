@@ -1,4 +1,5 @@
 import wave
+import logging
 from PySide6.QtCore import QObject, Signal, Slot
 from . import pyaudio, PYAUDIO_AVAILABLE
 
@@ -18,6 +19,7 @@ class AudioPlaybackWorker(QObject):
             self.finished.emit()
             return
         try:
+            logging.info(f"AudioPlaybackWorker.run: start path={self.wav_path}")
             p = pyaudio.PyAudio()
             wf = wave.open(self.wav_path, 'rb')
             stream = p.open(
@@ -37,8 +39,10 @@ class AudioPlaybackWorker(QObject):
         except Exception as e:
             self.error.emit(f"Audio playback failed: {e}")
         finally:
+            logging.info(f"AudioPlaybackWorker.run: finished stopped={self.should_stop}")
             self.finished.emit()
 
     @Slot()
     def stop(self):
         self.should_stop = True
+        logging.info("AudioPlaybackWorker.stop: request received")

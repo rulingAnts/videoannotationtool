@@ -16,7 +16,8 @@ from PySide6.QtWidgets import (
     QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle, QSizePolicy,
     QListView, QStyledItemDelegate, QApplication, QCheckBox, QGraphicsDropShadowEffect
 )
-from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize, QRect, QPoint, QLocale
+from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize, QRect, QPoint, QLocale, QMetaObject
+import time
 from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence, QImageReader, QPen, QColor
 
 from vat.audio import PYAUDIO_AVAILABLE
@@ -662,8 +663,12 @@ class VideoAnnotationApp(QMainWindow):
         self.cap = None
         self.video_timer = QTimer()
         self.video_timer.timeout.connect(self.update_video_frame)
-        self.audio_thread = None
+        # Persistent audio thread used for all playback
+        self.audio_thread = QThread(self)
         self.audio_worker = None
+        # Unified audio playback state + debounce
+        self.is_playing_audio = False
+        self._last_play_request_ts = 0.0
         self.is_recording = False
         self.recording_thread = None
         self.recording_worker = None
@@ -751,6 +756,13 @@ class VideoAnnotationApp(QMainWindow):
             self._shortcut_drawer_ctrl.activated.connect(self._toggle_drawer)
             self._shortcut_drawer_meta = QShortcut(QKeySequence("Meta+D"), self)
             self._shortcut_drawer_meta.activated.connect(self._toggle_drawer)
+        except Exception:
+            pass
+        # Start persistent audio thread
+        try:
+            if self.audio_thread and not self.audio_thread.isRunning():
+                self.audio_thread.start()
+                logging.info("UI.audio: persistent audio thread started")
         except Exception:
             pass
 
@@ -1951,7 +1963,8 @@ class VideoAnnotationApp(QMainWindow):
             self.update_recording_indicator()
             wav_path = self.fs.wav_path_for(self.current_video)
             if os.path.exists(wav_path):
-                self.play_audio_button.setEnabled(True)
+                # Disable Play while audio is actively playing
+                self.play_audio_button.setEnabled(not self.is_playing_audio)
                 self.stop_audio_button.setEnabled(True)
                 self.video_label.setStyleSheet("background-color: black; color: white; border: 3px solid #2ecc71;")
                 if getattr(self, 'badge_label', None):
@@ -2079,42 +2092,89 @@ class VideoAnnotationApp(QMainWindow):
     def play_audio(self):
         if not self.current_video:
             return
-        self.stop_audio()
+        # Debounce rapid clicks
+        now = time.time()
+        if (now - self._last_play_request_ts) < 0.2:
+            return
+        self._last_play_request_ts = now
+        # Re-entrancy guard: ignore if already playing
+        if self.is_playing_audio:
+            return
         wav_path = self.fs.wav_path_for(self.current_video)
         if not os.path.exists(wav_path):
             return
         if not PYAUDIO_AVAILABLE:
             QMessageBox.warning(self, "Error", "PyAudio is not available. Cannot play audio.")
             return
-        self.audio_thread = QThread()
-        self.audio_worker = AudioPlaybackWorker(wav_path)
-        self.audio_worker.moveToThread(self.audio_thread)
-        self.audio_thread.started.connect(self.audio_worker.run)
-        self.audio_worker.finished.connect(self.audio_thread.quit)
-        self.audio_worker.finished.connect(self.audio_worker.deleteLater)
-        self.audio_thread.finished.connect(self.audio_thread.deleteLater)
-        self.audio_thread.finished.connect(self._on_audio_thread_finished)
-        self.audio_worker.error.connect(self._show_worker_error)
-        self.audio_thread.start()
+        # Mark playing and update UI (busy indicator)
+        try:
+            self.is_playing_audio = True
+            self.play_audio_button.setText("Playing…")
+            self.play_audio_button.setEnabled(False)
+            logging.info(f"UI.audio: start video audio path={os.path.basename(wav_path)}")
+        except Exception:
+            pass
+        # Use persistent audio thread
+        try:
+            self.audio_worker = AudioPlaybackWorker(wav_path)
+            self.audio_worker.moveToThread(self.audio_thread)
+            QMetaObject.invokeMethod(self.audio_worker, "run", Qt.QueuedConnection)
+            # Re-enable controls when playback finishes
+            self.audio_worker.finished.connect(self._on_any_audio_finished)
+            self.audio_worker.error.connect(self._show_worker_error)
+        except Exception:
+            # Fallback: start thread if not running
+            try:
+                if self.audio_thread and not self.audio_thread.isRunning():
+                    self.audio_thread.start()
+                self.audio_thread.started.connect(self.audio_worker.run)
+            except Exception:
+                pass
     def stop_audio(self):
+        logging.info("UI.audio: stop requested")
         if self.audio_worker:
             try:
                 self.audio_worker.stop()
             except RuntimeError:
                 pass
-        if self.audio_thread:
-            try:
-                if self.audio_thread.isRunning():
-                    self.audio_thread.quit()
-                    self.audio_thread.wait()
-            except RuntimeError:
-                pass
-            finally:
-                self.audio_thread = None
-                self.audio_worker = None
+        # Do not quit persistent thread here; just clear UI state
+        self.is_playing_audio = False
+        try:
+            # Restore button text
+            self.play_audio_button.setText(self.LABELS.get("play_audio", "Play Audio"))
+        except Exception:
+            pass
+        try:
+            self.update_media_controls()
+        except Exception:
+            pass
+        try:
+            self._update_image_record_controls()
+        except Exception:
+            pass
+        # Clear playing state and re-enable Play buttons
+        self.is_playing_audio = False
+        try:
+            self.update_media_controls()
+        except Exception:
+            pass
+        try:
+            self._update_image_record_controls()
+        except Exception:
+            pass
     def _on_audio_thread_finished(self):
         self.audio_thread = None
         self.audio_worker = None
+        # Ensure UI reflects that playback has ended
+        self.is_playing_audio = False
+        try:
+            self.update_media_controls()
+        except Exception:
+            pass
+        try:
+            self._update_image_record_controls()
+        except Exception:
+            pass
     def _handle_play_image_audio(self):
         try:
             return self.play_image_audio()
@@ -2253,6 +2313,14 @@ class VideoAnnotationApp(QMainWindow):
                             self.recording_thread = None
                             self.recording_worker = None
                     self.update_recording_indicator()
+            except Exception:
+                pass
+            # Ensure persistent audio thread stops on app close
+            try:
+                if self.audio_thread and self.audio_thread.isRunning():
+                    self.audio_thread.quit()
+                    self.audio_thread.wait()
+                    logging.info("UI.audio: persistent audio thread stopped on close")
             except Exception:
                 pass
             try:
@@ -3087,8 +3155,8 @@ class VideoAnnotationApp(QMainWindow):
             resolved = self.fs.find_existing_image_audio(path or "")
             wav_path = resolved or self.fs.wav_path_for_image(path or "")
             exists = bool(resolved)
-            # Play/Stop audio reflect wav existence
-            self.play_image_audio_button.setEnabled(exists)
+            # Play/Stop audio reflect wav existence, but disable Play while actively playing
+            self.play_image_audio_button.setEnabled(exists and not self.is_playing_audio)
             self.stop_image_audio_button.setEnabled(exists)
             # Record/Stop-Record reflect recording state
             if self.is_recording:
@@ -3126,10 +3194,25 @@ class VideoAnnotationApp(QMainWindow):
             wav_path = self.fs.find_existing_image_audio(path) or self.fs.wav_path_for_image(path)
             if not (wav_path and os.path.exists(wav_path)):
                 return
-            self.stop_audio()
+            # Re-entrancy guard: ignore if already playing
+            if self.is_playing_audio:
+                return
             if not PYAUDIO_AVAILABLE:
                 QMessageBox.warning(self, "Error", "PyAudio is not available. Cannot play audio.")
                 return
+            # Mark playing and update UI (disable Play, enable Stop)
+            self.is_playing_audio = True
+            try:
+                self.play_image_audio_button.setEnabled(False)
+                self.stop_image_audio_button.setEnabled(True)
+            except Exception:
+                pass
+            try:
+                # Also disable videos tab Play if present
+                if getattr(self, 'play_audio_button', None):
+                    self.play_audio_button.setEnabled(False)
+            except Exception:
+                pass
             self.audio_thread = QThread()
             self.audio_worker = AudioPlaybackWorker(wav_path)
             self.audio_worker.moveToThread(self.audio_thread)
@@ -3138,8 +3221,37 @@ class VideoAnnotationApp(QMainWindow):
             self.audio_worker.finished.connect(self.audio_worker.deleteLater)
             self.audio_thread.finished.connect(self.audio_thread.deleteLater)
             self.audio_thread.finished.connect(self._on_audio_thread_finished)
+            # Re-enable controls when playback finishes
+            self.audio_worker.finished.connect(self._on_any_audio_finished)
             self.audio_worker.error.connect(self._show_worker_error)
             self.audio_thread.start()
+        except Exception:
+            pass
+
+    def _on_any_audio_finished(self):
+        """Shared handler to re-enable Play buttons after audio playback completes."""
+        try:
+            logging.info("UI.audio: finished")
+        except Exception:
+            pass
+        self.is_playing_audio = False
+        # Restore Play button texts
+        try:
+            if getattr(self, 'play_audio_button', None):
+                self.play_audio_button.setText(self.LABELS.get("play_audio", "Play Audio"))
+        except Exception:
+            pass
+        try:
+            if getattr(self, 'play_image_audio_button', None):
+                self.play_image_audio_button.setText(self.LABELS.get("play_audio", "Play Audio"))
+        except Exception:
+            pass
+        try:
+            self.update_media_controls()
+        except Exception:
+            pass
+        try:
+            self._update_image_record_controls()
         except Exception:
             pass
 
