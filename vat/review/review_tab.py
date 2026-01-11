@@ -182,7 +182,7 @@ class ReviewTab(QWidget):
         # Settings toggle button (gear)
         self.settings_toggle_btn = QToolButton()
         self.settings_toggle_btn.setToolTip("Show settings")
-        # Use a gear glyph instead of a desktop icon
+        # Use a Unicode gear glyph as before; text color follows palette
         self.settings_toggle_btn.setText("⚙")
         # Make the gear visibly larger for easier access
         try:
@@ -378,6 +378,12 @@ class ReviewTab(QWidget):
             if getattr(self, 'settings_scrim', None) is not None:
                 alpha = 0.25 if dark else 0.15
                 self.settings_scrim.setStyleSheet(f"background-color: rgba(0,0,0,{alpha});")
+            # Update navigation icons to match theme (use standard icons)
+            try:
+                self.skip_back_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipBackward))
+                self.skip_forward_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipForward))
+            except Exception:
+                pass
         except Exception:
             pass
 

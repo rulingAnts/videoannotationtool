@@ -787,6 +787,8 @@ class VideoAnnotationApp(QMainWindow):
             if getattr(self, 'drawer_scrim', None) is not None:
                 alpha = 0.25 if dark else 0.15
                 self.drawer_scrim.setStyleSheet(f"background-color: rgba(0,0,0,{alpha});")
+            # Icons should adapt to theme as well
+            self._apply_theme_icons()
         except Exception:
             pass
 
@@ -798,6 +800,26 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             pass
         return super().changeEvent(event)
+
+    def _apply_theme_icons(self) -> None:
+        """Update button icons to ensure sufficient contrast in current theme."""
+        try:
+            # Drawer: regenerate hamburger icon with palette-derived color
+            if getattr(self, 'drawer_toggle_btn', None) is not None:
+                self.drawer_toggle_btn.setIcon(self._hamburger_icon())
+            # Prev/Next: re-fetch standard icons so the style supplies theme-appropriate glyphs
+            if getattr(self, 'prev_button', None) is not None:
+                try:
+                    self.prev_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipBackward))
+                except Exception:
+                    pass
+            if getattr(self, 'next_button', None) is not None:
+                try:
+                    self.next_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipForward))
+                except Exception:
+                    pass
+        except Exception:
+            pass
         # Start persistent audio thread
         try:
             if self.audio_thread and not self.audio_thread.isRunning():
@@ -995,12 +1017,7 @@ class VideoAnnotationApp(QMainWindow):
                 pass
         except Exception:
             pass
-        main_layout.addWidget(self.language_dropdown)
-        # Add a tiny spacer between the dropdown and folder label
-        try:
-            main_layout.addSpacing(6)
-        except Exception:
-            pass
+        # Language dropdown will be placed in the header row next to the folder label
         # Folder label + drawer toggle row
         self.folder_display_label = QLabel(self.LABELS["no_folder_selected"])
         self.folder_display_label.setAlignment(Qt.AlignLeft)
@@ -1034,10 +1051,12 @@ class VideoAnnotationApp(QMainWindow):
             pass
         # Folder label follows the drawer button on the left
         header_row.addWidget(self.folder_display_label)
+        # Push the language dropdown to the right edge on the same line
         try:
             header_row.addStretch(1)
         except Exception:
             pass
+        header_row.addWidget(self.language_dropdown)
         main_layout.addLayout(header_row)
         splitter = QSplitter(Qt.Horizontal)
         try:
@@ -1448,6 +1467,15 @@ class VideoAnnotationApp(QMainWindow):
                 self._on_images_updated(self.fs.current_folder, imgs)
             except Exception:
                 pass
+            # Also populate the videos list to avoid empty state on startup
+            try:
+                vids = self.fs.list_videos()
+                self._on_videos_updated(vids)
+            except Exception:
+                try:
+                    self.load_video_files()
+                except Exception:
+                    pass
         # Show a short welcome/best-practices message once on startup
         try:
             QTimer.singleShot(0, self._show_welcome_dialog)
@@ -1521,7 +1549,11 @@ class VideoAnnotationApp(QMainWindow):
             painter = QPainter(pm)
             try:
                 painter.setRenderHint(QPainter.Antialiasing, True)
-                pen = QPen(QColor('#444'))
+                # Derive stroke color from current palette for good contrast
+                from PySide6.QtGui import QGuiApplication, QPalette
+                pal = QGuiApplication.palette()
+                stroke = pal.color(QPalette.ButtonText)
+                pen = QPen(stroke)
                 pen.setWidth(2)
                 painter.setPen(pen)
                 # Draw three lines
