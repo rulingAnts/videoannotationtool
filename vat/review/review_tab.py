@@ -155,6 +155,29 @@ class ReviewTab(QWidget):
         self.replay_btn.setEnabled(False)
         top.addWidget(self.replay_btn)
 
+        # Insert set selector + editable set name in the header
+        self.session_select = QComboBox()
+        top.addWidget(self.session_select)
+        self.set_name_edit = QLineEdit()
+        self.set_name_edit.setPlaceholderText("Set name")
+        try:
+            self.set_name_edit.setMinimumWidth(160)
+        except Exception:
+            pass
+        top.addWidget(self.set_name_edit)
+
+        # Export controls in header (grayed out until session complete)
+        self.export_yaml_btn_main = QPushButton("Export Results")
+        self.export_yaml_btn_main.setEnabled(False)
+        self.export_yaml_btn_main.clicked.connect(self._on_export_yaml)
+        top.addWidget(self.export_yaml_btn_main)
+
+        self.export_sets_btn_main = QPushButton("Export Sets")
+        self.export_sets_btn_main.setToolTip("Save the current virtual session grouping")
+        self.export_sets_btn_main.setEnabled(False)
+        self.export_sets_btn_main.clicked.connect(self._on_export_sets)
+        top.addWidget(self.export_sets_btn_main)
+
         self.skip_forward_btn = QToolButton()
         try:
             self.skip_forward_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipForward))
@@ -265,31 +288,19 @@ class ReviewTab(QWidget):
         rowThumb.addWidget(self.thumb_size_slider, 1)
         settings_layout.addLayout(rowThumb)
 
-        # Row Sessions: Items per Session + sessions selector + counts
+        # Row Sessions: Items per Session + counts
         rowSess = QHBoxLayout()
         rowSess.addWidget(QLabel("Items per Session:"))
         self.items_per_session_slider = QSlider(Qt.Horizontal)
-        self.items_per_session_slider.setMinimum(6)
-        self.items_per_session_slider.setMaximum(60)
+        self.items_per_session_slider.setMinimum(2)
+        self.items_per_session_slider.setMaximum(50)
         self.items_per_session_slider.setSingleStep(1)
-        self.items_per_session_slider.setTickInterval(6)
+        self.items_per_session_slider.setTickInterval(2)
         self.items_per_session_slider.setTickPosition(QSlider.TicksBelow)
         self.items_per_session_slider.setValue(self.state.itemsPerSession)
         rowSess.addWidget(self.items_per_session_slider, 1)
         self.sessions_label = QLabel("Sessions: --")
         rowSess.addWidget(self.sessions_label)
-        self.session_select = QComboBox()
-        rowSess.addWidget(self.session_select)
-        # Current set label and rename field
-        self.current_set_label = QLabel("Set 1")
-        rowSess.addWidget(self.current_set_label)
-        self.set_name_edit = QLineEdit()
-        self.set_name_edit.setPlaceholderText("Rename set…")
-        try:
-            self.set_name_edit.setMinimumWidth(160)
-        except Exception:
-            pass
-        rowSess.addWidget(self.set_name_edit, 1)
         settings_layout.addLayout(rowSess)
 
         # Row Actions inside settings: Stop/Reset/Defaults/Export
@@ -309,14 +320,7 @@ class ReviewTab(QWidget):
 
         rowActions.addStretch()
 
-        self.export_yaml_btn = QPushButton("Export Results")
-        self.export_yaml_btn.clicked.connect(self._on_export_yaml)
-        rowActions.addWidget(self.export_yaml_btn)
-
-        self.export_sets_btn = QPushButton("Export Sets")
-        self.export_sets_btn.setToolTip("Save the current virtual session grouping")
-        self.export_sets_btn.clicked.connect(self._on_export_sets)
-        rowActions.addWidget(self.export_sets_btn)
+        # Export format stays in overlay; buttons moved to header
         rowActions.addWidget(QLabel("Format:"))
         self.export_format_combo = QComboBox()
         self.export_format_combo.addItems(["Folders", "Zip files"]) 
@@ -490,6 +494,10 @@ class ReviewTab(QWidget):
         
         # Update UI
         self.state.sessionActive = True
+        try:
+            self.session_completed = False
+        except Exception:
+            self.session_completed = False
         self.state.paused = False
         self.session_id = str(uuid.uuid4())
         self._update_controls_state()
@@ -516,7 +524,6 @@ class ReviewTab(QWidget):
         try:
             idx = max(0, self.session_select.currentIndex())
             name = self.set_names.get(idx) or f"Set {idx+1}"
-            self.current_set_label.setText(name)
             self.set_name_edit.setText(name)
         except Exception:
             pass
@@ -547,11 +554,10 @@ class ReviewTab(QWidget):
             pass
         # Refresh grid slice to reflect new grouping
         self._refresh_grid()
-        # Reflect current selection in the label and editor
+        # Reflect current selection in the editor
         try:
             idx = max(0, self.session_select.currentIndex())
             name = self.set_names.get(idx) or f"Set {idx+1}"
-            self.current_set_label.setText(name)
             self.set_name_edit.setText(name)
         except Exception:
             pass
@@ -566,7 +572,6 @@ class ReviewTab(QWidget):
                 self.session_select.setItemText(idx, name)
             except Exception:
                 pass
-            self.current_set_label.setText(name)
             self._save_sets_yaml()
         except Exception:
             pass
@@ -632,7 +637,6 @@ class ReviewTab(QWidget):
         try:
             idx = max(0, self.session_select.currentIndex())
             name = self.set_names.get(idx) or f"Set {idx+1}"
-            self.current_set_label.setText(name)
             self.set_name_edit.setText(name)
         except Exception:
             pass
@@ -826,6 +830,10 @@ class ReviewTab(QWidget):
         self._stop_audio()
         self.timer.stop()
         self.state.sessionActive = False
+        try:
+            self.session_completed = True
+        except Exception:
+            self.session_completed = True
         self._update_controls_state()
         
         # Show summary
@@ -1149,6 +1157,13 @@ class ReviewTab(QWidget):
         self.play_count_spin.setEnabled(not in_session)
         self.time_limit_spin.setEnabled(not in_session)
         self.limit_mode_combo.setEnabled(not in_session)
+        # Export buttons enabled only when a session has completed
+        try:
+            enable_exports = bool(getattr(self, 'session_completed', False))
+            self.export_yaml_btn_main.setEnabled(enable_exports)
+            self.export_sets_btn_main.setEnabled(enable_exports)
+        except Exception:
+            pass
     
     def _update_progress(self) -> None:
         """Update progress bar."""
