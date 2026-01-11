@@ -64,6 +64,9 @@ class ReviewTab(QWidget):
         self.audio_thread: Optional[QThread] = QThread(self)
         self.audio_worker: Optional[AudioPlaybackWorker] = None
         self.audio_kind: Optional[str] = None  # 'prompt', 'prompt_replay', 'sfx'
+        # Keep a persistent reference to the fullscreen viewer to prevent
+        # premature garbage collection and immediate window close on open.
+        self._fullscreen_viewer = None
         
         self._init_ui()
         self._connect_signals()
@@ -788,6 +791,8 @@ class ReviewTab(QWidget):
             if media_path.lower().endswith(self.fs.VIDEO_EXTS):
                 from vat.ui.fullscreen import FullscreenVideoViewer
                 viewer = FullscreenVideoViewer(media_path)
+                # Persist reference so the viewer isn't GC'd immediately
+                self._fullscreen_viewer = viewer
                 
                 # Connect to playingChanged signal for timer pause/resume
                 try:
@@ -796,12 +801,20 @@ class ReviewTab(QWidget):
                     pass
                 
                 viewer.showFullScreen()
-                viewer.destroyed.connect(self._on_fullscreen_closed)
+                try:
+                    viewer.destroyed.connect(self._on_fullscreen_closed)
+                except Exception:
+                    pass
             else:
                 from vat.ui.fullscreen import FullscreenImageViewer
                 viewer = FullscreenImageViewer(media_path)
+                # Persist reference so the viewer isn't GC'd immediately
+                self._fullscreen_viewer = viewer
                 viewer.showFullScreen()
-                viewer.destroyed.connect(self._on_fullscreen_closed)
+                try:
+                    viewer.destroyed.connect(self._on_fullscreen_closed)
+                except Exception:
+                    pass
         except Exception:
             # Resume timer if preview fails
             if self.state.sessionActive and not self.state.paused:
@@ -819,6 +832,11 @@ class ReviewTab(QWidget):
     
     def _on_fullscreen_closed(self) -> None:
         """Handle fullscreen viewer closed."""
+        # Drop persistent reference
+        try:
+            self._fullscreen_viewer = None
+        except Exception:
+            pass
         # Resume timer when fullscreen closes
         if self.state.sessionActive and not self.state.paused:
             self.stats.resume_timer()
