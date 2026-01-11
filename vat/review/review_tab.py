@@ -718,10 +718,17 @@ class ReviewTab(QWidget):
             from vat.review.grouped_exporter import GroupedExporter
             # Transform sessions to list of (media_path, wav_path) pairs
             session_pairs = [[(item["mediaPath"], item["wavPath"]) for item in chunk] for chunk in sessions]
+            # Resolve set names for each session (fallback to "Set N")
+            names = []
+            for idx in range(len(sessions)):
+                # self.set_names uses zero-based indices corresponding to session order
+                name = self.set_names.get(idx) or f"Set {idx+1}"
+                names.append(name)
             meta = GroupedExporter.export_sessions(
                 sessions=session_pairs,
                 output_dir=output_dir,
                 export_format="zip" if "zip" in export_format else "folders",
+                group_names=names,
             )
             QMessageBox.information(self, "Export Complete", f"Exported {meta['totalGroups']} sets to:\n{output_dir}")
         except Exception as e:

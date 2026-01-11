@@ -119,6 +119,7 @@ class GroupedExporter:
         output_dir: str,
         export_format: str = "folders",  # "folders" or "zip"
         copy_or_move: str = "copy",
+        group_names: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Export predefined sessions into folders or zip files.
 
@@ -127,6 +128,7 @@ class GroupedExporter:
             output_dir: Destination directory
             export_format: "folders" to create Set NN directories, "zip" to create Set NN.zip archives
             copy_or_move: Only applies to folder export; "copy" or "move"
+            group_names: Optional list of names to use per session; if provided, length should match sessions. Missing or empty names fall back to "Set N".
 
         Returns:
             Dictionary with export metadata
@@ -135,8 +137,23 @@ class GroupedExporter:
         total_items = sum(len(s) for s in sessions)
         meta_groups: List[Dict[str, Any]] = []
 
+        def _sanitize_name(name: str, default: str) -> str:
+            # Replace filesystem-problematic characters and trim
+            safe = (name or "").strip()
+            if not safe:
+                return default
+            # Replace common invalids on Windows/macOS
+            for ch in ['/', '\\', ':', '*', '?', '"', '<', '>', '|']:
+                safe = safe.replace(ch, '-')
+            # Avoid leading/trailing dots or spaces
+            safe = safe.strip(' .')
+            return safe or default
+
         for i, session in enumerate(sessions, start=1):
-            group_name = f"Set {i}"
+            suggested = None
+            if group_names and i-1 < len(group_names):
+                suggested = group_names[i-1]
+            group_name = _sanitize_name(suggested or "", f"Set {i}")
             if export_format == "zip":
                 zip_path = os.path.join(output_dir, f"{group_name}.zip")
                 with zipfile.ZipFile(zip_path, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
