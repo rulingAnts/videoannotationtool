@@ -1,14 +1,5 @@
 """Review Tab widget for quiz-based review sessions."""
 
-"""
-[x] Visually distinguish video thumbnails from still image thumbnails somehow in Review tab.
-[ ] Consider adding a "Reset to Defaults" button in the Review settings UI to restore default settings easily.
-[ ] Fix full-screen play/preview functionality in Review tab for videos.
-[ ] Add ability to export current media into multiple separate folders in order to reduce it to manageable lessons (like if the user has too many in one folder).
-[ ] Fix the QThread: Destroyed while thread '' is still running error on app quit.
-[ ] Try to see if you can reduce space between image thumbnails in the grid so that there's less whitespace?
-"""
-
 import logging
 import os
 import uuid
@@ -150,6 +141,12 @@ class ReviewTab(QWidget):
         self.pause_btn.setEnabled(False)
         top.addWidget(self.pause_btn)
 
+        # Stop button in main controls next to Pause
+        self.stop_btn = QPushButton("Stop")
+        self.stop_btn.clicked.connect(self._on_stop)
+        self.stop_btn.setEnabled(False)
+        top.addWidget(self.stop_btn)
+
         self.replay_btn = QPushButton("Replay")
         self.replay_btn.clicked.connect(self._on_replay_clicked)
         self.replay_btn.setEnabled(False)
@@ -166,17 +163,7 @@ class ReviewTab(QWidget):
             pass
         top.addWidget(self.set_name_edit)
 
-        # Export controls in header (grayed out until session complete)
-        self.export_yaml_btn_main = QPushButton("Export Results")
-        self.export_yaml_btn_main.setEnabled(False)
-        self.export_yaml_btn_main.clicked.connect(self._on_export_yaml)
-        top.addWidget(self.export_yaml_btn_main)
-
-        self.export_sets_btn_main = QPushButton("Export Sets")
-        self.export_sets_btn_main.setToolTip("Save the current virtual session grouping")
-        self.export_sets_btn_main.setEnabled(False)
-        self.export_sets_btn_main.clicked.connect(self._on_export_sets)
-        top.addWidget(self.export_sets_btn_main)
+        # Export controls moved to drawer; header remains lean
 
         self.skip_forward_btn = QToolButton()
         try:
@@ -320,7 +307,18 @@ class ReviewTab(QWidget):
 
         rowActions.addStretch()
 
-        # Export format stays in overlay; buttons moved to header
+        # Export buttons in overlay (disabled until session finished)
+        self.export_yaml_btn = QPushButton("Export Results")
+        self.export_yaml_btn.setEnabled(False)
+        self.export_yaml_btn.clicked.connect(self._on_export_yaml)
+        rowActions.addWidget(self.export_yaml_btn)
+
+        self.export_sets_btn = QPushButton("Export Sets")
+        self.export_sets_btn.setToolTip("Save the current virtual session grouping")
+        self.export_sets_btn.setEnabled(False)
+        self.export_sets_btn.clicked.connect(self._on_export_sets)
+        rowActions.addWidget(self.export_sets_btn)
+
         rowActions.addWidget(QLabel("Format:"))
         self.export_format_combo = QComboBox()
         self.export_format_combo.addItems(["Folders", "Zip files"]) 
@@ -1157,11 +1155,11 @@ class ReviewTab(QWidget):
         self.play_count_spin.setEnabled(not in_session)
         self.time_limit_spin.setEnabled(not in_session)
         self.limit_mode_combo.setEnabled(not in_session)
-        # Export buttons enabled only when a session has completed
+        # Export buttons (in overlay) enabled only when a session has completed
         try:
             enable_exports = bool(getattr(self, 'session_completed', False))
-            self.export_yaml_btn_main.setEnabled(enable_exports)
-            self.export_sets_btn_main.setEnabled(enable_exports)
+            self.export_yaml_btn.setEnabled(enable_exports)
+            self.export_sets_btn.setEnabled(enable_exports)
         except Exception:
             pass
     

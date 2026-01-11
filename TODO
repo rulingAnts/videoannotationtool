@@ -1,4 +1,18 @@
 
+"""
+[x] Visually distinguish video thumbnails from still image thumbnails somehow in Review tab.
+[x] Consider adding a "Reset to Defaults" button in the Review settings UI to restore default settings easily.
+[x] Fix the QThread: Destroyed while thread '' is still running error on app quit.
+[ ] Test randomness changes for smaller grids (like 2-3 items, etc) (especially test stability)
+[ ] Fix full-screen play/preview functionality in Review tab for videos.
+[ ] Add ability to export current media into multiple separate folders in order to reduce it to manageable lessons (like if the user has too many in one folder).
+[ ] Try to see if you can reduce space between image thumbnails in the grid so that there's less whitespace?
+[ ] Specify how YAML settings should be included in the exports (same as the session, except only one folder, but maybe if we're specifying how many items per session, that will be just fine??)
+[ ] Test Export Sets and Export Results functionality more thoroughly.
+[ ] Test settings YAML feature for the folder more thoroughly (loading different folders, etc).
+[ ] Add backward compatible convention of including video filenames in matching wav filenames.
+"""
+
 # FS Manager Integration Follow-ups
 
  [x] Replace remaining `self.folder_path` references with `self.fs.current_folder` in `show_first_frame()`, `play_video()`, and any guards.

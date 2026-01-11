@@ -54,32 +54,51 @@ class ReviewQueue(QObject):
         if seed is not None:
             random.seed(seed)
         
-        # Build queue with fairness guarantees
-        if play_count == 1:
-            # Single round: simple shuffle
-            self._queue = list(self._items)
-            random.shuffle(self._queue)
-        else:
-            # Multiple rounds: shuffle each round and rotate
+        # Strategy: for small sets (<=6), use fully random order per prompt
+        # while still respecting total play_count per item. For larger sets,
+        # keep fairness guarantees (shuffle without replacement per round
+        # with rotation and anti-repeat across rounds).
+        small_set_threshold = 6
+        if len(self._items) <= small_set_threshold:
+            # Constrained random with replacement: choose randomly among items
+            # that still have remaining appearances.
+            remaining = {i: play_count for i in range(len(self._items))}
             self._queue = []
-            for round_num in range(play_count):
-                round_items = list(self._items)
-                random.shuffle(round_items)
-                
-                # Rotate to avoid positional bias
-                if round_num > 0:
-                    rotation = round_num % len(round_items)
-                    round_items = round_items[rotation:] + round_items[:rotation]
-                
-                # Prevent immediate repeats between rounds
-                if self._queue and len(round_items) > 1:
-                    last_item = self._queue[-1]
-                    if round_items[0] == last_item:
-                        # Swap first with a random other position
-                        swap_idx = random.randint(1, len(round_items) - 1)
-                        round_items[0], round_items[swap_idx] = round_items[swap_idx], round_items[0]
-                
-                self._queue.extend(round_items)
+            total = len(self._items) * max(1, play_count)
+            for _ in range(total):
+                candidates = [idx for idx, cnt in remaining.items() if cnt > 0]
+                if not candidates:
+                    break
+                pick = random.choice(candidates)
+                self._queue.append(self._items[pick])
+                remaining[pick] -= 1
+        else:
+            # Build queue with fairness guarantees
+            if play_count == 1:
+                # Single round: simple shuffle
+                self._queue = list(self._items)
+                random.shuffle(self._queue)
+            else:
+                # Multiple rounds: shuffle each round and rotate
+                self._queue = []
+                for round_num in range(play_count):
+                    round_items = list(self._items)
+                    random.shuffle(round_items)
+                    
+                    # Rotate to avoid positional bias
+                    if round_num > 0:
+                        rotation = round_num % len(round_items)
+                        round_items = round_items[rotation:] + round_items[:rotation]
+                    
+                    # Prevent immediate repeats between rounds
+                    if self._queue and len(round_items) > 1:
+                        last_item = self._queue[-1]
+                        if round_items[0] == last_item:
+                            # Swap first with a random other position
+                            swap_idx = random.randint(1, len(round_items) - 1)
+                            round_items[0], round_items[swap_idx] = round_items[swap_idx], round_items[0]
+                    
+                    self._queue.extend(round_items)
         
         # Reset seed after queue building
         if seed is not None:
