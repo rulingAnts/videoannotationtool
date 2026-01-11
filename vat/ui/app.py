@@ -758,6 +758,46 @@ class VideoAnnotationApp(QMainWindow):
             self._shortcut_drawer_meta.activated.connect(self._toggle_drawer)
         except Exception:
             pass
+
+    def _is_dark_mode(self) -> bool:
+        """Detect whether the OS/app is currently using a dark color scheme."""
+        try:
+            from PySide6.QtGui import QGuiApplication, QPalette
+            hints = QGuiApplication.styleHints()
+            # Qt 6+ provides a color scheme hint
+            if hasattr(hints, 'colorScheme'):
+                return hints.colorScheme() == Qt.ColorScheme.Dark
+            # Fallback: infer from window color lightness
+            pal = QGuiApplication.palette()
+            base = pal.color(QPalette.Window)
+            return base.lightness() < 128
+        except Exception:
+            return False
+
+    def _apply_theme_styles(self) -> None:
+        """Apply theme-aware styles to overlay drawer and scrim."""
+        try:
+            dark = self._is_dark_mode()
+            # Drawer background and border adapt to theme
+            if getattr(self, 'drawer_layer', None) is not None:
+                bg = 'rgba(32,32,32,0.92)' if dark else 'rgba(248,248,248,0.95)'
+                border = '#555' if dark else '#ccc'
+                self.drawer_layer.setStyleSheet(f"#drawer_layer {{ background-color: {bg}; border-right: 1px solid {border}; }}")
+            # Scrim: slightly stronger in dark mode
+            if getattr(self, 'drawer_scrim', None) is not None:
+                alpha = 0.25 if dark else 0.15
+                self.drawer_scrim.setStyleSheet(f"background-color: rgba(0,0,0,{alpha});")
+        except Exception:
+            pass
+
+    def changeEvent(self, event):
+        """React to palette/theme changes (e.g., macOS auto dark mode)."""
+        try:
+            if event.type() in (QEvent.PaletteChange, QEvent.ApplicationPaletteChange, QEvent.StyleChange):
+                self._apply_theme_styles()
+        except Exception:
+            pass
+        return super().changeEvent(event)
         # Start persistent audio thread
         try:
             if self.audio_thread and not self.audio_thread.isRunning():
@@ -1093,7 +1133,8 @@ class VideoAnnotationApp(QMainWindow):
             self.drawer_layer.setAttribute(Qt.WA_StyledBackground, True)
             # Targeted style on the drawer container only to avoid affecting child controls
             self.drawer_layer.setObjectName("drawer_layer")
-            self.drawer_layer.setStyleSheet("#drawer_layer { background-color: rgba(248,248,248, 0.95); border-right: 1px solid #ccc; }")
+            # Initial style; will be updated by _apply_theme_styles()
+            self._apply_theme_styles()
             dl = QVBoxLayout(self.drawer_layer)
             dl.setContentsMargins(8, 8, 8, 8)
             dl.setSpacing(6)
@@ -1126,7 +1167,8 @@ class VideoAnnotationApp(QMainWindow):
             self.drawer_scrim = QWidget(central_widget)
             self.drawer_scrim.setVisible(False)
             self.drawer_scrim.setAttribute(Qt.WA_StyledBackground, True)
-            self.drawer_scrim.setStyleSheet("background-color: rgba(0,0,0,0.15);")
+            # Initial style; will be updated by _apply_theme_styles()
+            self._apply_theme_styles()
             self.drawer_scrim.installEventFilter(self)
         except Exception:
             self.drawer_layer = None

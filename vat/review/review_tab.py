@@ -334,7 +334,11 @@ class ReviewTab(QWidget):
         self.settings_layer.setVisible(False)
         self.settings_layer.setAttribute(Qt.WA_StyledBackground, True)
         self.settings_layer.setObjectName("review_settings_layer")
-        self.settings_layer.setStyleSheet("#review_settings_layer { background-color: rgba(248,248,248,0.95); border-left: 1px solid #ccc; }")
+        # Initial style; will be updated by _apply_theme_styles()
+        try:
+            self._apply_theme_styles()
+        except Exception:
+            pass
         sl = QVBoxLayout(self.settings_layer)
         sl.setContentsMargins(8, 8, 8, 8)
         sl.addWidget(self.settings_panel)
@@ -342,10 +346,49 @@ class ReviewTab(QWidget):
         self.settings_scrim = QWidget(self)
         self.settings_scrim.setVisible(False)
         self.settings_scrim.setAttribute(Qt.WA_StyledBackground, True)
-        self.settings_scrim.setStyleSheet("background-color: rgba(0,0,0,0.15);")
+        try:
+            self._apply_theme_styles()
+        except Exception:
+            pass
         self.settings_scrim.installEventFilter(self)
 
         return header
+
+    def _is_dark_mode(self) -> bool:
+        """Detect whether the OS/app is currently using a dark color scheme."""
+        try:
+            from PySide6.QtGui import QGuiApplication, QPalette
+            hints = QGuiApplication.styleHints()
+            if hasattr(hints, 'colorScheme'):
+                return hints.colorScheme() == Qt.ColorScheme.Dark
+            pal = QGuiApplication.palette()
+            base = pal.color(QPalette.Window)
+            return base.lightness() < 128
+        except Exception:
+            return False
+
+    def _apply_theme_styles(self) -> None:
+        """Apply theme-aware styles to the settings overlay and scrim."""
+        try:
+            dark = self._is_dark_mode()
+            if getattr(self, 'settings_layer', None) is not None:
+                bg = 'rgba(32,32,32,0.92)' if dark else 'rgba(248,248,248,0.95)'
+                border = '#555' if dark else '#ccc'
+                self.settings_layer.setStyleSheet(f"#review_settings_layer {{ background-color: {bg}; border-left: 1px solid {border}; }}")
+            if getattr(self, 'settings_scrim', None) is not None:
+                alpha = 0.25 if dark else 0.15
+                self.settings_scrim.setStyleSheet(f"background-color: rgba(0,0,0,{alpha});")
+        except Exception:
+            pass
+
+    def changeEvent(self, event):
+        """React to palette/theme changes to keep overlays in sync."""
+        try:
+            if event.type() in (event.Type.PaletteChange, event.Type.ApplicationPaletteChange, event.Type.StyleChange):
+                self._apply_theme_styles()
+        except Exception:
+            pass
+        return super().changeEvent(event)
     
     def _connect_signals(self) -> None:
         """Connect signals."""
