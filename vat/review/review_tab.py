@@ -1,16 +1,15 @@
 """Review Tab widget for quiz-based review sessions."""
 
 """
-- [ ] Visually distinguish video thumbnails from still image thumbnails somehow in Review tab.
-- [ ] Consider adding a "Reset to Defaults" button in the Review settings UI to restore default settings easily.
-- [ ] Fix full-screen play/preview functionality in Review tab for videos.
-- [ ] Add ability to export current media into multiple separate folders in order to reduce it to manageable lessons (like if the user has too many in one folder).
-- [ ] Fix the QThread: Destroyed while thread '' is still running error on app quit.
-- [ ] Try to see if you can reduce space between image thumbnails in the grid so that there's less whitespace?
+[x] Visually distinguish video thumbnails from still image thumbnails somehow in Review tab.
+[ ] Consider adding a "Reset to Defaults" button in the Review settings UI to restore default settings easily.
+[ ] Fix full-screen play/preview functionality in Review tab for videos.
+[ ] Add ability to export current media into multiple separate folders in order to reduce it to manageable lessons (like if the user has too many in one folder).
+[ ] Fix the QThread: Destroyed while thread '' is still running error on app quit.
+[ ] Try to see if you can reduce space between image thumbnails in the grid so that there's less whitespace?
 """
 
 import logging
-
 import os
 import uuid
 import tempfile
