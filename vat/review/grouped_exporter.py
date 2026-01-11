@@ -3,6 +3,7 @@
 import os
 import shutil
 from typing import List, Tuple, Optional, Dict, Any
+import zipfile
 from pathlib import Path
 
 
@@ -110,6 +111,66 @@ class GroupedExporter:
             "totalGroups": num_groups,
             "copyOrMove": copy_or_move,
             "remainderInLastFolder": remainder,
+        }
+
+    @staticmethod
+    def export_sessions(
+        sessions: List[List[Tuple[str, str]]],  # [[(media_path, wav_path), ...], ...]
+        output_dir: str,
+        export_format: str = "folders",  # "folders" or "zip"
+        copy_or_move: str = "copy",
+    ) -> Dict[str, Any]:
+        """Export predefined sessions into folders or zip files.
+
+        Args:
+            sessions: List of sessions; each session is a list of (media_path, wav_path)
+            output_dir: Destination directory
+            export_format: "folders" to create Set NN directories, "zip" to create Set NN.zip archives
+            copy_or_move: Only applies to folder export; "copy" or "move"
+
+        Returns:
+            Dictionary with export metadata
+        """
+        os.makedirs(output_dir, exist_ok=True)
+        total_items = sum(len(s) for s in sessions)
+        meta_groups: List[Dict[str, Any]] = []
+
+        for i, session in enumerate(sessions, start=1):
+            group_name = f"Set {i}"
+            if export_format == "zip":
+                zip_path = os.path.join(output_dir, f"{group_name}.zip")
+                with zipfile.ZipFile(zip_path, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+                    for media_path, wav_path in session:
+                        if os.path.exists(media_path):
+                            zf.write(media_path, arcname=os.path.basename(media_path))
+                        if wav_path and os.path.exists(wav_path):
+                            zf.write(wav_path, arcname=os.path.basename(wav_path))
+                meta_groups.append({"name": group_name, "path": zip_path, "count": len(session)})
+            else:
+                group_dir = os.path.join(output_dir, group_name)
+                os.makedirs(group_dir, exist_ok=True)
+                for media_path, wav_path in session:
+                    # Media file
+                    if os.path.exists(media_path):
+                        dest = os.path.join(group_dir, os.path.basename(media_path))
+                        if copy_or_move == "copy":
+                            shutil.copy2(media_path, dest)
+                        else:
+                            shutil.move(media_path, dest)
+                    # WAV
+                    if wav_path and os.path.exists(wav_path):
+                        dest_wav = os.path.join(group_dir, os.path.basename(wav_path))
+                        if copy_or_move == "copy":
+                            shutil.copy2(wav_path, dest_wav)
+                        else:
+                            shutil.move(wav_path, dest_wav)
+                meta_groups.append({"name": group_name, "path": group_dir, "count": len(session)})
+
+        return {
+            "format": export_format,
+            "totalGroups": len(sessions),
+            "totalItems": total_items,
+            "groups": meta_groups,
         }
     
     @staticmethod

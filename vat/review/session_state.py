@@ -41,6 +41,7 @@ class ReviewSessionState:
     sfxTone: str = "default"
     quickConfirmMode: bool = True
     groupedDefaultItemsPerFolder: int = 12
+    itemsPerSession: int = 12
     reviewThumbScale: float = 1.0
     
     # Transient state
@@ -85,6 +86,11 @@ class ReviewSessionState:
         
         self.quickConfirmMode = review_settings.get("quickConfirmMode", self.quickConfirmMode)
         self.reviewThumbScale = review_settings.get("reviewThumbScale", self.reviewThumbScale)
+        # Session grouping: prefer new key, fallback to legacy groupedDefaultItemsPerFolder
+        self.itemsPerSession = review_settings.get(
+            "itemsPerSession",
+            review_settings.get("groupedDefaultItemsPerFolder", self.itemsPerSession),
+        )
         
         grouped = review_settings.get("grouped", {})
         self.groupedDefaultItemsPerFolder = grouped.get("defaultItemsPerFolder", self.groupedDefaultItemsPerFolder)
@@ -109,6 +115,7 @@ class ReviewSessionState:
         settings["review"]["uiOverheadMs"] = self.uiOverheadMs
         settings["review"]["quickConfirmMode"] = self.quickConfirmMode
         settings["review"]["reviewThumbScale"] = float(self.reviewThumbScale)
+        settings["review"]["itemsPerSession"] = int(self.itemsPerSession)
         
         if "sfx" not in settings["review"]:
             settings["review"]["sfx"] = {}

@@ -90,6 +90,40 @@ class YAMLExporter:
             yaml.safe_dump(report, f, default_flow_style=False, allow_unicode=True, sort_keys=True)
         
         return filepath
+
+    @staticmethod
+    def export_sets(
+        sessions: List[List[Dict[str, Any]]],
+        state: ReviewSessionState,
+        output_dir: str,
+    ) -> str:
+        """Export virtual review sets (sessions) configuration to YAML.
+
+        Args:
+            sessions: List of sessions, each a list of item dicts with id, label, mediaPath, wavPath
+            state: Current review state (for settings like itemsPerSession)
+            output_dir: Directory to save the YAML file
+
+        Returns:
+            Path to the created YAML file
+        """
+        timestamp = datetime.now(timezone.utc)
+        report = {
+            "version": YAMLExporter.VERSION,
+            "settings": {
+                "scope": state.scope,
+                "itemsPerSession": state.itemsPerSession,
+                "playCountPerItem": state.playCountPerItem,
+            },
+            "sessions": sessions,
+        }
+
+        filename = f"review_sets_{timestamp.strftime('%Y%m%d_%H%M%S')}.yaml"
+        filepath = os.path.join(output_dir, filename)
+        os.makedirs(output_dir, exist_ok=True)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            yaml.safe_dump(report, f, default_flow_style=False, allow_unicode=True, sort_keys=True)
+        return filepath
     
     @staticmethod
     def _export_settings(state: ReviewSessionState) -> Dict[str, Any]:

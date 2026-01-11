@@ -14,12 +14,13 @@ import os
 import uuid
 import tempfile
 import numpy as np
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict, Any
 from pydub import AudioSegment
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QComboBox, QSpinBox, QDoubleSpinBox, QSlider, QCheckBox,
-    QProgressBar, QMessageBox, QFileDialog, QGroupBox, QRadioButton
+    QProgressBar, QMessageBox, QFileDialog, QGroupBox, QRadioButton,
+    QToolButton, QFrame, QStyle
 )
 from PySide6.QtCore import Qt, QTimer, Signal, QThread
 from PySide6.QtGui import QShortcut, QKeySequence
@@ -85,6 +86,7 @@ class ReviewTab(QWidget):
         
         # Header controls
         header = self._create_header_controls()
+        self._header_widget = header
         layout.addWidget(header)
         
         # Tip
@@ -113,125 +115,203 @@ class ReviewTab(QWidget):
         layout.addWidget(self.grid, 1)
     
     def _create_header_controls(self) -> QWidget:
-        """Create header controls."""
+        """Create header controls with a collapsible settings drawer."""
         header = QWidget()
         layout = QVBoxLayout(header)
         layout.setContentsMargins(0, 0, 0, 0)
-        
-        # Row 1: Scope, Play Count, Time Limit
+
+        # Top row: Minimal controls + settings toggle
+        top = QHBoxLayout()
+
+        # Skip Back first (before Start Review)
+        self.skip_back_btn = QToolButton()
+        try:
+            self.skip_back_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipBackward))
+        except Exception:
+            self.skip_back_btn.setText("⏮")
+        self.skip_back_btn.setToolTip("Previous set")
+        self.skip_back_btn.clicked.connect(lambda: self._on_skip_session(-1))
+        top.addWidget(self.skip_back_btn)
+
+        self.start_btn = QPushButton("Start Review")
+        self.start_btn.clicked.connect(self._on_start)
+        top.addWidget(self.start_btn)
+
+        self.pause_btn = QPushButton("Pause")
+        self.pause_btn.clicked.connect(self._on_pause_resume)
+        self.pause_btn.setEnabled(False)
+        top.addWidget(self.pause_btn)
+
+        self.replay_btn = QPushButton("Replay")
+        self.replay_btn.clicked.connect(self._on_replay_clicked)
+        self.replay_btn.setEnabled(False)
+        top.addWidget(self.replay_btn)
+
+        self.skip_forward_btn = QToolButton()
+        try:
+            self.skip_forward_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipForward))
+        except Exception:
+            self.skip_forward_btn.setText("⏭")
+        self.skip_forward_btn.setToolTip("Next set")
+        self.skip_forward_btn.clicked.connect(lambda: self._on_skip_session(+1))
+        top.addWidget(self.skip_forward_btn)
+
+        top.addStretch()
+
+        # Settings toggle button (gear)
+        self.settings_toggle_btn = QToolButton()
+        self.settings_toggle_btn.setToolTip("Show settings")
+        # Use a gear glyph instead of a desktop icon
+        self.settings_toggle_btn.setText("⚙")
+        self.settings_toggle_btn.setAutoRaise(True)
+        self.settings_toggle_btn.clicked.connect(self._toggle_settings_panel)
+        top.addWidget(self.settings_toggle_btn)
+
+        layout.addLayout(top)
+
+        # Settings content (will live inside an overlay)
+        self.settings_panel = QFrame()
+        self.settings_panel.setFrameShape(QFrame.StyledPanel)
+        settings_layout = QVBoxLayout(self.settings_panel)
+        settings_layout.setContentsMargins(8, 8, 8, 8)
+
+        # Row 1: Scope, Play Count, Time Limit, Limit Mode
         row1 = QHBoxLayout()
-        
+
         row1.addWidget(QLabel("Scope:"))
         self.scope_combo = QComboBox()
         self.scope_combo.addItems(["Images", "Videos", "Both"])
         self.scope_combo.setCurrentText("Both")
         row1.addWidget(self.scope_combo)
-        
+
         row1.addWidget(QLabel("Play Count:"))
         self.play_count_spin = QSpinBox()
         self.play_count_spin.setRange(1, 10)
         self.play_count_spin.setValue(1)
         row1.addWidget(self.play_count_spin)
-        
+
         row1.addWidget(QLabel("Time Limit (sec):"))
         self.time_limit_spin = QDoubleSpinBox()
         self.time_limit_spin.setRange(0, 60)
         self.time_limit_spin.setValue(0)
         self.time_limit_spin.setSpecialValueText("Off")
         row1.addWidget(self.time_limit_spin)
-        
+
         row1.addWidget(QLabel("Limit Mode:"))
         self.limit_mode_combo = QComboBox()
         self.limit_mode_combo.addItems(["Soft", "Hard"])
         row1.addWidget(self.limit_mode_combo)
-        
         row1.addStretch()
-        layout.addLayout(row1)
-        
+        settings_layout.addLayout(row1)
+
         # Row 2: SFX, Time Weighting, UI Overhead
         row2 = QHBoxLayout()
-        
+
         self.sfx_check = QCheckBox("Sound Effects")
         self.sfx_check.setChecked(True)
         row2.addWidget(self.sfx_check)
-        
+
         row2.addWidget(QLabel("SFX Vol:"))
         self.sfx_volume_slider = QSlider(Qt.Horizontal)
         self.sfx_volume_slider.setRange(0, 100)
         self.sfx_volume_slider.setValue(70)
         self.sfx_volume_slider.setMaximumWidth(100)
         row2.addWidget(self.sfx_volume_slider)
-        
+
         row2.addWidget(QLabel("SFX Tone:"))
         self.sfx_tone_combo = QComboBox()
         self.sfx_tone_combo.addItems(["Default", "Gentle"])
         row2.addWidget(self.sfx_tone_combo)
-        
+
         row2.addWidget(QLabel("Time Weight %:"))
         self.time_weight_spin = QSpinBox()
         self.time_weight_spin.setRange(0, 100)
         self.time_weight_spin.setValue(30)
         row2.addWidget(self.time_weight_spin)
-        
+
         row2.addWidget(QLabel("UI Overhead (ms):"))
         self.ui_overhead_spin = QSpinBox()
         self.ui_overhead_spin.setRange(0, 5000)
         self.ui_overhead_spin.setValue(2000)
         row2.addWidget(self.ui_overhead_spin)
 
-        # Thumbnail size slider
-        row2.addWidget(QLabel("Thumb Size:"))
+        row2.addStretch()
+        settings_layout.addLayout(row2)
+
+        # Row Thumb: Thumb Size (full width)
+        rowThumb = QHBoxLayout()
+        rowThumb.addWidget(QLabel("Thumb Size:"))
         self.thumb_size_slider = QSlider(Qt.Horizontal)
         self.thumb_size_slider.setRange(60, 180)  # percent
         self.thumb_size_slider.setValue(int(self.state.reviewThumbScale * 100))
-        self.thumb_size_slider.setMaximumWidth(120)
-        row2.addWidget(self.thumb_size_slider)
-        
-        row2.addStretch()
-        layout.addLayout(row2)
-        
-        # Row 3: Session controls
-        row3 = QHBoxLayout()
-        
-        self.start_btn = QPushButton("Start Review")
-        self.start_btn.clicked.connect(self._on_start)
-        row3.addWidget(self.start_btn)
-        
-        self.pause_btn = QPushButton("Pause")
-        self.pause_btn.clicked.connect(self._on_pause_resume)
-        self.pause_btn.setEnabled(False)
-        row3.addWidget(self.pause_btn)
-        
+        rowThumb.addWidget(self.thumb_size_slider, 1)
+        settings_layout.addLayout(rowThumb)
+
+        # Row Sessions: Items per Session + sessions selector + counts
+        rowSess = QHBoxLayout()
+        rowSess.addWidget(QLabel("Items per Session:"))
+        self.items_per_session_slider = QSlider(Qt.Horizontal)
+        self.items_per_session_slider.setMinimum(6)
+        self.items_per_session_slider.setMaximum(60)
+        self.items_per_session_slider.setSingleStep(1)
+        self.items_per_session_slider.setTickInterval(6)
+        self.items_per_session_slider.setTickPosition(QSlider.TicksBelow)
+        self.items_per_session_slider.setValue(self.state.itemsPerSession)
+        rowSess.addWidget(self.items_per_session_slider, 1)
+        self.sessions_label = QLabel("Sessions: --")
+        rowSess.addWidget(self.sessions_label)
+        self.session_select = QComboBox()
+        rowSess.addWidget(self.session_select)
+        settings_layout.addLayout(rowSess)
+
+        # Row Actions inside settings: Stop/Reset/Defaults/Export
+        rowActions = QHBoxLayout()
         self.stop_btn = QPushButton("Stop")
         self.stop_btn.clicked.connect(self._on_stop)
         self.stop_btn.setEnabled(False)
-        row3.addWidget(self.stop_btn)
-        
-        self.replay_btn = QPushButton("Replay Prompt")
-        self.replay_btn.clicked.connect(self._on_replay_clicked)
-        self.replay_btn.setEnabled(False)
-        row3.addWidget(self.replay_btn)
+        rowActions.addWidget(self.stop_btn)
 
         self.reset_btn = QPushButton("Reset")
         self.reset_btn.clicked.connect(self._on_reset)
-        row3.addWidget(self.reset_btn)
-        
+        rowActions.addWidget(self.reset_btn)
+
         self.reset_defaults_btn = QPushButton("Reset to Defaults")
         self.reset_defaults_btn.clicked.connect(self._on_reset_defaults)
-        row3.addWidget(self.reset_defaults_btn)
-        
-        row3.addStretch()
-        
+        rowActions.addWidget(self.reset_defaults_btn)
+
+        rowActions.addStretch()
+
         self.export_yaml_btn = QPushButton("Export Results")
         self.export_yaml_btn.clicked.connect(self._on_export_yaml)
-        row3.addWidget(self.export_yaml_btn)
-        
-        self.grouped_export_btn = QPushButton("Grouped Export")
-        self.grouped_export_btn.clicked.connect(self._on_grouped_export)
-        row3.addWidget(self.grouped_export_btn)
-        
-        layout.addLayout(row3)
-        
+        rowActions.addWidget(self.export_yaml_btn)
+
+        self.export_sets_btn = QPushButton("Export Sets")
+        self.export_sets_btn.setToolTip("Save the current virtual session grouping")
+        self.export_sets_btn.clicked.connect(self._on_export_sets)
+        rowActions.addWidget(self.export_sets_btn)
+        rowActions.addWidget(QLabel("Format:"))
+        self.export_format_combo = QComboBox()
+        self.export_format_combo.addItems(["Folders", "Zip files"]) 
+        rowActions.addWidget(self.export_format_combo)
+
+        settings_layout.addLayout(rowActions)
+
+        # Overlay container and scrim for the settings panel
+        self.settings_layer = QWidget(self)
+        self.settings_layer.setVisible(False)
+        self.settings_layer.setAttribute(Qt.WA_StyledBackground, True)
+        self.settings_layer.setObjectName("review_settings_layer")
+        self.settings_layer.setStyleSheet("#review_settings_layer { background-color: rgba(248,248,248,0.95); border-left: 1px solid #ccc; }")
+        sl = QVBoxLayout(self.settings_layer)
+        sl.setContentsMargins(8, 8, 8, 8)
+        sl.addWidget(self.settings_panel)
+
+        self.settings_scrim = QWidget(self)
+        self.settings_scrim.setVisible(False)
+        self.settings_scrim.setAttribute(Qt.WA_StyledBackground, True)
+        self.settings_scrim.setStyleSheet("background-color: rgba(0,0,0,0.15);")
+        self.settings_scrim.installEventFilter(self)
+
         return header
     
     def _connect_signals(self) -> None:
@@ -242,7 +322,7 @@ class ReviewTab(QWidget):
         self.queue.queueFinished.connect(self._on_queue_finished)
         # Auto-refresh the grid when scope changes or folder contents update
         try:
-            self.scope_combo.currentTextChanged.connect(lambda _t: self._refresh_grid())
+            self.scope_combo.currentTextChanged.connect(lambda _t: (self._refresh_grid(), self._update_sessions_ui()))
         except Exception:
             pass
         try:
@@ -255,6 +335,18 @@ class ReviewTab(QWidget):
             pass
         try:
             self.fs.videosUpdated.connect(lambda *_args: self._refresh_grid())
+        except Exception:
+            pass
+
+        # Items per session slider → update grouping
+        try:
+            self.items_per_session_slider.valueChanged.connect(lambda v: self._on_items_per_session_changed(v))
+        except Exception:
+            pass
+
+        # Change set → refresh grid slice
+        try:
+            self.session_select.currentIndexChanged.connect(lambda _i: self._refresh_grid())
         except Exception:
             pass
 
@@ -279,6 +371,8 @@ class ReviewTab(QWidget):
 
         # Initial population
         self._refresh_grid()
+        # Initialize sessions UI after population
+        self._update_sessions_ui()
 
         # Ensure the tab can receive key events for shortcuts
         try:
@@ -304,10 +398,19 @@ class ReviewTab(QWidget):
         except Exception:
             pass
 
+        # Initial grouping UI population
+        self._update_sessions_ui()
+
     def _refresh_grid(self) -> None:
         """Populate the thumbnail grid with recorded items for current scope."""
         try:
-            items = self._get_recorded_items()
+            all_items = self._get_recorded_items()
+            # Slice to current session for display
+            per = max(1, self.state.itemsPerSession)
+            idx = max(0, self.session_select.currentIndex()) if hasattr(self, 'session_select') else 0
+            start = idx * per
+            end = start + per
+            items = all_items[start:end]
             self.grid.populate(items)
             self.grid.clear_feedback()
             try:
@@ -325,7 +428,13 @@ class ReviewTab(QWidget):
     def _on_start(self) -> None:
         """Start a review session."""
         # Build item list based on scope
-        items = self._get_recorded_items()
+        all_items = self._get_recorded_items()
+        # Slice to selected session
+        per = max(1, self.state.itemsPerSession)
+        idx = max(0, self.session_select.currentIndex())
+        start = idx * per
+        end = start + per
+        items = all_items[start:end]
         if not items:
             QMessageBox.information(self, "No Items", "No recorded items found for the selected scope.")
             return
@@ -354,6 +463,76 @@ class ReviewTab(QWidget):
         
         # Start first prompt
         self.queue.emit_next_prompt()
+
+    def _on_items_per_session_changed(self, value: int) -> None:
+        try:
+            self.state.itemsPerSession = max(1, int(value))
+        except Exception:
+            pass
+        self._update_sessions_ui()
+        self._refresh_grid()
+
+    def _update_sessions_ui(self) -> None:
+        """Update sessions count and selection based on items and slider value."""
+        items = self._get_recorded_items()
+        count = len(items)
+        per = max(1, self.state.itemsPerSession)
+        sessions = max(1, (count + per - 1) // per)
+        remainder = count % per
+        last_items = remainder if remainder != 0 else (per if count > 0 else 0)
+        self.sessions_label.setText(
+            f"Sessions: {sessions}  |  Items/session: {per}  |  Last: {last_items}"
+        )
+        # Populate selector
+        self.session_select.blockSignals(True)
+        self.session_select.clear()
+        for i in range(1, sessions + 1):
+            self.session_select.addItem(f"Set {i}", i - 1)
+        self.session_select.blockSignals(False)
+        # Ensure valid selection
+        try:
+            if self.session_select.count() > 0 and self.session_select.currentIndex() < 0:
+                self.session_select.setCurrentIndex(0)
+        except Exception:
+            pass
+        # Refresh grid slice to reflect new grouping
+        self._refresh_grid()
+
+    def _on_export_sets(self) -> None:
+        """Export current virtual session grouping to folders or zip files."""
+        items = self._get_recorded_items()
+        if not items:
+            QMessageBox.information(self, "No Items", "No recorded items to group.")
+            return
+        per = max(1, self.state.itemsPerSession)
+        sessions: List[List[Dict[str, Any]]] = []
+        for i in range(0, len(items), per):
+            chunk = items[i:i+per]
+            sessions.append([
+                {
+                    "id": item_id,
+                    "label": os.path.basename(media_path),
+                    "mediaPath": media_path,
+                    "wavPath": wav_path,
+                }
+                for (item_id, media_path, wav_path) in chunk
+            ])
+        output_dir = QFileDialog.getExistingDirectory(self, "Choose Where to Save the Sets")
+        if not output_dir:
+            return
+        try:
+            export_format = self.export_format_combo.currentText().lower()
+            from vat.review.grouped_exporter import GroupedExporter
+            # Transform sessions to list of (media_path, wav_path) pairs
+            session_pairs = [[(item["mediaPath"], item["wavPath"]) for item in chunk] for chunk in sessions]
+            meta = GroupedExporter.export_sessions(
+                sessions=session_pairs,
+                output_dir=output_dir,
+                export_format="zip" if "zip" in export_format else "folders",
+            )
+            QMessageBox.information(self, "Export Complete", f"Exported {meta['totalGroups']} sets to:\n{output_dir}")
+        except Exception as e:
+            QMessageBox.critical(self, "Export Failed", f"Failed to export sets: {e}")
     
     def _on_pause_resume(self) -> None:
         """Pause or resume the session."""
@@ -819,6 +998,12 @@ class ReviewTab(QWidget):
         self.pause_btn.setEnabled(in_session)
         self.stop_btn.setEnabled(in_session)
         self.replay_btn.setEnabled(in_session)
+        # Disable skipping between sets during an active session
+        try:
+            self.skip_back_btn.setEnabled(not in_session)
+            self.skip_forward_btn.setEnabled(not in_session)
+        except Exception:
+            pass
         
         # Disable settings during session
         self.scope_combo.setEnabled(not in_session)
@@ -845,6 +1030,19 @@ class ReviewTab(QWidget):
         self._stop_audio()
         self._play_audio(self.current_wav_path, kind='prompt_replay')
 
+    def _on_skip_session(self, delta: int) -> None:
+        """Skip to previous/next virtual session and refresh the grid."""
+        if not hasattr(self, 'session_select'):
+            return
+        try:
+            idx = self.session_select.currentIndex()
+            new_idx = max(0, min(self.session_select.count() - 1, idx + delta))
+            if new_idx != idx:
+                self.session_select.setCurrentIndex(new_idx)
+                self._refresh_grid()
+        except Exception:
+            pass
+
     def _on_thumb_scale_changed(self, value: int) -> None:
         try:
             scale = max(0.5, min(1.8, value / 100.0))
@@ -865,6 +1063,75 @@ class ReviewTab(QWidget):
         except Exception:
             pass
         super().keyPressEvent(event)
+
+    def _toggle_settings_panel(self) -> None:
+        """Show or hide the settings overlay panel."""
+        try:
+            vis = self.settings_layer.isVisible() if hasattr(self, 'settings_layer') else False
+            if vis:
+                self.settings_layer.hide()
+                if hasattr(self, 'settings_scrim'):
+                    self.settings_scrim.hide()
+                self.settings_toggle_btn.setToolTip("Show settings")
+            else:
+                self._position_settings_panel()
+                if hasattr(self, 'settings_scrim'):
+                    # Scrim covers below header area to allow header to remain clickable
+                    header_h = getattr(self, '_header_widget', None).height() if hasattr(self, '_header_widget') else 48
+                    self.settings_scrim.setGeometry(0, header_h, self.width(), self.height() - header_h)
+                    self.settings_scrim.show()
+                    self.settings_scrim.raise_()
+                self.settings_layer.show()
+                self.settings_layer.raise_()
+                self.settings_toggle_btn.setToolTip("Hide settings")
+        except Exception:
+            pass
+
+    def _position_settings_panel(self) -> None:
+        """Position the settings overlay anchored to the right side."""
+        try:
+            if not hasattr(self, 'settings_layer'):
+                return
+            cw = self
+            # Width proportional to parent with bounds
+            dw = int(max(320, min(520, cw.width() * 0.42)))
+            # Place below header controls
+            top_margin = getattr(self, '_header_widget', None).height() + 8 if hasattr(self, '_header_widget') else 56
+            h = cw.height() - top_margin - 8
+            x = cw.width() - dw - 8
+            self.settings_layer.setGeometry(x, top_margin, dw, h)
+        except Exception:
+            pass
+
+    def resizeEvent(self, event) -> None:
+        try:
+            super().resizeEvent(event)
+        except Exception:
+            pass
+        try:
+            if hasattr(self, 'settings_layer') and self.settings_layer.isVisible():
+                self._position_settings_panel()
+                # Keep scrim sized correctly
+                header_h = getattr(self, '_header_widget', None).height() if hasattr(self, '_header_widget') else 48
+                if hasattr(self, 'settings_scrim') and self.settings_scrim.isVisible():
+                    self.settings_scrim.setGeometry(0, header_h, self.width(), self.height() - header_h)
+        except Exception:
+            pass
+
+    def eventFilter(self, watched, event):
+        # Collapse settings overlay when clicking outside the panel
+        try:
+            from PySide6.QtCore import QEvent
+            if watched is getattr(self, 'settings_scrim', None) and event.type() == QEvent.MouseButtonPress:
+                dl = getattr(self, 'settings_layer', None)
+                if dl is not None and dl.isVisible():
+                    self.settings_layer.hide()
+                    self.settings_scrim.hide()
+                    self.settings_toggle_btn.setToolTip("Show settings")
+                return True
+        except Exception:
+            pass
+        return super().eventFilter(watched, event)
 
     def cleanup(self) -> None:
         """Cleanly stop audio worker and thread to avoid QThread warnings."""
