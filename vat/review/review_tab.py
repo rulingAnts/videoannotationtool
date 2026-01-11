@@ -310,7 +310,7 @@ class ReviewTab(QWidget):
 
         rowActions.addStretch()
 
-        # Export buttons in overlay (disabled until session finished)
+        # Export buttons in overlay
         self.export_yaml_btn = QPushButton("Export Results")
         self.export_yaml_btn.setEnabled(False)
         self.export_yaml_btn.clicked.connect(self._on_export_yaml)
@@ -318,7 +318,7 @@ class ReviewTab(QWidget):
 
         self.export_sets_btn = QPushButton("Export Sets")
         self.export_sets_btn.setToolTip("Save the current virtual session grouping")
-        self.export_sets_btn.setEnabled(False)
+        self.export_sets_btn.setEnabled(True)
         self.export_sets_btn.clicked.connect(self._on_export_sets)
         rowActions.addWidget(self.export_sets_btn)
 
@@ -1229,11 +1229,11 @@ class ReviewTab(QWidget):
         self.play_count_spin.setEnabled(not in_session)
         self.time_limit_spin.setEnabled(not in_session)
         self.limit_mode_combo.setEnabled(not in_session)
-        # Export buttons (in overlay) enabled only when a session has completed
+        # Export results only when a session has completed; Export Sets is always enabled
         try:
-            enable_exports = bool(getattr(self, 'session_completed', False))
-            self.export_yaml_btn.setEnabled(enable_exports)
-            self.export_sets_btn.setEnabled(enable_exports)
+            enable_results = bool(getattr(self, 'session_completed', False))
+            self.export_yaml_btn.setEnabled(enable_results)
+            # Leave export_sets_btn enabled regardless of session state
         except Exception:
             pass
     
