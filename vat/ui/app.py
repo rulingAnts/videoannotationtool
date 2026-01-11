@@ -2285,6 +2285,13 @@ class VideoAnnotationApp(QMainWindow):
             pass
     def closeEvent(self, event):
         try:
+            # Ensure Review tab threads stop before main window closes
+            try:
+                review_tab = getattr(self, 'review_tab', None)
+                if review_tab and hasattr(review_tab, 'cleanup'):
+                    review_tab.cleanup()
+            except Exception:
+                pass
             try:
                 self.stop_audio()
             except Exception:

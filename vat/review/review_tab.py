@@ -222,7 +222,7 @@ class ReviewTab(QWidget):
         
         row3.addStretch()
         
-        self.export_yaml_btn = QPushButton("Export YAML Report")
+        self.export_yaml_btn = QPushButton("Export Results")
         self.export_yaml_btn.clicked.connect(self._on_export_yaml)
         row3.addWidget(self.export_yaml_btn)
         
@@ -551,12 +551,12 @@ class ReviewTab(QWidget):
         self.queue.emit_next_prompt()
     
     def _on_export_yaml(self) -> None:
-        """Export YAML report."""
+        """Export review results to a report file."""
         if not self.session_id:
             QMessageBox.warning(self, "No Session", "No session data to export.")
             return
         
-        output_dir = QFileDialog.getExistingDirectory(self, "Select Export Directory")
+        output_dir = QFileDialog.getExistingDirectory(self, "Choose Where to Save the Report")
         if not output_dir:
             return
         
@@ -570,9 +570,9 @@ class ReviewTab(QWidget):
                 self.app_version,
                 output_dir,
             )
-            QMessageBox.information(self, "Export Complete", f"YAML report saved to:\n{filepath}")
+            QMessageBox.information(self, "Export Complete", f"Report saved to:\n{filepath}")
         except Exception as e:
-            QMessageBox.critical(self, "Export Failed", f"Failed to export YAML: {e}")
+            QMessageBox.critical(self, "Export Failed", f"Failed to export report: {e}")
     
     def _on_grouped_export(self) -> None:
         """Open grouped export dialog."""
@@ -865,3 +865,36 @@ class ReviewTab(QWidget):
         except Exception:
             pass
         super().keyPressEvent(event)
+
+    def cleanup(self) -> None:
+        """Cleanly stop audio worker and thread to avoid QThread warnings."""
+        try:
+            # Stop any ongoing playback
+            self._stop_audio()
+        except Exception:
+            pass
+        try:
+            # Ensure persistent audio thread is quit and waited
+            if self.audio_thread and self.audio_thread.isRunning():
+                self.audio_thread.quit()
+                self.audio_thread.wait()
+                logging.info("Review.audio: persistent audio thread stopped on cleanup")
+        except Exception:
+            pass
+        # Clear references
+        try:
+            self.audio_worker = None
+        except Exception:
+            pass
+        try:
+            self.audio_kind = None
+        except Exception:
+            pass
+
+    def closeEvent(self, event) -> None:
+        """Ensure threads are stopped when the tab is closed/destroyed."""
+        try:
+            self.cleanup()
+        except Exception:
+            pass
+        super().closeEvent(event)

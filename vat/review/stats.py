@@ -171,8 +171,9 @@ class ReviewStats:
         median_time = sorted(times)[len(times) // 2] if times else 0.0
         
         # Time efficiency score: Ts = clamp((Tmax - avg_time) / (Tmax - Topt), 0, 1)
+        # Compute if we have any correct prompt times, even if avg_time==0 after overhead subtraction.
         time_efficiency = 0.0
-        if avg_time > 0:
+        if times:
             time_efficiency = (self.TMAX - avg_time) / (self.TMAX - self.TOPT)
             time_efficiency = max(0.0, min(1.0, time_efficiency))
         
