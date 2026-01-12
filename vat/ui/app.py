@@ -2950,7 +2950,7 @@ class VideoAnnotationApp(QMainWindow):
             import subprocess, sys
             from vat.utils.resources import resource_path
             # Resolve bundled docs path (PyInstaller-aware)
-            index_path = resource_path(os.path.join("docs", "index.html"), check_system=False)
+            index_path = resource_path(os.path.join("docs", "gpa", "index.html"), check_system=False)
             # Support internal anchors like internal:docs#section
             frag = None
             try:
@@ -2959,8 +2959,8 @@ class VideoAnnotationApp(QMainWindow):
             except Exception:
                 frag = None
             if not os.path.exists(index_path):
-                # Fallback: project docs site
-                index_path = "https://rulingants.github.io/videoannotationtool/"
+                # Fallback: bundled full docs
+                index_path = resource_path(os.path.join("docs", "index.html"), check_system=False)
             # Launch a separate process to avoid interfering with the Qt event loop
             if frag:
                 cmd = [sys.executable, "-m", "vat.ui.docs_webview", index_path, frag]

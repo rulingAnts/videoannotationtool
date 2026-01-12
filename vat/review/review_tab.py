@@ -374,7 +374,7 @@ class ReviewTab(QWidget):
         """Open the bundled documentation (GPA guide) in a pywebview window."""
         try:
             import subprocess, sys, os
-            index_path = resource_path(os.path.join("docs", "index.html"), check_system=False)
+            index_path = resource_path(os.path.join("docs", "gpa", "index.html"), check_system=False)
             frag = None
             try:
                 if isinstance(_link, str) and "#" in _link:
@@ -382,7 +382,8 @@ class ReviewTab(QWidget):
             except Exception:
                 frag = None
             if not os.path.exists(index_path):
-                index_path = "https://rulingants.github.io/videoannotationtool/"
+                # Fallback to bundled full docs rather than online
+                index_path = resource_path(os.path.join("docs", "index.html"), check_system=False)
             if frag:
                 cmd = [sys.executable, "-m", "vat.ui.docs_webview", index_path, frag]
             else:
@@ -680,8 +681,21 @@ class ReviewTab(QWidget):
         try:
             path = self._sets_yaml_path()
             if not path or not os.path.exists(path):
-                # Clear names when switching to a folder without YAML
+                # No YAML: reset to defaults and recompute sessions/groups
                 self.set_names = {}
+                try:
+                    # Reset items-per-session to default
+                    default_state = ReviewSessionState()
+                    self.state.itemsPerSession = default_state.itemsPerSession
+                    # Reflect in UI slider
+                    self.items_per_session_slider.blockSignals(True)
+                    self.items_per_session_slider.setValue(self.state.itemsPerSession)
+                    self.items_per_session_slider.blockSignals(False)
+                except Exception:
+                    pass
+                # Recompute sessions UI and refresh grid to avoid stale/empty sets
+                self._update_sessions_ui()
+                self._refresh_grid()
                 return
             with open(path, 'r') as f:
                 data = yaml.safe_load(f) or {}
@@ -704,6 +718,15 @@ class ReviewTab(QWidget):
                         continue
                     normalized[idx] = str(v)
                 self.set_names = normalized
+            # Ensure set names align with computed sessions (no empty trailing groups)
+            try:
+                items = self._get_recorded_items()
+                per = max(1, self.state.itemsPerSession)
+                sessions = max(1, (len(items) + per - 1) // per)
+                # Prune any excess names beyond sessions count
+                self.set_names = {k: v for k, v in self.set_names.items() if 0 <= k < sessions}
+            except Exception:
+                pass
             # Update selector and labels to reflect loaded data
             self._update_sessions_ui()
         except Exception:
