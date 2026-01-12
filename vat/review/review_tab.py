@@ -199,7 +199,7 @@ class ReviewTab(QWidget):
         except Exception:
             pass
         try:
-            self.help_link = QLabel("<a href=\"internal:docs#guide-gpa-dirty-dozen\">GPA Review Guide</a>")
+            self.help_link = QLabel("<a href=\"internal:docs#default\">GPA Review Guide</a>")
             self.help_link.setTextFormat(Qt.RichText)
             self.help_link.setOpenExternalLinks(False)
             self.help_link.setStyleSheet("QLabel { color: palette(link); } QLabel:hover { text-decoration: underline; }")
@@ -370,7 +370,7 @@ class ReviewTab(QWidget):
 
         return header
 
-    def _open_docs_site(self, _link: str = "internal:docs#guide-gpa-dirty-dozen") -> None:
+    def _open_docs_site(self, _link: str = "internal:docs#default") -> None:
         """Open the bundled documentation (GPA guide) in a pywebview window."""
         try:
             import subprocess, sys, os

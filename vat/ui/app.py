@@ -14,11 +14,12 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QListWidget, QListWidgetItem, QLabel, QTextEdit, QMessageBox,
     QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle, QSizePolicy,
-    QListView, QStyledItemDelegate, QApplication, QCheckBox, QGraphicsDropShadowEffect
+    QListView, QStyledItemDelegate, QApplication, QCheckBox, QGraphicsDropShadowEffect,
+    QMenu
 )
 from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize, QRect, QPoint, QLocale, QMetaObject
 import time
-from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence, QImageReader, QPen, QColor
+from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence, QImageReader, QPen, QColor, QGuiApplication, QAction, QCursor
 
 from vat.audio import PYAUDIO_AVAILABLE
 from vat.audio.playback import AudioPlaybackWorker
@@ -53,6 +54,10 @@ LABELS_ALL = {
         "stop_audio": "Stop Audio",
         "record_audio": "Record Audio",
         "stop_recording": "Stop Recording",
+        "add_existing_audio": "Add existing audio...",
+        "import_select_file_dialog": "Select Audio File",
+        "copy_image": "Copy Image",
+        "copied_image": "Image copied to clipboard",
         "edit_metadata": "Edit Metadata",
         "save_metadata": "Save",
         "audio_label_prefix": "Audio: ",
@@ -1286,6 +1291,11 @@ class VideoAnnotationApp(QMainWindow):
         self.record_button.clicked.connect(self.toggle_recording)
         self.record_button.setEnabled(False)
         audio_controls_layout.addWidget(self.record_button)
+        # Add existing audio import (to the right of Record)
+        self.add_audio_button = QPushButton(self.LABELS.get("add_existing_audio", "Add existing audio..."))
+        self.add_audio_button.clicked.connect(self._handle_add_existing_audio_video)
+        self.add_audio_button.setEnabled(False)
+        audio_controls_layout.addWidget(self.add_audio_button)
         self.recording_status_label = QLabel("")
         self.recording_status_label.setStyleSheet("color: red; font-weight: bold;")
         audio_controls_layout.addWidget(self.recording_status_label)
@@ -1347,6 +1357,11 @@ class VideoAnnotationApp(QMainWindow):
         self.record_image_button.clicked.connect(self._handle_record_image)
         self.record_image_button.setEnabled(False)
         controls_row.addWidget(self.record_image_button)
+        # Add existing audio import (to the right of Record)
+        self.add_image_audio_button = QPushButton(self.LABELS.get("add_existing_audio", "Add existing audio..."))
+        self.add_image_audio_button.clicked.connect(self._handle_add_existing_audio_image)
+        self.add_image_audio_button.setEnabled(False)
+        controls_row.addWidget(self.add_image_audio_button)
         self.stop_image_record_button = QPushButton(self.LABELS.get("stop_recording", "Stop Recording"))
         self.stop_image_record_button.clicked.connect(self._handle_stop_image_record)
         self.stop_image_record_button.setEnabled(False)
@@ -1400,6 +1415,14 @@ class VideoAnnotationApp(QMainWindow):
             self.images_list.setSelectionMode(QListWidget.SingleSelection)
             self.images_list.setSelectionBehavior(QListWidget.SelectItems)
             logging.info("UI.init_ui: images_list ready (IconMode)")
+        except Exception:
+            pass
+        # Context menu and Ctrl+C to copy image to clipboard
+        try:
+            self.images_list.setContextMenuPolicy(Qt.CustomContextMenu)
+            self.images_list.customContextMenuRequested.connect(self._on_images_context_menu)
+            self.copy_image_shortcut = QShortcut(QKeySequence.Copy, self.images_list)
+            self.copy_image_shortcut.activated.connect(self._copy_current_image_to_clipboard)
         except Exception:
             pass
         # Install custom delegate to draw green border and check overlay for recorded images
@@ -2042,6 +2065,9 @@ class VideoAnnotationApp(QMainWindow):
             self.record_button.setEnabled(True)
             self.record_button.setText(self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
             self.update_recording_indicator()
+            # Enable import button when a video is selected and not recording
+            if getattr(self, 'add_audio_button', None):
+                self.add_audio_button.setEnabled(not self.is_recording)
             wav_path = self.fs.wav_path_for(self.current_video)
             if os.path.exists(wav_path):
                 # Disable Play while audio is actively playing
@@ -2064,6 +2090,8 @@ class VideoAnnotationApp(QMainWindow):
             self.stop_audio_button.setEnabled(False)
             self.record_button.setEnabled(False)
             self.record_button.setText(self.LABELS["record_audio"])
+            if getattr(self, 'add_audio_button', None):
+                self.add_audio_button.setEnabled(False)
             self.update_recording_indicator()
             self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
             if getattr(self, 'badge_label', None):
@@ -2264,6 +2292,154 @@ class VideoAnnotationApp(QMainWindow):
     def _handle_stop_image_audio(self):
         try:
             return self.stop_image_audio()
+        except Exception:
+            pass
+    def _on_images_context_menu(self, pos: QPoint):
+        try:
+            # Select the item under the cursor if present
+            item = self.images_list.itemAt(pos)
+            if item is not None:
+                self.images_list.setCurrentItem(item)
+            menu = QMenu(self)
+            copy_act = QAction(self.LABELS.get("copy_image", "Copy Image"), self)
+            copy_act.triggered.connect(self._copy_current_image_to_clipboard)
+            menu.addAction(copy_act)
+            try:
+                global_pos = self.images_list.mapToGlobal(pos)
+            except Exception:
+                global_pos = None
+            if global_pos:
+                menu.exec(global_pos)
+            else:
+                menu.exec(QCursor.pos())
+        except Exception:
+            pass
+    def _copy_current_image_to_clipboard(self):
+        try:
+            sel = self.images_list.currentItem()
+            if sel is None:
+                return
+            path = None
+            try:
+                path = sel.data(Qt.UserRole)
+            except Exception:
+                path = None
+            if not path:
+                name = sel.text()
+                path = os.path.join(self.fs.current_folder or "", name)
+            if not path or not os.path.exists(path):
+                return
+            reader = QImageReader(path)
+            img = reader.read()
+            if img.isNull():
+                # Fallback: try via QPixmap
+                try:
+                    pix = QPixmap(path)
+                    if not pix.isNull():
+                        QGuiApplication.clipboard().setPixmap(pix)
+                        return
+                except Exception:
+                    pass
+                return
+            QGuiApplication.clipboard().setImage(img)
+            try:
+                self.statusBar().showMessage(self.LABELS.get("copied_image", "Image copied to clipboard"), 2000)
+            except Exception:
+                pass
+        except Exception:
+            pass
+    def _handle_add_existing_audio_video(self):
+        """Import an existing audio file for the currently selected video and convert to 16-bit WAV."""
+        try:
+            if not self.current_video or not self.fs.current_folder:
+                return
+            target_wav = self.fs.wav_path_for(self.current_video)
+            if os.path.exists(target_wav):
+                reply = QMessageBox.question(
+                    self,
+                    self.LABELS.get("overwrite", "Overwrite?"),
+                    self.LABELS.get("overwrite_audio", "Audio file already exists. Overwrite?"),
+                    QMessageBox.Yes | QMessageBox.No,
+                )
+                if reply == QMessageBox.No:
+                    return
+            # Choose source audio file
+            src_path, _ = QFileDialog.getOpenFileName(
+                self,
+                self.LABELS.get("import_select_file_dialog", "Select Audio File"),
+                self.fs.current_folder or "",
+                "Audio files (*.wav *.mp3 *.ogg *.m4a *.aac *.flac *.opus *.aif *.aiff);;All files (*)",
+            )
+            if not src_path:
+                return
+            try:
+                seg = AudioSegment.from_file(src_path)
+                seg = seg.set_channels(1).set_frame_rate(44100).set_sample_width(2)
+                seg.export(target_wav, format="wav")
+            except Exception as e:
+                QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"Failed to import audio: {e}")
+                return
+            try:
+                self.statusBar().showMessage(self.LABELS.get("metadata_saved", "Metadata saved!"))
+            except Exception:
+                pass
+            # Refresh controls and badges
+            self.update_media_controls()
+        except Exception:
+            pass
+    def _handle_add_existing_audio_image(self):
+        """Import an existing audio file for the selected image and convert to 16-bit WAV."""
+        try:
+            sel = self.images_list.currentItem()
+            if sel is None:
+                return
+            path = None
+            try:
+                path = sel.data(Qt.UserRole)
+            except Exception:
+                path = None
+            if not path:
+                name = sel.text()
+                path = os.path.join(self.fs.current_folder or "", name)
+            if not path:
+                return
+            existing = self.fs.find_existing_image_audio(path)
+            target_wav = self.fs.wav_path_for_image(path)
+            if existing and os.path.exists(existing):
+                reply = QMessageBox.question(
+                    self,
+                    self.LABELS.get("overwrite", "Overwrite?"),
+                    self.LABELS.get("overwrite_audio", "Audio file already exists. Overwrite?"),
+                    QMessageBox.Yes | QMessageBox.No,
+                )
+                if reply == QMessageBox.No:
+                    return
+            # Choose source audio file
+            src_path, _ = QFileDialog.getOpenFileName(
+                self,
+                self.LABELS.get("import_select_file_dialog", "Select Audio File"),
+                os.path.dirname(path) or (self.fs.current_folder or ""),
+                "Audio files (*.wav *.mp3 *.ogg *.m4a *.aac *.flac *.opus *.aif *.aiff);;All files (*)",
+            )
+            if not src_path:
+                return
+            try:
+                seg = AudioSegment.from_file(src_path)
+                seg = seg.set_channels(1).set_frame_rate(44100).set_sample_width(2)
+                seg.export(target_wav, format="wav")
+            except Exception as e:
+                QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"Failed to import audio: {e}")
+                return
+            try:
+                self.statusBar().showMessage(self.LABELS.get("metadata_saved", "Metadata saved!"))
+            except Exception:
+                pass
+            # Refresh controls and visuals
+            try:
+                self._update_image_record_controls(path)
+            except Exception:
+                pass
+            self.update_video_file_checks()
         except Exception:
             pass
     def _handle_record_image(self):
@@ -2944,7 +3120,7 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             pass
 
-    def _open_docs_site(self, _link: str = "internal:docs"):
+    def _open_docs_site(self, _link: str = "internal:docs#default"):
         """Open the bundled documentation site in a pywebview window."""
         try:
             import subprocess, sys
@@ -3324,9 +3500,14 @@ class VideoAnnotationApp(QMainWindow):
             if self.is_recording:
                 self.record_image_button.setEnabled(False)
                 self.stop_image_record_button.setEnabled(True)
+                if getattr(self, 'add_image_audio_button', None):
+                    self.add_image_audio_button.setEnabled(False)
             else:
                 self.record_image_button.setEnabled(True)
                 self.stop_image_record_button.setEnabled(False)
+                if getattr(self, 'add_image_audio_button', None):
+                    # Enable import when an image is selected
+                    self.add_image_audio_button.setEnabled(bool(path))
             try:
                 logging.debug(f"UI._update_image_record_controls: wav_path={wav_path}, exists={exists}, is_recording={self.is_recording}")
             except Exception:
@@ -3375,18 +3556,23 @@ class VideoAnnotationApp(QMainWindow):
                     self.play_audio_button.setEnabled(False)
             except Exception:
                 pass
-            self.audio_thread = QThread()
+            # Use persistent audio thread (created in __init__) for playback
             self.audio_worker = AudioPlaybackWorker(wav_path)
             self.audio_worker.moveToThread(self.audio_thread)
-            self.audio_thread.started.connect(self.audio_worker.run)
-            self.audio_worker.finished.connect(self.audio_thread.quit)
-            self.audio_worker.finished.connect(self.audio_worker.deleteLater)
-            self.audio_thread.finished.connect(self.audio_thread.deleteLater)
-            self.audio_thread.finished.connect(self._on_audio_thread_finished)
+            try:
+                from PySide6.QtCore import QMetaObject
+                QMetaObject.invokeMethod(self.audio_worker, "run", Qt.QueuedConnection)
+            except Exception:
+                # Fallback: start thread if not already running and connect
+                try:
+                    if self.audio_thread and not self.audio_thread.isRunning():
+                        self.audio_thread.start()
+                    self.audio_thread.started.connect(self.audio_worker.run)
+                except Exception:
+                    pass
             # Re-enable controls when playback finishes
             self.audio_worker.finished.connect(self._on_any_audio_finished)
             self.audio_worker.error.connect(self._show_worker_error)
-            self.audio_thread.start()
         except Exception:
             pass
 
