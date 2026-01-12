@@ -39,10 +39,12 @@ class ReviewTab(QWidget):
     - YAML export and grouped export
     """
     
-    def __init__(self, fs_manager: FolderAccessManager, app_version: str, parent=None):
+    def __init__(self, fs_manager: FolderAccessManager, app_version: str, parent=None, labels: Optional[Dict[str, str]] = None):
         super().__init__(parent)
         self.fs = fs_manager
         self.app_version = app_version
+        # Localization labels (optional)
+        self.LABELS = labels or {}
         
         # State and logic components
         self.state = ReviewSessionState()
@@ -88,10 +90,11 @@ class ReviewTab(QWidget):
         layout.addWidget(header)
         
         # Tip
-        tip = QLabel(
+        tip = QLabel(self.LABELS.get(
+            "review_tip_html",
             "<b>Tip:</b> Single-click selects. Right-click, Ctrl/Cmd+Click, or Enter confirms. "
             "Double-click opens preview/fullscreen. Press Space to replay prompt."
-        )
+        ))
         tip.setWordWrap(True)
         tip.setStyleSheet("color: #555; font-size: 12px; padding: 4px;")
         layout.addWidget(tip)
@@ -102,7 +105,7 @@ class ReviewTab(QWidget):
         self.progress_bar.setTextVisible(True)
         progress_layout.addWidget(self.progress_bar, 1)
         
-        self.timer_label = QLabel("Time: --")
+        self.timer_label = QLabel(f"{self.LABELS.get('time_label_prefix', 'Time: ')}--")
         self.timer_label.setStyleSheet("font-size: 14px; font-weight: bold;")
         progress_layout.addWidget(self.timer_label)
         
@@ -132,26 +135,26 @@ class ReviewTab(QWidget):
             self.skip_back_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipBackward))
         except Exception:
             self.skip_back_btn.setText("⏮")
-        self.skip_back_btn.setToolTip("Previous set")
+        self.skip_back_btn.setToolTip(self.LABELS.get("review_prev_set", "Previous set"))
         self.skip_back_btn.clicked.connect(lambda: self._on_skip_session(-1))
         top.addWidget(self.skip_back_btn)
 
-        self.start_btn = QPushButton("Start Review")
+        self.start_btn = QPushButton(self.LABELS.get("review_start", "Start Review"))
         self.start_btn.clicked.connect(self._on_start)
         top.addWidget(self.start_btn)
 
-        self.pause_btn = QPushButton("Pause")
+        self.pause_btn = QPushButton(self.LABELS.get("review_pause", "Pause"))
         self.pause_btn.clicked.connect(self._on_pause_resume)
         self.pause_btn.setEnabled(False)
         top.addWidget(self.pause_btn)
 
         # Stop button in main controls next to Pause
-        self.stop_btn = QPushButton("Stop")
+        self.stop_btn = QPushButton(self.LABELS.get("review_stop", "Stop"))
         self.stop_btn.clicked.connect(self._on_stop)
         self.stop_btn.setEnabled(False)
         top.addWidget(self.stop_btn)
 
-        self.replay_btn = QPushButton("Replay")
+        self.replay_btn = QPushButton(self.LABELS.get("review_replay", "Replay"))
         self.replay_btn.clicked.connect(self._on_replay_clicked)
         self.replay_btn.setEnabled(False)
         top.addWidget(self.replay_btn)
@@ -160,7 +163,7 @@ class ReviewTab(QWidget):
         self.session_select = QComboBox()
         top.addWidget(self.session_select)
         self.set_name_edit = QLineEdit()
-        self.set_name_edit.setPlaceholderText("Set name")
+        self.set_name_edit.setPlaceholderText(self.LABELS.get("review_set_name_placeholder", "Set name"))
         try:
             self.set_name_edit.setMinimumWidth(160)
         except Exception:
@@ -174,7 +177,7 @@ class ReviewTab(QWidget):
             self.skip_forward_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipForward))
         except Exception:
             self.skip_forward_btn.setText("⏭")
-        self.skip_forward_btn.setToolTip("Next set")
+        self.skip_forward_btn.setToolTip(self.LABELS.get("review_next_set", "Next set"))
         self.skip_forward_btn.clicked.connect(lambda: self._on_skip_session(+1))
         top.addWidget(self.skip_forward_btn)
 
@@ -182,7 +185,7 @@ class ReviewTab(QWidget):
 
         # Settings toggle button (gear)
         self.settings_toggle_btn = QToolButton()
-        self.settings_toggle_btn.setToolTip("Show settings")
+        self.settings_toggle_btn.setToolTip(self.LABELS.get("review_show_settings", "Show settings"))
         # Use a Unicode gear glyph as before; text color follows palette
         self.settings_toggle_btn.setText("⚙")
         # Make the gear visibly larger for easier access
@@ -199,7 +202,7 @@ class ReviewTab(QWidget):
         except Exception:
             pass
         try:
-            self.help_link = QLabel("<a href=\"internal:docs#default\">GPA Review Guide</a>")
+            self.help_link = QLabel(f"<a href=\"internal:docs#default\">{self.LABELS.get('review_help_link', 'GPA Review Guide')}</a>")
             self.help_link.setTextFormat(Qt.RichText)
             self.help_link.setOpenExternalLinks(False)
             self.help_link.setStyleSheet("QLabel { color: palette(link); } QLabel:hover { text-decoration: underline; }")
@@ -221,28 +224,39 @@ class ReviewTab(QWidget):
         # Row 1: Scope, Play Count, Time Limit, Limit Mode
         row1 = QHBoxLayout()
 
-        row1.addWidget(QLabel("Scope:"))
+        self.lbl_scope = QLabel(self.LABELS.get("review_scope_label", "Scope:"))
+        row1.addWidget(self.lbl_scope)
         self.scope_combo = QComboBox()
-        self.scope_combo.addItems(["Images", "Videos", "Both"])
-        self.scope_combo.setCurrentText("Both")
+        self.scope_combo.addItems([
+            self.LABELS.get("review_scope_images", "Images"),
+            self.LABELS.get("review_scope_videos", "Videos"),
+            self.LABELS.get("review_scope_both", "Both")
+        ])
+        self.scope_combo.setCurrentText(self.LABELS.get("review_scope_both", "Both"))
         row1.addWidget(self.scope_combo)
 
-        row1.addWidget(QLabel("Play Count:"))
+        self.lbl_play_count = QLabel(self.LABELS.get("review_play_count_label", "Play Count:"))
+        row1.addWidget(self.lbl_play_count)
         self.play_count_spin = QSpinBox()
         self.play_count_spin.setRange(1, 10)
         self.play_count_spin.setValue(1)
         row1.addWidget(self.play_count_spin)
 
-        row1.addWidget(QLabel("Time Limit (sec):"))
+        self.lbl_time_limit = QLabel(self.LABELS.get("review_time_limit_label", "Time Limit (sec):"))
+        row1.addWidget(self.lbl_time_limit)
         self.time_limit_spin = QDoubleSpinBox()
         self.time_limit_spin.setRange(0, 60)
         self.time_limit_spin.setValue(0)
-        self.time_limit_spin.setSpecialValueText("Off")
+        self.time_limit_spin.setSpecialValueText(self.LABELS.get("review_time_limit_off", "Off"))
         row1.addWidget(self.time_limit_spin)
 
-        row1.addWidget(QLabel("Limit Mode:"))
+        self.lbl_limit_mode = QLabel(self.LABELS.get("review_limit_mode_label", "Limit Mode:"))
+        row1.addWidget(self.lbl_limit_mode)
         self.limit_mode_combo = QComboBox()
-        self.limit_mode_combo.addItems(["Soft", "Hard"])
+        self.limit_mode_combo.addItems([
+            self.LABELS.get("review_limit_soft", "Soft"),
+            self.LABELS.get("review_limit_hard", "Hard")
+        ])
         row1.addWidget(self.limit_mode_combo)
         row1.addStretch()
         settings_layout.addLayout(row1)
@@ -250,11 +264,12 @@ class ReviewTab(QWidget):
         # Row 2: SFX, Time Weighting, UI Overhead
         row2 = QHBoxLayout()
 
-        self.sfx_check = QCheckBox("Sound Effects")
+        self.sfx_check = QCheckBox(self.LABELS.get("review_sfx_label", "Sound Effects"))
         self.sfx_check.setChecked(True)
         row2.addWidget(self.sfx_check)
 
-        row2.addWidget(QLabel("SFX Vol:"))
+        self.lbl_sfx_vol = QLabel(self.LABELS.get("review_sfx_vol_label", "SFX Vol:"))
+        row2.addWidget(self.lbl_sfx_vol)
         self.sfx_volume_slider = QSlider(Qt.Horizontal)
         self.sfx_volume_slider.setRange(0, 100)
         self.sfx_volume_slider.setValue(70)
@@ -265,18 +280,24 @@ class ReviewTab(QWidget):
             pass
         row2.addWidget(self.sfx_volume_slider, 1)
 
-        row2.addWidget(QLabel("SFX Tone:"))
+        self.lbl_sfx_tone = QLabel(self.LABELS.get("review_sfx_tone_label", "SFX Tone:"))
+        row2.addWidget(self.lbl_sfx_tone)
         self.sfx_tone_combo = QComboBox()
-        self.sfx_tone_combo.addItems(["Default", "Gentle"])
+        self.sfx_tone_combo.addItems([
+            self.LABELS.get("review_sfx_tone_default", "Default"),
+            self.LABELS.get("review_sfx_tone_gentle", "Gentle")
+        ])
         row2.addWidget(self.sfx_tone_combo)
 
-        row2.addWidget(QLabel("Time Weight %:"))
+        self.lbl_time_weight = QLabel(self.LABELS.get("review_time_weight_label", "Time Weight %:"))
+        row2.addWidget(self.lbl_time_weight)
         self.time_weight_spin = QSpinBox()
         self.time_weight_spin.setRange(0, 100)
         self.time_weight_spin.setValue(30)
         row2.addWidget(self.time_weight_spin)
 
-        row2.addWidget(QLabel("UI Overhead (ms):"))
+        self.lbl_ui_overhead = QLabel(self.LABELS.get("review_ui_overhead_label", "UI Overhead (ms):"))
+        row2.addWidget(self.lbl_ui_overhead)
         self.ui_overhead_spin = QSpinBox()
         self.ui_overhead_spin.setRange(0, 5000)
         self.ui_overhead_spin.setValue(2000)
@@ -287,7 +308,8 @@ class ReviewTab(QWidget):
 
         # Row Thumb: Thumb Size (full width)
         rowThumb = QHBoxLayout()
-        rowThumb.addWidget(QLabel("Thumb Size:"))
+        self.lbl_thumb_size = QLabel(self.LABELS.get("review_thumb_size_label", "Thumb Size:"))
+        rowThumb.addWidget(self.lbl_thumb_size)
         self.thumb_size_slider = QSlider(Qt.Horizontal)
         self.thumb_size_slider.setRange(60, 180)  # percent
         self.thumb_size_slider.setValue(int(self.state.reviewThumbScale * 100))
@@ -296,7 +318,8 @@ class ReviewTab(QWidget):
 
         # Row Sessions: Items per Session + counts
         rowSess = QHBoxLayout()
-        rowSess.addWidget(QLabel("Items per Session:"))
+        self.lbl_items_per_session = QLabel(self.LABELS.get("review_items_per_session_label", "Items per Session:"))
+        rowSess.addWidget(self.lbl_items_per_session)
         self.items_per_session_slider = QSlider(Qt.Horizontal)
         self.items_per_session_slider.setMinimum(2)
         self.items_per_session_slider.setMaximum(50)
@@ -305,42 +328,46 @@ class ReviewTab(QWidget):
         self.items_per_session_slider.setTickPosition(QSlider.TicksBelow)
         self.items_per_session_slider.setValue(self.state.itemsPerSession)
         rowSess.addWidget(self.items_per_session_slider, 1)
-        self.sessions_label = QLabel("Sessions: --")
+        self.sessions_label = QLabel(self.LABELS.get("review_sessions_label_initial", "Sessions: --"))
         rowSess.addWidget(self.sessions_label)
         settings_layout.addLayout(rowSess)
 
         # Row Actions inside settings: Stop/Reset/Defaults/Export
         rowActions = QHBoxLayout()
-        self.stop_btn = QPushButton("Stop")
+        self.stop_btn = QPushButton(self.LABELS.get("review_stop", "Stop"))
         self.stop_btn.clicked.connect(self._on_stop)
         self.stop_btn.setEnabled(False)
         rowActions.addWidget(self.stop_btn)
 
-        self.reset_btn = QPushButton("Reset")
+        self.reset_btn = QPushButton(self.LABELS.get("review_reset", "Reset"))
         self.reset_btn.clicked.connect(self._on_reset)
         rowActions.addWidget(self.reset_btn)
 
-        self.reset_defaults_btn = QPushButton("Reset to Defaults")
+        self.reset_defaults_btn = QPushButton(self.LABELS.get("review_reset_defaults", "Reset to Defaults"))
         self.reset_defaults_btn.clicked.connect(self._on_reset_defaults)
         rowActions.addWidget(self.reset_defaults_btn)
 
         rowActions.addStretch()
 
         # Export buttons in overlay
-        self.export_yaml_btn = QPushButton("Export Results")
+        self.export_yaml_btn = QPushButton(self.LABELS.get("review_export_results", "Export Results"))
         self.export_yaml_btn.setEnabled(False)
         self.export_yaml_btn.clicked.connect(self._on_export_yaml)
         rowActions.addWidget(self.export_yaml_btn)
 
-        self.export_sets_btn = QPushButton("Export Sets")
-        self.export_sets_btn.setToolTip("Save the current virtual session grouping")
+        self.export_sets_btn = QPushButton(self.LABELS.get("review_export_sets", "Export Sets"))
+        self.export_sets_btn.setToolTip(self.LABELS.get("review_export_sets_tooltip", "Save the current virtual session grouping"))
         self.export_sets_btn.setEnabled(True)
         self.export_sets_btn.clicked.connect(self._on_export_sets)
         rowActions.addWidget(self.export_sets_btn)
 
-        rowActions.addWidget(QLabel("Format:"))
+        self.lbl_export_format = QLabel(self.LABELS.get("review_export_format_label", "Format:"))
+        rowActions.addWidget(self.lbl_export_format)
         self.export_format_combo = QComboBox()
-        self.export_format_combo.addItems(["Folders", "Zip files"]) 
+        self.export_format_combo.addItems([
+            self.LABELS.get("review_export_format_folders", "Folders"),
+            self.LABELS.get("review_export_format_zip", "Zip files")
+        ]) 
         rowActions.addWidget(self.export_format_combo)
 
         settings_layout.addLayout(rowActions)
@@ -436,6 +463,129 @@ class ReviewTab(QWidget):
         except Exception:
             pass
         return super().changeEvent(event)
+
+    def retranslate(self, labels: Dict[str, str]) -> None:
+        """Update all visible texts to the provided labels without rebuilding the tab."""
+        try:
+            self.LABELS = labels or {}
+        except Exception:
+            self.LABELS = {}
+        # Tip
+        try:
+            for i in range(self.layout().count()):
+                w = self.layout().itemAt(i).widget()
+                if isinstance(w, QLabel) and "Tip:" in (w.text() or ""):
+                    w.setText(self.LABELS.get(
+                        "review_tip_html",
+                        "<b>Tip:</b> Single-click selects. Right-click, Ctrl/Cmd+Click, or Enter confirms. Double-click opens preview/fullscreen. Press Space to replay prompt."
+                    ))
+                    break
+        except Exception:
+            pass
+        # Header controls
+        try:
+            self.skip_back_btn.setToolTip(self.LABELS.get("review_prev_set", "Previous set"))
+            self.start_btn.setText(self.LABELS.get("review_start", "Start Review"))
+            self.pause_btn.setText(self.LABELS.get("review_pause", "Pause"))
+            self.stop_btn.setText(self.LABELS.get("review_stop", "Stop"))
+            self.replay_btn.setText(self.LABELS.get("review_replay", "Replay"))
+            self.skip_forward_btn.setToolTip(self.LABELS.get("review_next_set", "Next set"))
+            self.settings_toggle_btn.setToolTip(self.LABELS.get("review_show_settings", "Show settings"))
+            if getattr(self, "help_link", None):
+                self.help_link.setText(f"<a href=\"internal:docs#default\">{self.LABELS.get('review_help_link', 'GPA Review Guide')}</a>")
+        except Exception:
+            pass
+        # Row labels
+        try:
+            self.lbl_scope.setText(self.LABELS.get("review_scope_label", "Scope:"))
+            self.lbl_play_count.setText(self.LABELS.get("review_play_count_label", "Play Count:"))
+            self.lbl_time_limit.setText(self.LABELS.get("review_time_limit_label", "Time Limit (sec):"))
+            self.lbl_limit_mode.setText(self.LABELS.get("review_limit_mode_label", "Limit Mode:"))
+            self.sfx_check.setText(self.LABELS.get("review_sfx_label", "Sound Effects"))
+            self.lbl_sfx_vol.setText(self.LABELS.get("review_sfx_vol_label", "SFX Vol:"))
+            self.lbl_sfx_tone.setText(self.LABELS.get("review_sfx_tone_label", "SFX Tone:"))
+            self.lbl_time_weight.setText(self.LABELS.get("review_time_weight_label", "Time Weight %:"))
+            self.lbl_ui_overhead.setText(self.LABELS.get("review_ui_overhead_label", "UI Overhead (ms):"))
+            self.lbl_thumb_size.setText(self.LABELS.get("review_thumb_size_label", "Thumb Size:"))
+            self.lbl_items_per_session.setText(self.LABELS.get("review_items_per_session_label", "Items per Session:"))
+            self.lbl_export_format.setText(self.LABELS.get("review_export_format_label", "Format:"))
+        except Exception:
+            pass
+        # Combos: replace items preserving selection
+        try:
+            idx = self.scope_combo.currentIndex()
+            self.scope_combo.blockSignals(True)
+            self.scope_combo.clear()
+            self.scope_combo.addItems([
+                self.LABELS.get("review_scope_images", "Images"),
+                self.LABELS.get("review_scope_videos", "Videos"),
+                self.LABELS.get("review_scope_both", "Both")
+            ])
+            self.scope_combo.setCurrentIndex(max(0, min(2, idx)))
+            self.scope_combo.blockSignals(False)
+        except Exception:
+            pass
+        try:
+            idx = self.limit_mode_combo.currentIndex()
+            self.limit_mode_combo.clear()
+            self.limit_mode_combo.addItems([
+                self.LABELS.get("review_limit_soft", "Soft"),
+                self.LABELS.get("review_limit_hard", "Hard")
+            ])
+            self.limit_mode_combo.setCurrentIndex(max(0, min(1, idx)))
+        except Exception:
+            pass
+        try:
+            idx = self.sfx_tone_combo.currentIndex()
+            self.sfx_tone_combo.clear()
+            self.sfx_tone_combo.addItems([
+                self.LABELS.get("review_sfx_tone_default", "Default"),
+                self.LABELS.get("review_sfx_tone_gentle", "Gentle")
+            ])
+            self.sfx_tone_combo.setCurrentIndex(max(0, min(1, idx)))
+        except Exception:
+            pass
+        try:
+            idx = self.export_format_combo.currentIndex()
+            self.export_format_combo.clear()
+            self.export_format_combo.addItems([
+                self.LABELS.get("review_export_format_folders", "Folders"),
+                self.LABELS.get("review_export_format_zip", "Zip files")
+            ])
+            self.export_format_combo.setCurrentIndex(max(0, min(1, idx)))
+        except Exception:
+            pass
+        # Buttons in actions row
+        try:
+            self.stop_btn.setText(self.LABELS.get("review_stop", "Stop"))
+            self.reset_btn.setText(self.LABELS.get("review_reset", "Reset"))
+            self.reset_defaults_btn.setText(self.LABELS.get("review_reset_defaults", "Reset to Defaults"))
+            self.export_yaml_btn.setText(self.LABELS.get("review_export_results", "Export Results"))
+            self.export_sets_btn.setText(self.LABELS.get("review_export_sets", "Export Sets"))
+            self.export_sets_btn.setToolTip(self.LABELS.get("review_export_sets_tooltip", "Save the current virtual session grouping"))
+        except Exception:
+            pass
+        # Timer prefix
+        try:
+            txt = self.timer_label.text() or ""
+            # Replace prefix before digits
+            if "s" in txt or ":" in txt:
+                # Simple reset to prefix + '--' if not running
+                if not self.state.sessionActive:
+                    self.timer_label.setText(f"{self.LABELS.get('time_label_prefix', 'Time: ')}--")
+            else:
+                self.timer_label.setText(f"{self.LABELS.get('time_label_prefix', 'Time: ')}--")
+        except Exception:
+            pass
+        # Sessions UI and progress format
+        try:
+            self._update_sessions_ui()
+        except Exception:
+            pass
+        try:
+            self._update_progress()
+        except Exception:
+            pass
     
     def _connect_signals(self) -> None:
         """Connect signals."""
@@ -549,7 +699,7 @@ class ReviewTab(QWidget):
             if not self.state.sessionActive:
                 self.progress_bar.setMaximum(max(1, len(items)))
                 self.progress_bar.setValue(0)
-                self.progress_bar.setFormat(f"0/{len(items)} prompts")
+                self.progress_bar.setFormat(self.LABELS.get("review_progress_format", "{current}/{total} prompts").format(current=0, total=len(items)))
         except Exception:
             pass
     
@@ -564,7 +714,11 @@ class ReviewTab(QWidget):
         end = start + per
         items = all_items[start:end]
         if not items:
-            QMessageBox.information(self, "No Items", "No recorded items found for the selected scope.")
+            QMessageBox.information(
+                self,
+                self.LABELS.get("review_no_items_title", "No Items"),
+                self.LABELS.get("review_no_items_scope", "No recorded items found for the selected scope.")
+            )
             return
         
         # Update state from UI
@@ -614,7 +768,7 @@ class ReviewTab(QWidget):
         self._refresh_grid()
         try:
             idx = max(0, self.session_select.currentIndex())
-            name = self.set_names.get(idx) or f"Set {idx+1}"
+            name = self.set_names.get(idx) or self.LABELS.get("review_set_label_format", "Set {n}").format(n=idx+1)
             self.set_name_edit.setText(name)
         except Exception:
             pass
@@ -628,13 +782,16 @@ class ReviewTab(QWidget):
         remainder = count % per
         last_items = remainder if remainder != 0 else (per if count > 0 else 0)
         self.sessions_label.setText(
-            f"Sessions: {sessions}  |  Items/session: {per}  |  Last: {last_items}"
+            self.LABELS.get(
+                "review_sessions_label_format",
+                "Sessions: {sessions}  |  Items/session: {per}  |  Last: {last_items}"
+            ).format(sessions=sessions, per=per, last_items=last_items)
         )
         # Populate selector (use custom names when available)
         self.session_select.blockSignals(True)
         self.session_select.clear()
         for i in range(1, sessions + 1):
-            label = self.set_names.get(i - 1) or f"Set {i}"
+            label = self.set_names.get(i - 1) or self.LABELS.get("review_set_label_format", "Set {n}").format(n=i)
             self.session_select.addItem(label, i - 1)
         self.session_select.blockSignals(False)
         # Ensure valid selection
@@ -648,7 +805,7 @@ class ReviewTab(QWidget):
         # Reflect current selection in the editor
         try:
             idx = max(0, self.session_select.currentIndex())
-            name = self.set_names.get(idx) or f"Set {idx+1}"
+            name = self.set_names.get(idx) or self.LABELS.get("review_set_label_format", "Set {n}").format(n=idx+1)
             self.set_name_edit.setText(name)
         except Exception:
             pass
@@ -758,7 +915,11 @@ class ReviewTab(QWidget):
         """Export current virtual session grouping to folders or zip files."""
         items = self._get_recorded_items()
         if not items:
-            QMessageBox.information(self, "No Items", "No recorded items to group.")
+            QMessageBox.information(
+                self,
+                self.LABELS.get("review_no_items_title", "No Items"),
+                self.LABELS.get("review_no_items_group", "No recorded items to group.")
+            )
             return
         per = max(1, self.state.itemsPerSession)
         sessions: List[List[Dict[str, Any]]] = []
@@ -773,7 +934,7 @@ class ReviewTab(QWidget):
                 }
                 for (item_id, media_path, wav_path) in chunk
             ])
-        output_dir = QFileDialog.getExistingDirectory(self, "Choose Where to Save the Sets")
+        output_dir = QFileDialog.getExistingDirectory(self, self.LABELS.get("review_choose_save_sets", "Choose Where to Save the Sets"))
         if not output_dir:
             return
         try:
@@ -785,7 +946,7 @@ class ReviewTab(QWidget):
             names = []
             for idx in range(len(sessions)):
                 # self.set_names uses zero-based indices corresponding to session order
-                name = self.set_names.get(idx) or f"Set {idx+1}"
+                name = self.set_names.get(idx) or self.LABELS.get("review_set_label_format", "Set {n}").format(n=idx+1)
                 names.append(name)
             meta = GroupedExporter.export_sessions(
                 sessions=session_pairs,
@@ -793,19 +954,27 @@ class ReviewTab(QWidget):
                 export_format="zip" if "zip" in export_format else "folders",
                 group_names=names,
             )
-            QMessageBox.information(self, "Export Complete", f"Exported {meta['totalGroups']} sets to:\n{output_dir}")
+            QMessageBox.information(
+                self,
+                self.LABELS.get("review_export_complete_title", "Export Complete"),
+                self.LABELS.get("review_export_sets_complete_msg", "Exported {n} sets to:\n{dir}").format(n=meta['totalGroups'], dir=output_dir)
+            )
         except Exception as e:
-            QMessageBox.critical(self, "Export Failed", f"Failed to export sets: {e}")
+            QMessageBox.critical(
+                self,
+                self.LABELS.get("review_export_failed_title", "Export Failed"),
+                f"{self.LABELS.get('review_export_sets_failed', 'Failed to export sets:')} {e}"
+            )
     
     def _on_pause_resume(self) -> None:
         """Pause or resume the session."""
         if self.state.paused:
             self.state.paused = False
-            self.pause_btn.setText("Pause")
+            self.pause_btn.setText(self.LABELS.get("review_pause", "Pause"))
             self.stats.resume_timer()
         else:
             self.state.paused = True
-            self.pause_btn.setText("Resume")
+            self.pause_btn.setText(self.LABELS.get("review_resume", "Resume"))
             self.stats.pause_timer()
     
     def _on_stop(self) -> None:
@@ -978,18 +1147,18 @@ class ReviewTab(QWidget):
         )
         
         msg = (
-            f"Review session complete!\n\n"
-            f"Grade: {overall['grade']}\n"
-            f"Accuracy: {overall['accuracyPercent']}%\n"
-            f"Average Time: {overall['averageTimeSec']}s\n"
-            f"Composite Score: {overall['compositeScore']}\n"
+            f"{self.LABELS.get('review_session_complete_msg', 'Review session complete!')}\n\n"
+            f"{self.LABELS.get('review_summary_grade', 'Grade')}: {overall['grade']}\n"
+            f"{self.LABELS.get('review_summary_accuracy', 'Accuracy')}: {overall['accuracyPercent']}%\n"
+            f"{self.LABELS.get('review_summary_avg_time', 'Average Time')}: {overall['averageTimeSec']}s\n"
+            f"{self.LABELS.get('review_summary_composite', 'Composite Score')}: {overall['compositeScore']}\n"
         )
-        QMessageBox.information(self, "Session Complete", msg)
+        QMessageBox.information(self, self.LABELS.get("review_session_complete_title", "Session Complete"), msg)
     
     def _on_timer_tick(self) -> None:
         """Update timer display."""
         self.elapsed_time += 0.1
-        self.timer_label.setText(f"Time: {self.elapsed_time:.1f}s")
+        self.timer_label.setText(f"{self.LABELS.get('time_label_prefix', 'Time: ')}{self.elapsed_time:.1f}s")
         
         # Check hard limit
         if (self.state.limitMode == "hard" and 
@@ -1014,10 +1183,14 @@ class ReviewTab(QWidget):
     def _on_export_yaml(self) -> None:
         """Export review results to a report file."""
         if not self.session_id:
-            QMessageBox.warning(self, "No Session", "No session data to export.")
+            QMessageBox.warning(
+                self,
+                self.LABELS.get("review_no_session_title", "No Session"),
+                self.LABELS.get("review_no_session_msg", "No session data to export.")
+            )
             return
         
-        output_dir = QFileDialog.getExistingDirectory(self, "Choose Where to Save the Report")
+        output_dir = QFileDialog.getExistingDirectory(self, self.LABELS.get("review_choose_save_report", "Choose Where to Save the Report"))
         if not output_dir:
             return
         
@@ -1031,19 +1204,31 @@ class ReviewTab(QWidget):
                 self.app_version,
                 output_dir,
             )
-            QMessageBox.information(self, "Export Complete", f"Report saved to:\n{filepath}")
+            QMessageBox.information(
+                self,
+                self.LABELS.get("review_export_complete_title", "Export Complete"),
+                f"{self.LABELS.get('review_report_saved_msg', 'Report saved to:')}\n{filepath}"
+            )
         except Exception as e:
-            QMessageBox.critical(self, "Export Failed", f"Failed to export report: {e}")
+            QMessageBox.critical(
+                self,
+                self.LABELS.get("review_export_failed_title", "Export Failed"),
+                f"{self.LABELS.get('review_export_report_failed', 'Failed to export report:')} {e}"
+            )
     
     def _on_grouped_export(self) -> None:
         """Open grouped export dialog."""
         items = self._get_recorded_items()
         if not items:
-            QMessageBox.information(self, "No Items", "No recorded items to export.")
+            QMessageBox.information(
+                self,
+                self.LABELS.get("review_no_items_title", "No Items"),
+                self.LABELS.get("review_no_items_export", "No recorded items to export.")
+            )
             return
         
         from vat.review.grouped_export_dialog import GroupedExportDialog
-        dialog = GroupedExportDialog(items, self.state.groupedDefaultItemsPerFolder, self)
+        dialog = GroupedExportDialog(items, self.state.groupedDefaultItemsPerFolder, self, labels=self.LABELS)
         if dialog.exec() == dialog.Accepted and dialog.result_metadata:
             # Optionally save the metadata for the YAML export
             pass
@@ -1361,7 +1546,7 @@ class ReviewTab(QWidget):
                 self.settings_layer.hide()
                 if hasattr(self, 'settings_scrim'):
                     self.settings_scrim.hide()
-                self.settings_toggle_btn.setToolTip("Show settings")
+                self.settings_toggle_btn.setToolTip(self.LABELS.get("review_show_settings", "Show settings"))
             else:
                 self._position_settings_panel()
                 if hasattr(self, 'settings_scrim'):
@@ -1372,7 +1557,7 @@ class ReviewTab(QWidget):
                     self.settings_scrim.raise_()
                 self.settings_layer.show()
                 self.settings_layer.raise_()
-                self.settings_toggle_btn.setToolTip("Hide settings")
+                self.settings_toggle_btn.setToolTip(self.LABELS.get("review_hide_settings", "Hide settings"))
         except Exception:
             pass
 
@@ -1423,7 +1608,7 @@ class ReviewTab(QWidget):
                 if dl is not None and dl.isVisible():
                     self.settings_layer.hide()
                     self.settings_scrim.hide()
-                    self.settings_toggle_btn.setToolTip("Show settings")
+                    self.settings_toggle_btn.setToolTip(self.LABELS.get("review_show_settings", "Show settings"))
                 return True
         except Exception:
             pass

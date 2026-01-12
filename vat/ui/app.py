@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QListView, QStyledItemDelegate, QApplication, QCheckBox, QGraphicsDropShadowEffect,
     QMenu
 )
-from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize, QRect, QPoint, QLocale, QMetaObject, QUrl
+from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize, QRect, QPoint, QLocale, QMetaObject, QUrl, QMimeData
 import time
 from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence, QImageReader, QPen, QColor, QGuiApplication, QAction, QCursor
 
@@ -58,8 +58,15 @@ LABELS_ALL = {
         "add_audio_from_file": "From file…",
         "add_audio_paste_clipboard": "Paste from clipboard",
         "import_select_file_dialog": "Select Audio File",
-        "copy_image": "Copy Image",
+            "images_tab_title": "Images",
+            "copy_image": "Copy Image",
+            "copy_video": "Copy Video",
         "copied_image": "Image copied to clipboard",
+            "copied_video": "Video copied to clipboard",
+            "save_image_as": "Save Image as…",
+            "save_video_as": "Save Video as…",
+            "save_image_as_dialog_title": "Save Image as…",
+            "save_video_as_dialog_title": "Save Video as…",
         "paste_audio_failed": "Clipboard does not contain audio or an audio file path.",
         "edit_metadata": "Edit Metadata",
         "save_metadata": "Save",
@@ -139,6 +146,96 @@ LABELS_ALL = {
             "You can configure and start a review session from the Review tab header and export results when done.</p>"
         ),
         "ocenaudio_not_found_body": "Ocenaudio not found. Please install it to use this feature.",
+        
+        # Review Tab labels
+        "review_tab_title": "Review",
+        "review_tip_html": "<b>Tip:</b> Single-click selects. Right-click, Ctrl/Cmd+Click, or Enter confirms. Double-click opens preview/fullscreen. Press Space to replay prompt.",
+        "time_label_prefix": "Time: ",
+        "review_prev_set": "Previous set",
+        "review_next_set": "Next set",
+        "review_start": "Start Review",
+        "review_pause": "Pause",
+        "review_resume": "Resume",
+        "review_stop": "Stop",
+        "review_replay": "Replay",
+        "review_set_name_placeholder": "Set name",
+        "review_show_settings": "Show settings",
+        "review_hide_settings": "Hide settings",
+        "review_help_link": "GPA Review Guide",
+        "review_scope_label": "Scope:",
+        "review_scope_images": "Images",
+        "review_scope_videos": "Videos",
+        "review_scope_both": "Both",
+        "review_play_count_label": "Play Count:",
+        "review_time_limit_label": "Time Limit (sec):",
+        "review_time_limit_off": "Off",
+        "review_limit_mode_label": "Limit Mode:",
+        "review_limit_soft": "Soft",
+        "review_limit_hard": "Hard",
+        "review_sfx_label": "Sound Effects",
+        "review_sfx_vol_label": "SFX Vol:",
+        "review_sfx_tone_label": "SFX Tone:",
+        "review_sfx_tone_default": "Default",
+        "review_sfx_tone_gentle": "Gentle",
+        "review_time_weight_label": "Time Weight %:",
+        "review_ui_overhead_label": "UI Overhead (ms):",
+        "review_thumb_size_label": "Thumb Size:",
+        "review_items_per_session_label": "Items per Session:",
+        "review_sessions_label_initial": "Sessions: --",
+        "review_sessions_label_format": "Sessions: {sessions}  |  Items/session: {per}  |  Last: {last_items}",
+        "review_reset": "Reset",
+        "review_reset_defaults": "Reset to Defaults",
+        "review_export_results": "Export Results",
+        "review_export_sets": "Export Sets",
+        "review_export_sets_tooltip": "Save the current virtual session grouping",
+        "review_export_format_label": "Format:",
+        "review_export_format_folders": "Folders",
+        "review_export_format_zip": "Zip files",
+        "review_progress_format": "{current}/{total} prompts",
+        "review_no_items_title": "No Items",
+        "review_no_items_scope": "No recorded items found for the selected scope.",
+        "review_no_items_group": "No recorded items to group.",
+        "review_no_items_export": "No recorded items to export.",
+        "review_no_session_title": "No Session",
+        "review_no_session_msg": "No session data to export.",
+        "review_choose_save_report": "Choose Where to Save the Report",
+        "review_report_saved_msg": "Report saved to:",
+        "review_export_complete_title": "Export Complete",
+        "review_export_failed_title": "Export Failed",
+        "review_export_report_failed": "Failed to export report:",
+        "review_choose_save_sets": "Choose Where to Save the Sets",
+        "review_export_sets_complete_msg": "Exported {n} sets to:\n{dir}",
+        "review_export_sets_failed": "Failed to export sets:",
+        "review_session_complete_title": "Session Complete",
+        "review_session_complete_msg": "Review session complete!",
+        "review_summary_grade": "Grade",
+        "review_summary_accuracy": "Accuracy",
+        "review_summary_avg_time": "Average Time",
+        "review_summary_composite": "Composite Score",
+        
+        # Grouped Export Dialog labels
+        "group_export_title": "Grouped Export",
+        "group_export_info": "Export {count} recorded items into organized group folders.",
+        "group_export_items_per_folder": "Items per folder:",
+        "group_export_num_folders": "Number of folders:",
+        "group_export_copy_mode": "Copy files (default, safe)",
+        "group_export_copy_mode_tip": "Uncheck to move files instead (use with caution)",
+        "group_export_export_btn": "Export...",
+        "group_export_cancel_btn": "Cancel",
+        "group_export_preview_none": "No items to export.",
+        "group_export_preview_will_create": "Will create {n} folder(s):\n",
+        "group_export_preview_group_line": "  Group {i:02d}: {count} items\n",
+        "group_export_preview_more": "  ... and {extra} more folders\n",
+        "group_export_preview_last_note": "\nNote: Last folder has {count} items (remainder).",
+        "group_export_no_items_title": "No Items",
+        "group_export_no_items_msg": "No items to export.",
+        "group_export_select_dir": "Select Export Directory",
+        "group_export_confirm_overwrite_title": "Confirm Overwrite",
+        "group_export_confirm_overwrite_msg": "The selected directory already contains {n} Group folder(s).\n\nExisting files may be overwritten. Continue?",
+        "group_export_complete_title": "Export Complete",
+        "group_export_complete_msg": "Successfully exported {items} items into {groups} folders.",
+        "group_export_failed_title": "Export Failed",
+        "group_export_failed_msg": "Failed to export:",
     },
     "Bahasa Indonesia": {
         "language_name": "Bahasa Indonesia",
@@ -157,6 +254,20 @@ LABELS_ALL = {
         "stop_audio": "Hentikan Audio",
         "record_audio": "Rekam Audio",
         "stop_recording": "Hentikan Rekaman",
+        "add_existing_audio": "Tambah audio…",
+        "add_audio_from_file": "Dari berkas…",
+        "add_audio_paste_clipboard": "Tempel dari papan klip",
+        "import_select_file_dialog": "Pilih Berkas Audio",
+        "images_tab_title": "Gambar",
+        "copy_image": "Salin Gambar",
+        "copy_video": "Salin Video",
+        "copied_image": "Gambar disalin ke papan klip",
+        "copied_video": "Video disalin ke papan klip",
+        "save_image_as": "Simpan Gambar sebagai…",
+        "save_video_as": "Simpan Video sebagai…",
+        "save_image_as_dialog_title": "Simpan Gambar sebagai…",
+        "save_video_as_dialog_title": "Simpan Video sebagai…",
+        "paste_audio_failed": "Papan klip tidak berisi audio atau jalur berkas audio.",
         "edit_metadata": "Edit Metadata",
         "save_metadata": "Simpan",
         "audio_label_prefix": "Audio: ",
@@ -227,6 +338,94 @@ LABELS_ALL = {
             "di situs web proyek.</p>"
         ),
         "ocenaudio_not_found_body": "Ocenaudio tidak ditemukan. Silakan instal agar dapat menggunakan fitur ini.",
+        
+        "review_tab_title": "Ulasan",
+        "review_tip_html": "<b>Tip:</b> Klik sekali untuk memilih. Klik kanan, Ctrl/Cmd+Klik, atau Enter untuk konfirmasi. Klik dua kali untuk membuka pratinjau/layar penuh. Tekan Spasi untuk memutar ulang prompt.",
+        "time_label_prefix": "Waktu: ",
+        "review_start": "Mulai Ulasan",
+        "review_pause": "Jeda",
+        "review_resume": "Lanjut",
+        "review_stop": "Berhenti",
+        "review_replay": "Putar ulang",
+        "review_prev_set": "Set sebelumnya",
+        "review_next_set": "Set berikutnya",
+        "review_show_settings": "Tampilkan pengaturan",
+        "review_hide_settings": "Sembunyikan pengaturan",
+        "review_set_name_placeholder": "Nama set",
+        "review_help_link": "Panduan Ulasan GPA",
+        "review_scope_label": "Cakupan:",
+        "review_scope_images": "Gambar",
+        "review_scope_videos": "Video",
+        "review_scope_both": "Keduanya",
+        "review_play_count_label": "Jumlah Putar:",
+        "review_time_limit_label": "Batas Waktu (dtk):",
+        "review_time_limit_off": "Nonaktif",
+        "review_limit_mode_label": "Mode Batas:",
+        "review_limit_soft": "Lunak",
+        "review_limit_hard": "Keras",
+        "review_sfx_label": "Efek Suara",
+        "review_sfx_vol_label": "Vol SFX:",
+        "review_sfx_tone_label": "Nada SFX:",
+        "review_sfx_tone_default": "Bawaan",
+        "review_sfx_tone_gentle": "Lembut",
+        "review_time_weight_label": "Bobot Waktu %:",
+        "review_ui_overhead_label": "Beban UI (ms):",
+        "review_thumb_size_label": "Ukuran Thumbnail:",
+        "review_items_per_session_label": "Item per Sesi:",
+        "review_sessions_label_initial": "Sesi: --",
+        "review_sessions_label_format": "Sesi: {sessions}  |  Item/sesi: {per}  |  Terakhir: {last_items}",
+        "review_set_label_format": "Set {n}",
+        "review_reset": "Atur Ulang",
+        "review_reset_defaults": "Atur Ulang ke Bawaan",
+        "review_export_results": "Ekspor Hasil",
+        "review_export_sets": "Ekspor Set",
+        "review_export_sets_tooltip": "Simpan pengelompokan sesi virtual saat ini",
+        "review_export_format_label": "Format:",
+        "review_export_format_folders": "Folder",
+        "review_export_format_zip": "Berkas Zip",
+        "review_progress_format": "{current}/{total} prompt",
+        "review_no_items_title": "Tidak Ada Item",
+        "review_no_items_scope": "Tidak ada rekaman yang ditemukan untuk cakupan terpilih.",
+        "review_no_items_group": "Tidak ada rekaman untuk dikelompokkan.",
+        "review_no_items_export": "Tidak ada rekaman untuk diekspor.",
+        "review_no_session_title": "Tidak Ada Sesi",
+        "review_no_session_msg": "Tidak ada data sesi untuk diekspor.",
+        "review_choose_save_sets": "Pilih Lokasi untuk Menyimpan Set",
+        "review_export_complete_title": "Ekspor Selesai",
+        "review_export_sets_complete_msg": "Men-gekspor {n} set ke:\n{dir}",
+        "review_export_failed_title": "Ekspor Gagal",
+        "review_export_sets_failed": "Gagal mengekspor set:",
+        "review_choose_save_report": "Pilih Lokasi untuk Menyimpan Laporan",
+        "review_report_saved_msg": "Laporan disimpan ke:",
+        "review_export_report_failed": "Gagal mengekspor laporan:",
+        "review_session_complete_title": "Sesi Selesai",
+        "review_session_complete_msg": "Sesi ulasan selesai!",
+        "review_summary_grade": "Nilai",
+        "review_summary_accuracy": "Akurasi",
+        "review_summary_avg_time": "Waktu Rata-rata",
+        "review_summary_composite": "Skor Komposit",
+        "group_export_title": "Ekspor Kelompok",
+        "group_export_info": "Ekspor {count} rekaman ke folder grup yang teratur.",
+        "group_export_items_per_folder": "Item per folder:",
+        "group_export_num_folders": "Jumlah folder:",
+        "group_export_preview_none": "Tidak ada item untuk diekspor.",
+        "group_export_preview_will_create": "Akan membuat {n} folder:\n",
+        "group_export_preview_group_line": "  Grup {i:02d}: {count} item\n",
+        "group_export_preview_more": "  ... dan {extra} folder lagi\n",
+        "group_export_preview_last_note": "\nCatatan: Folder terakhir memiliki {count} item (sisa).",
+        "group_export_copy_mode": "Salin file (default, aman)",
+        "group_export_copy_mode_tip": "Hapus centang untuk memindahkan file (gunakan dengan hati-hati)",
+        "group_export_export_btn": "Ekspor...",
+        "group_export_cancel_btn": "Batal",
+        "group_export_select_dir": "Pilih Direktori Ekspor",
+        "group_export_no_items_title": "Tidak Ada Item",
+        "group_export_no_items_msg": "Tidak ada item untuk diekspor.",
+        "group_export_confirm_overwrite_title": "Konfirmasi Timpa",
+        "group_export_confirm_overwrite_msg": "Direktori yang dipilih sudah berisi {n} folder Grup.\n\nFile yang ada mungkin ditimpa. Lanjutkan?",
+        "group_export_complete_title": "Ekspor Selesai",
+        "group_export_complete_msg": "Berhasil mengekspor {items} item ke {groups} folder.",
+        "group_export_failed_title": "Ekspor Gagal",
+        "group_export_failed_msg": "Gagal mengekspor:",
     },
     "한국어": {
         "language_name": "한국어",
@@ -245,6 +444,20 @@ LABELS_ALL = {
         "stop_audio": "오디오 정지",
         "record_audio": "오디오 녹음",
         "stop_recording": "녹음 중지",
+        "add_existing_audio": "오디오 추가…",
+        "add_audio_from_file": "파일에서…",
+        "add_audio_paste_clipboard": "클립보드에서 붙여넣기",
+        "import_select_file_dialog": "오디오 파일 선택",
+        "images_tab_title": "이미지",
+        "copy_image": "이미지 복사",
+        "copy_video": "비디오 복사",
+        "copied_image": "이미지가 클립보드에 복사되었습니다",
+        "copied_video": "비디오가 클립보드에 복사되었습니다",
+        "save_image_as": "이미지 다른 이름으로 저장…",
+        "save_video_as": "비디오 다른 이름으로 저장…",
+        "save_image_as_dialog_title": "이미지 다른 이름으로 저장…",
+        "save_video_as_dialog_title": "비디오 다른 이름으로 저장…",
+        "paste_audio_failed": "클립보드에 오디오 또는 오디오 파일 경로가 없습니다.",
         "edit_metadata": "메타데이터 편집",
         "save_metadata": "저장",
         "audio_label_prefix": "오디오: ",
@@ -314,6 +527,94 @@ LABELS_ALL = {
             "섹션에서 확인할 수 있습니다.</p>"
         ),
         "ocenaudio_not_found_body": "Ocenaudio를 찾을 수 없습니다. 이 기능을 사용하려면 먼저 설치해 주세요.",
+        
+        "review_tab_title": "리뷰",
+        "review_tip_html": "<b>팁:</b> 한 번 클릭하면 선택됩니다. 우클릭, Ctrl/Cmd+클릭 또는 Enter로 확인합니다. 두 번 클릭하면 미리보기/전체화면이 열립니다. 스페이스바를 눌러 프롬프트를 다시 재생하세요.",
+        "time_label_prefix": "시간: ",
+        "review_start": "리뷰 시작",
+        "review_pause": "일시 정지",
+        "review_resume": "재개",
+        "review_stop": "중지",
+        "review_replay": "다시 듣기",
+        "review_prev_set": "이전 세트",
+        "review_next_set": "다음 세트",
+        "review_show_settings": "설정 표시",
+        "review_hide_settings": "설정 숨기기",
+        "review_set_name_placeholder": "세트 이름",
+        "review_help_link": "GPA 리뷰 가이드",
+        "review_scope_label": "범위:",
+        "review_scope_images": "이미지",
+        "review_scope_videos": "비디오",
+        "review_scope_both": "둘 다",
+        "review_play_count_label": "재생 횟수:",
+        "review_time_limit_label": "시간 제한(초):",
+        "review_time_limit_off": "꺼짐",
+        "review_limit_mode_label": "제한 모드:",
+        "review_limit_soft": "느슨함",
+        "review_limit_hard": "엄격함",
+        "review_sfx_label": "효과음",
+        "review_sfx_vol_label": "효과음 볼륨:",
+        "review_sfx_tone_label": "효과음 톤:",
+        "review_sfx_tone_default": "기본",
+        "review_sfx_tone_gentle": "부드럽게",
+        "review_time_weight_label": "시간 가중치 %:",
+        "review_ui_overhead_label": "UI 오버헤드(ms):",
+        "review_thumb_size_label": "썸네일 크기:",
+        "review_items_per_session_label": "세션당 항목:",
+        "review_sessions_label_initial": "세션: --",
+        "review_sessions_label_format": "세션: {sessions}  |  항목/세션: {per}  |  마지막: {last_items}",
+        "review_set_label_format": "세트 {n}",
+        "review_reset": "재설정",
+        "review_reset_defaults": "기본값으로 재설정",
+        "review_export_results": "결과 내보내기",
+        "review_export_sets": "세트 내보내기",
+        "review_export_sets_tooltip": "현재 가상 세션 그룹을 저장",
+        "review_export_format_label": "형식:",
+        "review_export_format_folders": "폴더",
+        "review_export_format_zip": "Zip 파일",
+        "review_progress_format": "{current}/{total} 프롬프트",
+        "review_no_items_title": "항목 없음",
+        "review_no_items_scope": "선택한 범위에 해당하는 녹음이 없습니다.",
+        "review_no_items_group": "그룹화할 녹음이 없습니다.",
+        "review_no_items_export": "내보낼 녹음이 없습니다.",
+        "review_no_session_title": "세션 없음",
+        "review_no_session_msg": "내보낼 세션 데이터가 없습니다.",
+        "review_choose_save_sets": "세트를 저장할 위치 선택",
+        "review_export_complete_title": "내보내기 완료",
+        "review_export_sets_complete_msg": "{n}개 세트를 내보냈습니다:\n{dir}",
+        "review_export_failed_title": "내보내기 실패",
+        "review_export_sets_failed": "세트 내보내기 실패:",
+        "review_choose_save_report": "보고서 저장 위치 선택",
+        "review_report_saved_msg": "보고서가 저장되었습니다:",
+        "review_export_report_failed": "보고서 내보내기 실패:",
+        "review_session_complete_title": "세션 완료",
+        "review_session_complete_msg": "리뷰 세션이 완료되었습니다!",
+        "review_summary_grade": "등급",
+        "review_summary_accuracy": "정확도",
+        "review_summary_avg_time": "평균 시간",
+        "review_summary_composite": "종합 점수",
+        "group_export_title": "그룹 내보내기",
+        "group_export_info": "{count}개의 녹음을 정리된 그룹 폴더로 내보냅니다.",
+        "group_export_items_per_folder": "폴더당 항목:",
+        "group_export_num_folders": "폴더 수:",
+        "group_export_preview_none": "내보낼 항목이 없습니다.",
+        "group_export_preview_will_create": "{n}개의 폴더를 생성합니다:\n",
+        "group_export_preview_group_line": "  그룹 {i:02d}: {count}개 항목\n",
+        "group_export_preview_more": "  ... 그리고 {extra}개 더 많은 폴더\n",
+        "group_export_preview_last_note": "\n참고: 마지막 폴더에는 {count}개 항목(나머지)이 있습니다.",
+        "group_export_copy_mode": "파일 복사(기본, 안전)",
+        "group_export_copy_mode_tip": "파일을 이동하려면 체크 해제(주의 필요)",
+        "group_export_export_btn": "내보내기...",
+        "group_export_cancel_btn": "취소",
+        "group_export_select_dir": "내보낼 디렉토리 선택",
+        "group_export_no_items_title": "항목 없음",
+        "group_export_no_items_msg": "내보낼 항목이 없습니다.",
+        "group_export_confirm_overwrite_title": "덮어쓰기 확인",
+        "group_export_confirm_overwrite_msg": "선택한 디렉토리에 이미 그룹 폴더 {n}개가 있습니다.\n\n기존 파일이 덮어써질 수 있습니다. 계속하시겠습니까?",
+        "group_export_complete_title": "내보내기 완료",
+        "group_export_complete_msg": "{items}개 항목을 {groups}개 폴더로 성공적으로 내보냈습니다.",
+        "group_export_failed_title": "내보내기 실패",
+        "group_export_failed_msg": "내보내기 실패:",
     },
     "Nederlands": {
         "language_name": "Nederlands",
@@ -332,6 +633,20 @@ LABELS_ALL = {
         "stop_audio": "Audio Stoppen",
         "record_audio": "Audio Opnemen",
         "stop_recording": "Opname Stoppen",
+        "add_existing_audio": "Audio toevoegen…",
+        "add_audio_from_file": "Uit bestand…",
+        "add_audio_paste_clipboard": "Plakken vanaf klembord",
+        "import_select_file_dialog": "Audiobestand selecteren",
+        "images_tab_title": "Afbeeldingen",
+        "copy_image": "Afbeelding kopiëren",
+        "copy_video": "Video kopiëren",
+        "copied_image": "Afbeelding gekopieerd naar klembord",
+        "copied_video": "Video gekopieerd naar klembord",
+        "save_image_as": "Afbeelding opslaan als…",
+        "save_video_as": "Video opslaan als…",
+        "save_image_as_dialog_title": "Afbeelding opslaan als…",
+        "save_video_as_dialog_title": "Video opslaan als…",
+        "paste_audio_failed": "Klembord bevat geen audio of pad naar audiobestand.",
         "edit_metadata": "Metadata Bewerken",
         "save_metadata": "Opslaan",
         "audio_label_prefix": "Audio: ",
@@ -399,6 +714,94 @@ LABELS_ALL = {
             "op de projectwebsite.</p>"
         ),
         "ocenaudio_not_found_body": "Ocenaudio niet gevonden. Installeer het om deze functie te gebruiken.",
+        
+        "review_tab_title": "Review",
+        "review_tip_html": "<b>Tip:</b> Enkelklik om te selecteren. Rechtsklik, Ctrl/Cmd+Klik of Enter om te bevestigen. Dubbelklik opent voorbeeld/volledig scherm. Druk op Spatie om de prompt opnieuw af te spelen.",
+        "time_label_prefix": "Tijd: ",
+        "review_start": "Review starten",
+        "review_pause": "Pauzeren",
+        "review_resume": "Hervatten",
+        "review_stop": "Stoppen",
+        "review_replay": "Opnieuw afspelen",
+        "review_prev_set": "Vorige set",
+        "review_next_set": "Volgende set",
+        "review_show_settings": "Instellingen tonen",
+        "review_hide_settings": "Instellingen verbergen",
+        "review_set_name_placeholder": "Setnaam",
+        "review_help_link": "GPA Review Gids",
+        "review_scope_label": "Bereik:",
+        "review_scope_images": "Afbeeldingen",
+        "review_scope_videos": "Video's",
+        "review_scope_both": "Beide",
+        "review_play_count_label": "Afspeel aantal:",
+        "review_time_limit_label": "Tijdslimiet (sec):",
+        "review_time_limit_off": "Uit",
+        "review_limit_mode_label": "Limietmodus:",
+        "review_limit_soft": "Zacht",
+        "review_limit_hard": "Strikt",
+        "review_sfx_label": "Geluidseffecten",
+        "review_sfx_vol_label": "SFX Vol:",
+        "review_sfx_tone_label": "SFX Toon:",
+        "review_sfx_tone_default": "Standaard",
+        "review_sfx_tone_gentle": "Zacht",
+        "review_time_weight_label": "Tijdweging %:",
+        "review_ui_overhead_label": "UI-overhead (ms):",
+        "review_thumb_size_label": "Thumbnailgrootte:",
+        "review_items_per_session_label": "Items per sessie:",
+        "review_sessions_label_initial": "Sessies: --",
+        "review_sessions_label_format": "Sessies: {sessions}  |  Items/sessie: {per}  |  Laatste: {last_items}",
+        "review_set_label_format": "Set {n}",
+        "review_reset": "Reset",
+        "review_reset_defaults": "Reset naar standaard",
+        "review_export_results": "Resultaten exporteren",
+        "review_export_sets": "Sets exporteren",
+        "review_export_sets_tooltip": "Huidige virtuele sessiegroepering opslaan",
+        "review_export_format_label": "Formaat:",
+        "review_export_format_folders": "Mappen",
+        "review_export_format_zip": "Zip-bestanden",
+        "review_progress_format": "{current}/{total} prompts",
+        "review_no_items_title": "Geen items",
+        "review_no_items_scope": "Geen opnames gevonden voor het geselecteerde bereik.",
+        "review_no_items_group": "Geen opnames om te groeperen.",
+        "review_no_items_export": "Geen opnames om te exporteren.",
+        "review_no_session_title": "Geen sessie",
+        "review_no_session_msg": "Geen sessiegegevens om te exporteren.",
+        "review_choose_save_sets": "Kies waar sets worden opgeslagen",
+        "review_export_complete_title": "Export voltooid",
+        "review_export_sets_complete_msg": "{n} sets geëxporteerd naar:\n{dir}",
+        "review_export_failed_title": "Export mislukt",
+        "review_export_sets_failed": "Sets exporteren mislukt:",
+        "review_choose_save_report": "Kies waar het rapport wordt opgeslagen",
+        "review_report_saved_msg": "Rapport opgeslagen naar:",
+        "review_export_report_failed": "Rapport exporteren mislukt:",
+        "review_session_complete_title": "Sessie voltooid",
+        "review_session_complete_msg": "Review sessie voltooid!",
+        "review_summary_grade": "Cijfer",
+        "review_summary_accuracy": "Nauwkeurigheid",
+        "review_summary_avg_time": "Gemiddelde tijd",
+        "review_summary_composite": "Compositescore",
+        "group_export_title": "Gegroepeerd exporteren",
+        "group_export_info": "Exporteer {count} opgenomen items naar georganiseerde groepsmappen.",
+        "group_export_items_per_folder": "Items per map:",
+        "group_export_num_folders": "Aantal mappen:",
+        "group_export_preview_none": "Geen items om te exporteren.",
+        "group_export_preview_will_create": "Zal {n} map(pen) maken:\n",
+        "group_export_preview_group_line": "  Groep {i:02d}: {count} items\n",
+        "group_export_preview_more": "  ... en nog {extra} mappen\n",
+        "group_export_preview_last_note": "\nOpmerking: laatste map heeft {count} items (rest).",
+        "group_export_copy_mode": "Bestanden kopiëren (standaard, veilig)",
+        "group_export_copy_mode_tip": "Vink uit om te verplaatsen (voorzichtig gebruiken)",
+        "group_export_export_btn": "Exporteren...",
+        "group_export_cancel_btn": "Annuleren",
+        "group_export_select_dir": "Exportmap selecteren",
+        "group_export_no_items_title": "Geen items",
+        "group_export_no_items_msg": "Geen items om te exporteren.",
+        "group_export_confirm_overwrite_title": "Overschrijven bevestigen",
+        "group_export_confirm_overwrite_msg": "De geselecteerde map bevat al {n} Groep-map(pen).\n\nBestaande bestanden kunnen worden overschreven. Doorgaan?",
+        "group_export_complete_title": "Export voltooid",
+        "group_export_complete_msg": "Succesvol {items} items geëxporteerd naar {groups} mappen.",
+        "group_export_failed_title": "Export mislukt",
+        "group_export_failed_msg": "Export mislukt:",
     },
     "Português (Brasil)": {
         "language_name": "Português (Brasil)",
@@ -417,6 +820,20 @@ LABELS_ALL = {
         "stop_audio": "Parar Áudio",
         "record_audio": "Gravar Áudio",
         "stop_recording": "Parar Gravação",
+        "add_existing_audio": "Adicionar áudio…",
+        "add_audio_from_file": "Do arquivo…",
+        "add_audio_paste_clipboard": "Colar da área de transferência",
+        "import_select_file_dialog": "Selecionar arquivo de áudio",
+        "images_tab_title": "Imagens",
+        "copy_image": "Copiar imagem",
+        "copy_video": "Copiar vídeo",
+        "copied_image": "Imagem copiada para a área de transferência",
+        "copied_video": "Vídeo copiado para a área de transferência",
+        "save_image_as": "Salvar imagem como…",
+        "save_video_as": "Salvar vídeo como…",
+        "save_image_as_dialog_title": "Salvar imagem como…",
+        "save_video_as_dialog_title": "Salvar vídeo como…",
+        "paste_audio_failed": "A área de transferência não contém áudio ou um caminho de arquivo de áudio.",
         "edit_metadata": "Editar Metadados",
         "save_metadata": "Salvar",
         "audio_label_prefix": "Áudio: ",
@@ -484,6 +901,94 @@ LABELS_ALL = {
             "no site do projeto.</p>"
         ),
         "ocenaudio_not_found_body": "Ocenaudio não encontrado. Instale-o para usar este recurso.",
+        
+        "review_tab_title": "Revisão",
+        "review_tip_html": "<b>Dica:</b> Clique uma vez para selecionar. Clique com o botão direito, Ctrl/Cmd+Clique ou Enter para confirmar. Clique duas vezes para abrir a visualização/tela cheia. Pressione Espaço para repetir o prompt.",
+        "time_label_prefix": "Tempo: ",
+        "review_start": "Iniciar Revisão",
+        "review_pause": "Pausar",
+        "review_resume": "Retomar",
+        "review_stop": "Parar",
+        "review_replay": "Repetir",
+        "review_prev_set": "Conjunto anterior",
+        "review_next_set": "Próximo conjunto",
+        "review_show_settings": "Mostrar configurações",
+        "review_hide_settings": "Ocultar configurações",
+        "review_set_name_placeholder": "Nome do conjunto",
+        "review_help_link": "Guia de Revisão GPA",
+        "review_scope_label": "Escopo:",
+        "review_scope_images": "Imagens",
+        "review_scope_videos": "Vídeos",
+        "review_scope_both": "Ambos",
+        "review_play_count_label": "Reproduções:",
+        "review_time_limit_label": "Limite de tempo (s):",
+        "review_time_limit_off": "Desligado",
+        "review_limit_mode_label": "Modo de limite:",
+        "review_limit_soft": "Suave",
+        "review_limit_hard": "Rígido",
+        "review_sfx_label": "Efeitos sonoros",
+        "review_sfx_vol_label": "Vol. SFX:",
+        "review_sfx_tone_label": "Tom SFX:",
+        "review_sfx_tone_default": "Padrão",
+        "review_sfx_tone_gentle": "Suave",
+        "review_time_weight_label": "Peso do tempo %:",
+        "review_ui_overhead_label": "Sobrecarga da UI (ms):",
+        "review_thumb_size_label": "Tamanho das miniaturas:",
+        "review_items_per_session_label": "Itens por sessão:",
+        "review_sessions_label_initial": "Sessões: --",
+        "review_sessions_label_format": "Sessões: {sessions}  |  Itens/sessão: {per}  |  Última: {last_items}",
+        "review_set_label_format": "Conjunto {n}",
+        "review_reset": "Redefinir",
+        "review_reset_defaults": "Redefinir para padrão",
+        "review_export_results": "Exportar Resultados",
+        "review_export_sets": "Exportar Conjuntos",
+        "review_export_sets_tooltip": "Salvar agrupamento da sessão virtual atual",
+        "review_export_format_label": "Formato:",
+        "review_export_format_folders": "Pastas",
+        "review_export_format_zip": "Arquivos Zip",
+        "review_progress_format": "{current}/{total} prompts",
+        "review_no_items_title": "Sem itens",
+        "review_no_items_scope": "Nenhuma gravação encontrada para o escopo selecionado.",
+        "review_no_items_group": "Nenhuma gravação para agrupar.",
+        "review_no_items_export": "Nenhuma gravação para exportar.",
+        "review_no_session_title": "Sem sessão",
+        "review_no_session_msg": "Nenhum dado de sessão para exportar.",
+        "review_choose_save_sets": "Escolher onde salvar os conjuntos",
+        "review_export_complete_title": "Exportação concluída",
+        "review_export_sets_complete_msg": "{n} conjuntos exportados para:\n{dir}",
+        "review_export_failed_title": "Falha na exportação",
+        "review_export_sets_failed": "Falha ao exportar conjuntos:",
+        "review_choose_save_report": "Escolher onde salvar o relatório",
+        "review_report_saved_msg": "Relatório salvo em:",
+        "review_export_report_failed": "Falha ao exportar relatório:",
+        "review_session_complete_title": "Sessão concluída",
+        "review_session_complete_msg": "Sessão de revisão concluída!",
+        "review_summary_grade": "Nota",
+        "review_summary_accuracy": "Precisão",
+        "review_summary_avg_time": "Tempo médio",
+        "review_summary_composite": "Pontuação composta",
+        "group_export_title": "Exportação Agrupada",
+        "group_export_info": "Exportar {count} itens gravados em pastas de grupos organizadas.",
+        "group_export_items_per_folder": "Itens por pasta:",
+        "group_export_num_folders": "Número de pastas:",
+        "group_export_preview_none": "Sem itens para exportar.",
+        "group_export_preview_will_create": "Criará {n} pasta(s):\n",
+        "group_export_preview_group_line": "  Grupo {i:02d}: {count} itens\n",
+        "group_export_preview_more": "  ... e mais {extra} pastas\n",
+        "group_export_preview_last_note": "\nObservação: a última pasta tem {count} itens (restante).",
+        "group_export_copy_mode": "Copiar arquivos (padrão, seguro)",
+        "group_export_copy_mode_tip": "Desmarque para mover arquivos (use com cuidado)",
+        "group_export_export_btn": "Exportar...",
+        "group_export_cancel_btn": "Cancelar",
+        "group_export_select_dir": "Selecionar Diretório de Exportação",
+        "group_export_no_items_title": "Sem itens",
+        "group_export_no_items_msg": "Nenhum item para exportar.",
+        "group_export_confirm_overwrite_title": "Confirmar sobrescrita",
+        "group_export_confirm_overwrite_msg": "O diretório selecionado já contém {n} pasta(s) do Grupo.\n\nArquivos existentes podem ser sobrescritos. Continuar?",
+        "group_export_complete_title": "Exportação concluída",
+        "group_export_complete_msg": "{items} itens exportados com sucesso em {groups} pastas.",
+        "group_export_failed_title": "Falha na exportação",
+        "group_export_failed_msg": "Falha ao exportar:",
     },
     "Español (Latinoamérica)": {
         "language_name": "Español (Latinoamérica)",
@@ -502,6 +1007,20 @@ LABELS_ALL = {
         "stop_audio": "Detener Audio",
         "record_audio": "Grabar Audio",
         "stop_recording": "Detener Grabación",
+        "add_existing_audio": "Agregar audio…",
+        "add_audio_from_file": "Desde archivo…",
+        "add_audio_paste_clipboard": "Pegar desde el portapapeles",
+        "import_select_file_dialog": "Seleccionar archivo de audio",
+        "images_tab_title": "Imágenes",
+        "copy_image": "Copiar imagen",
+        "copy_video": "Copiar video",
+        "copied_image": "Imagen copiada al portapapeles",
+        "copied_video": "Video copiado al portapapeles",
+        "save_image_as": "Guardar imagen como…",
+        "save_video_as": "Guardar video como…",
+        "save_image_as_dialog_title": "Guardar imagen como…",
+        "save_video_as_dialog_title": "Guardar video como…",
+        "paste_audio_failed": "El portapapeles no contiene audio ni una ruta de archivo de audio.",
         "edit_metadata": "Editar Metadatos",
         "save_metadata": "Guardar",
         "audio_label_prefix": "Audio: ",
@@ -569,6 +1088,94 @@ LABELS_ALL = {
             "en el sitio web del proyecto.</p>"
         ),
         "ocenaudio_not_found_body": "Ocenaudio no encontrado. Instálalo para usar esta función.",
+        
+        "review_tab_title": "Revisión",
+        "review_tip_html": "<b>Consejo:</b> Un clic selecciona. Clic derecho, Ctrl/Cmd+Clic o Enter para confirmar. Doble clic abre vista previa/pantalla completa. Presiona Espacio para repetir el prompt.",
+        "time_label_prefix": "Tiempo: ",
+        "review_start": "Iniciar Revisión",
+        "review_pause": "Pausar",
+        "review_resume": "Reanudar",
+        "review_stop": "Detener",
+        "review_replay": "Repetir",
+        "review_prev_set": "Conjunto anterior",
+        "review_next_set": "Siguiente conjunto",
+        "review_show_settings": "Mostrar ajustes",
+        "review_hide_settings": "Ocultar ajustes",
+        "review_set_name_placeholder": "Nombre del conjunto",
+        "review_help_link": "Guía de Revisión GPA",
+        "review_scope_label": "Alcance:",
+        "review_scope_images": "Imágenes",
+        "review_scope_videos": "Videos",
+        "review_scope_both": "Ambos",
+        "review_play_count_label": "Reproducciones:",
+        "review_time_limit_label": "Límite de tiempo (seg):",
+        "review_time_limit_off": "Apagado",
+        "review_limit_mode_label": "Modo de límite:",
+        "review_limit_soft": "Suave",
+        "review_limit_hard": "Estricto",
+        "review_sfx_label": "Efectos de sonido",
+        "review_sfx_vol_label": "Vol. SFX:",
+        "review_sfx_tone_label": "Tono SFX:",
+        "review_sfx_tone_default": "Predeterminado",
+        "review_sfx_tone_gentle": "Suave",
+        "review_time_weight_label": "Peso de tiempo %:",
+        "review_ui_overhead_label": "Sobrecarga de UI (ms):",
+        "review_thumb_size_label": "Tamaño de miniatura:",
+        "review_items_per_session_label": "Elementos por sesión:",
+        "review_sessions_label_initial": "Sesiones: --",
+        "review_sessions_label_format": "Sesiones: {sessions}  |  Elementos/sesión: {per}  |  Última: {last_items}",
+        "review_set_label_format": "Conjunto {n}",
+        "review_reset": "Reiniciar",
+        "review_reset_defaults": "Restablecer a predeterminados",
+        "review_export_results": "Exportar Resultados",
+        "review_export_sets": "Exportar Conjuntos",
+        "review_export_sets_tooltip": "Guardar la agrupación de la sesión virtual actual",
+        "review_export_format_label": "Formato:",
+        "review_export_format_folders": "Carpetas",
+        "review_export_format_zip": "Archivos Zip",
+        "review_progress_format": "{current}/{total} prompts",
+        "review_no_items_title": "Sin artículos",
+        "review_no_items_scope": "No se encontraron grabaciones para el alcance seleccionado.",
+        "review_no_items_group": "No hay grabaciones para agrupar.",
+        "review_no_items_export": "No hay grabaciones para exportar.",
+        "review_no_session_title": "Sin sesión",
+        "review_no_session_msg": "No hay datos de sesión para exportar.",
+        "review_choose_save_sets": "Elegir dónde guardar los conjuntos",
+        "review_export_complete_title": "Exportación completa",
+        "review_export_sets_complete_msg": "Se exportaron {n} conjuntos a:\n{dir}",
+        "review_export_failed_title": "Exportación fallida",
+        "review_export_sets_failed": "Error al exportar conjuntos:",
+        "review_choose_save_report": "Elegir dónde guardar el informe",
+        "review_report_saved_msg": "Informe guardado en:",
+        "review_export_report_failed": "Error al exportar informe:",
+        "review_session_complete_title": "Sesión completa",
+        "review_session_complete_msg": "¡Sesión de revisión completa!",
+        "review_summary_grade": "Calificación",
+        "review_summary_accuracy": "Precisión",
+        "review_summary_avg_time": "Tiempo promedio",
+        "review_summary_composite": "Puntuación compuesta",
+        "group_export_title": "Exportación Agrupada",
+        "group_export_info": "Exportar {count} elementos grabados en carpetas de grupos organizadas.",
+        "group_export_items_per_folder": "Elementos por carpeta:",
+        "group_export_num_folders": "Número de carpetas:",
+        "group_export_preview_none": "No hay artículos para exportar.",
+        "group_export_preview_will_create": "Se crearán {n} carpeta(s):\n",
+        "group_export_preview_group_line": "  Grupo {i:02d}: {count} elementos\n",
+        "group_export_preview_more": "  ... y {extra} carpetas más\n",
+        "group_export_preview_last_note": "\nNota: La última carpeta tiene {count} elementos (remanente).",
+        "group_export_copy_mode": "Copiar archivos (predeterminado, seguro)",
+        "group_export_copy_mode_tip": "Desmarca para mover archivos (usar con precaución)",
+        "group_export_export_btn": "Exportar...",
+        "group_export_cancel_btn": "Cancelar",
+        "group_export_select_dir": "Seleccionar Directorio de Exportación",
+        "group_export_no_items_title": "Sin artículos",
+        "group_export_no_items_msg": "No hay artículos para exportar.",
+        "group_export_confirm_overwrite_title": "Confirmar sobrescritura",
+        "group_export_confirm_overwrite_msg": "El directorio seleccionado ya contiene {n} carpeta(s) de Grupo.\n\nLos archivos existentes pueden sobrescribirse. ¿Continuar?",
+        "group_export_complete_title": "Exportación completa",
+        "group_export_complete_msg": "{items} elementos exportados correctamente en {groups} carpetas.",
+        "group_export_failed_title": "Exportación fallida",
+        "group_export_failed_msg": "Error al exportar:",
     },
     "Afrikaans": {
         "language_name": "Afrikaans",
@@ -587,6 +1194,20 @@ LABELS_ALL = {
         "stop_audio": "Stop Klank",
         "record_audio": "Neem Klank op",
         "stop_recording": "Stop Opname",
+        "add_existing_audio": "Voeg klank by…",
+        "add_audio_from_file": "Vanaf lêer…",
+        "add_audio_paste_clipboard": "Plak vanaf klembord",
+        "import_select_file_dialog": "Kies klanklêer",
+        "images_tab_title": "Prente",
+        "copy_image": "Kopieer prent",
+        "copy_video": "Kopieer video",
+        "copied_image": "Prent na klembord gekopieer",
+        "copied_video": "Video na klembord gekopieer",
+        "save_image_as": "Stoor prent as…",
+        "save_video_as": "Stoor video as…",
+        "save_image_as_dialog_title": "Stoor prent as…",
+        "save_video_as_dialog_title": "Stoor video as…",
+        "paste_audio_failed": "Klembord bevat nie klank of 'n klanklêerpad nie.",
         "edit_metadata": "Redigeer Metadata",
         "save_metadata": "Stoor",
         "audio_label_prefix": "Klank: ",
@@ -654,6 +1275,94 @@ LABELS_ALL = {
             "op die projek se webwerf.</p>"
         ),
         "ocenaudio_not_found_body": "Ocenaudio nie gevind nie. Installeer dit om hierdie funksie te gebruik.",
+        
+        "review_tab_title": "Hersiening",
+        "review_tip_html": "<b>Wenk:</b> Een klik kies. Regsklik, Ctrl/Cmd+Klik of Enter bevestig. Dubbelklik open voorskou/volskerm. Druk Spasie om die prompt weer te speel.",
+        "time_label_prefix": "Tyd: ",
+        "review_start": "Begin Hersiening",
+        "review_pause": "Pouse",
+        "review_resume": "Hervat",
+        "review_stop": "Stop",
+        "review_replay": "Speel weer",
+        "review_prev_set": "Vorige stel",
+        "review_next_set": "Volgende stel",
+        "review_show_settings": "Wys instellings",
+        "review_hide_settings": "Versteek instellings",
+        "review_set_name_placeholder": "Stelnaam",
+        "review_help_link": "GPA Hersieningsgids",
+        "review_scope_label": "Reikwydte:",
+        "review_scope_images": "Prente",
+        "review_scope_videos": "Video's",
+        "review_scope_both": "Albei",
+        "review_play_count_label": "Speelkeer:",
+        "review_time_limit_label": "Tydsbeperking (s):",
+        "review_time_limit_off": "Af",
+        "review_limit_mode_label": "Beperkingsmodus:",
+        "review_limit_soft": "Sag",
+        "review_limit_hard": "Streng",
+        "review_sfx_label": "Klankeffekte",
+        "review_sfx_vol_label": "SFX Vol:",
+        "review_sfx_tone_label": "SFX Toon:",
+        "review_sfx_tone_default": "Standaard",
+        "review_sfx_tone_gentle": "Sag",
+        "review_time_weight_label": "Tydweging %:",
+        "review_ui_overhead_label": "UI-oorskot (ms):",
+        "review_thumb_size_label": "Duimnaelgrootte:",
+        "review_items_per_session_label": "Items per sessie:",
+        "review_sessions_label_initial": "Sessies: --",
+        "review_sessions_label_format": "Sessies: {sessions}  |  Items/sessie: {per}  |  Laaste: {last_items}",
+        "review_set_label_format": "Stel {n}",
+        "review_reset": "Herstel",
+        "review_reset_defaults": "Herstel na verstek",
+        "review_export_results": "Voer Resultate Uit",
+        "review_export_sets": "Voer Stelle Uit",
+        "review_export_sets_tooltip": "Stoor die huidige virtuele sessiegroepering",
+        "review_export_format_label": "Formaat:",
+        "review_export_format_folders": "Gidse",
+        "review_export_format_zip": "Zip-lêers",
+        "review_progress_format": "{current}/{total} prompts",
+        "review_no_items_title": "Geen items",
+        "review_no_items_scope": "Geen opnames vir die gekose reikwydte gevind nie.",
+        "review_no_items_group": "Geen opnames om te groepeer nie.",
+        "review_no_items_export": "Geen opnames om uit te voer nie.",
+        "review_no_session_title": "Geen sessie",
+        "review_no_session_msg": "Geen sessiedata om uit te voer nie.",
+        "review_choose_save_sets": "Kies waar om stelle te stoor",
+        "review_export_complete_title": "Uitvoer voltooi",
+        "review_export_sets_complete_msg": "{n} stelle uitgevoer na:\n{dir}",
+        "review_export_failed_title": "Uitvoer misluk",
+        "review_export_sets_failed": "Kon nie stelle uitvoer nie:",
+        "review_choose_save_report": "Kies waar om die verslag te stoor",
+        "review_report_saved_msg": "Verslag gestoor in:",
+        "review_export_report_failed": "Kon nie verslag uitvoer nie:",
+        "review_session_complete_title": "Sessie voltooi",
+        "review_session_complete_msg": "Hersieningsessie voltooi!",
+        "review_summary_grade": "Graad",
+        "review_summary_accuracy": "Akkuraatheid",
+        "review_summary_avg_time": "Gem. tyd",
+        "review_summary_composite": "Samestellingscore",
+        "group_export_title": "Gegroepeerde Uitvoer",
+        "group_export_info": "Voer {count} opgenomen items uit na georganiseerde groepgidse.",
+        "group_export_items_per_folder": "Items per gids:",
+        "group_export_num_folders": "Aantal gidse:",
+        "group_export_preview_none": "Geen items om uit te voer nie.",
+        "group_export_preview_will_create": "Sal {n} gids(e) skep:\n",
+        "group_export_preview_group_line": "  Groep {i:02d}: {count} items\n",
+        "group_export_preview_more": "  ... en {extra} meer gidse\n",
+        "group_export_preview_last_note": "\nLet wel: Laaste gids het {count} items (oorblyfsel).",
+        "group_export_copy_mode": "Kopieer lêers (verstek, veilig)",
+        "group_export_copy_mode_tip": "Untick om lêers te skuif (gebruik versigtig)",
+        "group_export_export_btn": "Voer uit...",
+        "group_export_cancel_btn": "Kanselleer",
+        "group_export_select_dir": "Kies Uitvoergids",
+        "group_export_no_items_title": "Geen items",
+        "group_export_no_items_msg": "Geen items om uit te voer nie.",
+        "group_export_confirm_overwrite_title": "Bevestig Oorskryf",
+        "group_export_confirm_overwrite_msg": "Die geselekteerde gids bevat reeds {n} Groep-gids(e).\n\nBestaande lêers kan oorskryf word. Voortgaan?",
+        "group_export_complete_title": "Uitvoer voltooi",
+        "group_export_complete_msg": "{items} items suksesvol uitgevoer na {groups} gidse.",
+        "group_export_failed_title": "Uitvoer misluk",
+        "group_export_failed_msg": "Uitvoer het misluk:",
     },
 }
 
@@ -1148,6 +1857,14 @@ class VideoAnnotationApp(QMainWindow):
             self.video_listbox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         except Exception:
             pass
+        # Videos context menu and Ctrl+C to copy video file URL
+        try:
+            self.video_listbox.setContextMenuPolicy(Qt.CustomContextMenu)
+            self.video_listbox.customContextMenuRequested.connect(self._on_videos_context_menu)
+            self.copy_video_shortcut = QShortcut(QKeySequence.Copy, self.video_listbox)
+            self.copy_video_shortcut.activated.connect(self._copy_current_video_to_clipboard)
+        except Exception:
+            pass
         self.video_listbox.currentRowChanged.connect(self.on_video_select)
         left_layout.addWidget(self.video_listbox)
         # Replace inline metadata editor with a single button
@@ -1482,8 +2199,8 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             app_version = "2.0.3"
         
-        self.review_tab = ReviewTab(self.fs, app_version, self)
-        right_panel.addTab(self.review_tab, "Review")
+        self.review_tab = ReviewTab(self.fs, app_version, self, labels=self.LABELS)
+        right_panel.addTab(self.review_tab, self.LABELS.get("review_tab_title", "Review"))
         
         splitter.addWidget(right_panel)
         # Start with drawer collapsed; remember previous sizes for temporary expand
@@ -1558,7 +2275,32 @@ class VideoAnnotationApp(QMainWindow):
                 self.LABELS = LABELS_ALL[self.language]
                 break
         self.setWindowTitle(self.LABELS["app_title"])
+        # Update tab titles
+        try:
+            if getattr(self, 'right_panel', None) is not None:
+                self.right_panel.setTabText(0, self.LABELS.get("videos_tab_title", "Videos"))
+                self.right_panel.setTabText(1, self.LABELS.get("images_tab_title", "Images"))
+                self.right_panel.setTabText(2, self.LABELS.get("review_tab_title", "Review"))
+        except Exception:
+            pass
+        # Retranslate Review tab
+        try:
+            if getattr(self, 'review_tab', None) is not None:
+                self.review_tab.retranslate(self.LABELS)
+        except Exception:
+            pass
+        # Refresh other UI texts
         self.refresh_ui_texts()
+        # Update dropdown/menu labels where created earlier
+        try:
+            if getattr(self, 'add_audio_button', None) is not None and self.add_audio_button.menu():
+                self.add_audio_button.setText(self.LABELS.get("add_existing_audio", "Add audio…"))
+                acts = self.add_audio_button.menu().actions()
+                if len(acts) >= 2:
+                    acts[0].setText(self.LABELS.get("add_audio_from_file", "From file…"))
+                    acts[1].setText(self.LABELS.get("add_audio_paste_clipboard", "Paste from clipboard"))
+        except Exception:
+            pass
         self.save_settings()
 
     def _toggle_drawer(self):
@@ -2331,6 +3073,9 @@ class VideoAnnotationApp(QMainWindow):
             copy_act = QAction(self.LABELS.get("copy_image", "Copy Image"), self)
             copy_act.triggered.connect(self._copy_current_image_to_clipboard)
             menu.addAction(copy_act)
+            save_act = QAction(self.LABELS.get("save_image_as", "Save Image as…"), self)
+            save_act.triggered.connect(self._save_current_image_as)
+            menu.addAction(save_act)
             try:
                 global_pos = self.images_list.mapToGlobal(pos)
             except Exception:
@@ -2373,6 +3118,105 @@ class VideoAnnotationApp(QMainWindow):
                 self.statusBar().showMessage(self.LABELS.get("copied_image", "Image copied to clipboard"), 2000)
             except Exception:
                 pass
+        except Exception:
+            pass
+    def _on_videos_context_menu(self, pos: QPoint):
+        try:
+            item = self.video_listbox.itemAt(pos)
+            if item is not None:
+                self.video_listbox.setCurrentItem(item)
+            menu = QMenu(self)
+            copy_act = QAction(self.LABELS.get("copy_video", "Copy Video"), self)
+            copy_act.triggered.connect(self._copy_current_video_to_clipboard)
+            menu.addAction(copy_act)
+            save_act = QAction(self.LABELS.get("save_video_as", "Save Video as…"), self)
+            save_act.triggered.connect(self._save_current_video_as)
+            menu.addAction(save_act)
+            try:
+                global_pos = self.video_listbox.mapToGlobal(pos)
+            except Exception:
+                global_pos = None
+            if global_pos:
+                menu.exec(global_pos)
+            else:
+                menu.exec(QCursor.pos())
+        except Exception:
+            pass
+    def _copy_current_video_to_clipboard(self):
+        try:
+            if not self.current_video:
+                return
+            video_path = self._resolve_current_video_path()
+            if not (video_path and os.path.exists(video_path)):
+                return
+            mime = QMimeData()
+            try:
+                mime.setUrls([QUrl.fromLocalFile(video_path)])
+            except Exception:
+                pass
+            try:
+                mime.setText(video_path)
+            except Exception:
+                pass
+            QGuiApplication.clipboard().setMimeData(mime)
+            try:
+                self.statusBar().showMessage(self.LABELS.get("copied_video", "Video copied to clipboard"), 2000)
+            except Exception:
+                pass
+        except Exception:
+            pass
+    def _save_current_video_as(self):
+        try:
+            if not self.current_video:
+                return
+            src = self._resolve_current_video_path()
+            if not (src and os.path.exists(src)):
+                return
+            name = os.path.basename(src)
+            dst, _ = QFileDialog.getSaveFileName(
+                self,
+                self.LABELS.get("save_video_as_dialog_title", "Save Video as…"),
+                name,
+                "Video files (*.mpg *.mpeg *.mp4 *.avi *.mkv *.mov);;All files (*)",
+            )
+            if not dst:
+                return
+            try:
+                shutil.copyfile(src, dst)
+            except Exception as e:
+                QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"Failed to save video: {e}")
+                return
+        except Exception:
+            pass
+    def _save_current_image_as(self):
+        try:
+            sel = self.images_list.currentItem()
+            if sel is None:
+                return
+            path = None
+            try:
+                path = sel.data(Qt.UserRole)
+            except Exception:
+                path = None
+            if not path:
+                name = sel.text()
+                path = os.path.join(self.fs.current_folder or "", name)
+            if not path or not os.path.exists(path):
+                return
+            name = os.path.basename(path)
+            dst, _ = QFileDialog.getSaveFileName(
+                self,
+                self.LABELS.get("save_image_as_dialog_title", "Save Image as…"),
+                name,
+                "Image files (*.jpg *.jpeg *.png *.bmp *.tiff *.tif *.gif);;All files (*)",
+            )
+            if not dst:
+                return
+            try:
+                shutil.copyfile(path, dst)
+            except Exception as e:
+                QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"Failed to save image: {e}")
+                return
         except Exception:
             pass
     def _handle_add_existing_audio_video(self):
