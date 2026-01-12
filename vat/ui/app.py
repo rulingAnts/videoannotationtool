@@ -123,6 +123,10 @@ LABELS_ALL = {
             "<p>For examples of recommended stimulus kits and more background, see the "
             "<a href=\"https://rulingants.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
             "section on the project website.</p>"
+            "<p><b>Also great for GPA \"Dirty Dozen\" review:</b> Use the <b>Review</b> tab to run quiz-style "
+            "comprehension/retell sessions with fairness rules, timing, grading, and YAML/grouped exports. "
+            "For background and instructions, see the <a href=\"https://growingparticipatorsapproach.org/\" target=\"_blank\" rel=\"noopener noreferrer\">Growing Participator Approach</a>. "
+            "You can configure and start a review session from the Review tab header and export results when done.</p>"
         ),
         "ocenaudio_not_found_body": "Ocenaudio not found. Please install it to use this feature.",
     },
@@ -2888,7 +2892,43 @@ class VideoAnnotationApp(QMainWindow):
                 "welcome_dialog_body_html",
                 LABELS_ALL["English"]["welcome_dialog_body_html"],
             )
-            QMessageBox.information(self, title, body)
+            try:
+                from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
+                from PySide6.QtCore import Qt
+            except Exception:
+                # Fallback if widgets cannot be imported for some reason
+                QMessageBox.information(self, title, body)
+                return
+
+            dlg = QDialog(self)
+            dlg.setWindowTitle(title)
+            layout = QVBoxLayout(dlg)
+
+            label = QLabel(dlg)
+            label.setTextFormat(Qt.RichText)
+            label.setWordWrap(True)
+            try:
+                label.setOpenExternalLinks(True)
+            except Exception:
+                pass
+            label.setText(body)
+            layout.addWidget(label)
+
+            btn_row = QHBoxLayout()
+            btn_row.addStretch(1)
+            ok_btn = QPushButton("OK", dlg)
+            ok_btn.clicked.connect(dlg.accept)
+            btn_row.addWidget(ok_btn)
+            layout.addLayout(btn_row)
+
+            # Make the dialog wider to accommodate longer content
+            try:
+                current_size = dlg.sizeHint()
+                dlg.resize(max(900, current_size.width() * 2), max(520, current_size.height()))
+            except Exception:
+                dlg.resize(900, 520)
+
+            dlg.exec()
         except Exception:
             pass
 
