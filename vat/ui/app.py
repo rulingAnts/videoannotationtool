@@ -106,7 +106,7 @@ LABELS_ALL = {
         "welcome_dialog_title": "Welcome to the Visual Stimulus Kit Tool",
         "welcome_dialog_body_html": (
             "<p><b>Welcome!</b> This tool helps you collect clear, well-organised "
-            "examples of how people speak and sign in minority and under-documented languages. "
+            "examples of how people speak in minority and under-documented languages. "
             "You will use short video clips or still images (stimuli) to guide speakers and signers "
             "through specific situations or meanings so you can study the grammar and vocabulary.</p>"
             "<p><b>Best practices:</b></p>"
@@ -115,16 +115,18 @@ LABELS_ALL = {
             "and still images in the same order as the kit instructions. The exact filenames and the "
             "ordering of still images do not need to match the video list perfectly, but the meanings "
             "and situations should be presented in the intended sequence.</li>"
-            "<li><b>Make a continuous backup recording whenever possible.</b> In addition to recording "
+            "<li><b>Make a continuous recording whenever possible.</b> In addition to recording "
             "one short audio file per item in this tool, it is very helpful to keep a separate, "
-            "continuous audio (and/or video) recording of the whole elicitation session. This protects "
-            "you if something goes wrong with individual files.</li>"
+            "continuous audio (and/or video) recording of the whole elicitation session. This can provide "
+            "important data later, as informants are likely to treat this session as a single discourse "
+            "event with recurring characters, props, settings, and topics, rather than as completely "
+            "isolated scenes.</li>"
             "</ol>"
             "<p>For examples of recommended stimulus kits and more background, see the "
             "<a href=\"https://rulingants.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
             "section on the project website.</p>"
-            "<p><b>Also great for GPA \"Dirty Dozen\" review:</b> Use the <b>Review</b> tab to run quiz-style "
-            "comprehension/retell sessions with fairness rules, timing, grading, and YAML/grouped exports. "
+            "<p><b>This is also great for GPA \"Dirty Dozen\" review:</b> Use the <b>Review</b> tab to run quiz-style "
+            "comprehension/TPR sessions with fairness rules, timing, grading, and the ability to export results and sessions. "
             "For background and instructions, see the <a href=\"https://growingparticipatorsapproach.org/\" target=\"_blank\" rel=\"noopener noreferrer\">Growing Participator Approach</a>. "
             "You can configure and start a review session from the Review tab header and export results when done.</p>"
         ),
@@ -2903,6 +2905,11 @@ class VideoAnnotationApp(QMainWindow):
             dlg = QDialog(self)
             dlg.setWindowTitle(title)
             layout = QVBoxLayout(dlg)
+            try:
+                layout.setContentsMargins(16, 10, 16, 10)
+                layout.setSpacing(8)
+            except Exception:
+                pass
 
             label = QLabel(dlg)
             label.setTextFormat(Qt.RichText)
@@ -2921,12 +2928,16 @@ class VideoAnnotationApp(QMainWindow):
             btn_row.addWidget(ok_btn)
             layout.addLayout(btn_row)
 
-            # Make the dialog wider to accommodate longer content
+            # Make the dialog wider but slightly shorter to reduce empty space
             try:
                 current_size = dlg.sizeHint()
-                dlg.resize(max(900, current_size.width() * 2), max(520, current_size.height()))
+                # Target ~1.25x typical width, with a reasonable minimum
+                new_w = max(720, int(current_size.width() * 1.25))
+                # Reduce minimum height to trim top/bottom whitespace
+                new_h = max(440, current_size.height())
+                dlg.resize(new_w, new_h)
             except Exception:
-                dlg.resize(900, 520)
+                dlg.resize(720, 460)
 
             dlg.exec()
         except Exception:
