@@ -26,6 +26,7 @@ from vat.review.grouped_exporter import GroupedExporter
 from vat.review.thumbnail_grid import ThumbnailGridWidget
 from vat.audio import PYAUDIO_AVAILABLE
 from vat.audio.playback import AudioPlaybackWorker
+from vat.utils.resources import resource_path
 
 
 class ReviewTab(QWidget):
@@ -192,6 +193,21 @@ class ReviewTab(QWidget):
             pass
         self.settings_toggle_btn.setAutoRaise(True)
         self.settings_toggle_btn.clicked.connect(self._toggle_settings_panel)
+        # Add quick help link near the gear
+        try:
+            top.addSpacing(6)
+        except Exception:
+            pass
+        try:
+            self.help_link = QLabel("<a href=\"internal:docs#guide-gpa-dirty-dozen\">GPA Review Guide</a>")
+            self.help_link.setTextFormat(Qt.RichText)
+            self.help_link.setOpenExternalLinks(False)
+            self.help_link.setStyleSheet("QLabel { color: palette(link); } QLabel:hover { text-decoration: underline; }")
+            self.help_link.linkActivated.connect(self._open_docs_site)
+            # Keep help link right-aligned with gear
+            top.addWidget(self.help_link)
+        except Exception:
+            pass
         top.addWidget(self.settings_toggle_btn)
 
         layout.addLayout(top)
@@ -353,6 +369,30 @@ class ReviewTab(QWidget):
         self.settings_scrim.installEventFilter(self)
 
         return header
+
+    def _open_docs_site(self, _link: str = "internal:docs#guide-gpa-dirty-dozen") -> None:
+        """Open the bundled documentation (GPA guide) in a pywebview window."""
+        try:
+            import subprocess, sys, os
+            index_path = resource_path(os.path.join("docs", "index.html"), check_system=False)
+            frag = None
+            try:
+                if isinstance(_link, str) and "#" in _link:
+                    frag = _link.split("#", 1)[1]
+            except Exception:
+                frag = None
+            if not os.path.exists(index_path):
+                index_path = "https://rulingants.github.io/videoannotationtool/"
+            if frag:
+                cmd = [sys.executable, "-m", "vat.ui.docs_webview", index_path, frag]
+            else:
+                cmd = [sys.executable, "-m", "vat.ui.docs_webview", index_path]
+            subprocess.Popen(cmd)
+        except Exception as e:
+            try:
+                QMessageBox.information(self, "Documentation", f"Unable to open documentation window: {e}")
+            except Exception:
+                pass
 
     def _is_dark_mode(self) -> bool:
         """Detect whether the OS/app is currently using a dark color scheme."""

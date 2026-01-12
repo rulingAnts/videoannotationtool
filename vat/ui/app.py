@@ -1057,6 +1057,7 @@ class VideoAnnotationApp(QMainWindow):
             pass
         # Folder label follows the drawer button on the left
         header_row.addWidget(self.folder_display_label)
+
         # Push the language dropdown to the right edge on the same line
         try:
             header_row.addStretch(1)
@@ -2942,6 +2943,35 @@ class VideoAnnotationApp(QMainWindow):
             dlg.exec()
         except Exception:
             pass
+
+    def _open_docs_site(self, _link: str = "internal:docs"):
+        """Open the bundled documentation site in a pywebview window."""
+        try:
+            import subprocess, sys
+            from vat.utils.resources import resource_path
+            # Resolve bundled docs path (PyInstaller-aware)
+            index_path = resource_path(os.path.join("docs", "index.html"), check_system=False)
+            # Support internal anchors like internal:docs#section
+            frag = None
+            try:
+                if isinstance(_link, str) and "#" in _link:
+                    frag = _link.split("#", 1)[1]
+            except Exception:
+                frag = None
+            if not os.path.exists(index_path):
+                # Fallback: project docs site
+                index_path = "https://rulingants.github.io/videoannotationtool/"
+            # Launch a separate process to avoid interfering with the Qt event loop
+            if frag:
+                cmd = [sys.executable, "-m", "vat.ui.docs_webview", index_path, frag]
+            else:
+                cmd = [sys.executable, "-m", "vat.ui.docs_webview", index_path]
+            subprocess.Popen(cmd)
+        except Exception as e:
+            try:
+                QMessageBox.information(self, "Documentation", f"Unable to open documentation window: {e}")
+            except Exception:
+                pass
 
     # --- Images tab helpers (moved back into VideoAnnotationApp) ---
     def _open_fullscreen_video(self):

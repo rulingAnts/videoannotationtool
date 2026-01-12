@@ -6,3 +6,4 @@ numpy
 pydub
 PySide6
 PyYAML
+pywebview
