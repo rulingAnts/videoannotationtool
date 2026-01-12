@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QListView, QStyledItemDelegate, QApplication, QCheckBox, QGraphicsDropShadowEffect,
     QMenu
 )
-from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize, QRect, QPoint, QLocale, QMetaObject
+from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize, QRect, QPoint, QLocale, QMetaObject, QUrl
 import time
 from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence, QImageReader, QPen, QColor, QGuiApplication, QAction, QCursor
 
@@ -54,10 +54,13 @@ LABELS_ALL = {
         "stop_audio": "Stop Audio",
         "record_audio": "Record Audio",
         "stop_recording": "Stop Recording",
-        "add_existing_audio": "Add existing audio...",
+        "add_existing_audio": "Add audio…",
+        "add_audio_from_file": "From file…",
+        "add_audio_paste_clipboard": "Paste from clipboard",
         "import_select_file_dialog": "Select Audio File",
         "copy_image": "Copy Image",
         "copied_image": "Image copied to clipboard",
+        "paste_audio_failed": "Clipboard does not contain audio or an audio file path.",
         "edit_metadata": "Edit Metadata",
         "save_metadata": "Save",
         "audio_label_prefix": "Audio: ",
@@ -1291,10 +1294,22 @@ class VideoAnnotationApp(QMainWindow):
         self.record_button.clicked.connect(self.toggle_recording)
         self.record_button.setEnabled(False)
         audio_controls_layout.addWidget(self.record_button)
-        # Add existing audio import (to the right of Record)
-        self.add_audio_button = QPushButton(self.LABELS.get("add_existing_audio", "Add existing audio..."))
-        self.add_audio_button.clicked.connect(self._handle_add_existing_audio_video)
+        # Add audio dropdown (From file / Paste from clipboard)
+        self.add_audio_button = QToolButton()
+        self.add_audio_button.setText(self.LABELS.get("add_existing_audio", "Add audio…"))
+        try:
+            self.add_audio_button.setPopupMode(QToolButton.InstantPopup)
+        except Exception:
+            pass
         self.add_audio_button.setEnabled(False)
+        add_menu = QMenu(self)
+        act_file = QAction(self.LABELS.get("add_audio_from_file", "From file…"), self)
+        act_file.triggered.connect(self._handle_add_existing_audio_video)
+        add_menu.addAction(act_file)
+        act_clip = QAction(self.LABELS.get("add_audio_paste_clipboard", "Paste from clipboard"), self)
+        act_clip.triggered.connect(self._handle_paste_audio_video)
+        add_menu.addAction(act_clip)
+        self.add_audio_button.setMenu(add_menu)
         audio_controls_layout.addWidget(self.add_audio_button)
         self.recording_status_label = QLabel("")
         self.recording_status_label.setStyleSheet("color: red; font-weight: bold;")
@@ -1357,10 +1372,22 @@ class VideoAnnotationApp(QMainWindow):
         self.record_image_button.clicked.connect(self._handle_record_image)
         self.record_image_button.setEnabled(False)
         controls_row.addWidget(self.record_image_button)
-        # Add existing audio import (to the right of Record)
-        self.add_image_audio_button = QPushButton(self.LABELS.get("add_existing_audio", "Add existing audio..."))
-        self.add_image_audio_button.clicked.connect(self._handle_add_existing_audio_image)
+        # Add audio dropdown (From file / Paste from clipboard)
+        self.add_image_audio_button = QToolButton()
+        self.add_image_audio_button.setText(self.LABELS.get("add_existing_audio", "Add audio…"))
+        try:
+            self.add_image_audio_button.setPopupMode(QToolButton.InstantPopup)
+        except Exception:
+            pass
         self.add_image_audio_button.setEnabled(False)
+        add_img_menu = QMenu(self)
+        act_img_file = QAction(self.LABELS.get("add_audio_from_file", "From file…"), self)
+        act_img_file.triggered.connect(self._handle_add_existing_audio_image)
+        add_img_menu.addAction(act_img_file)
+        act_img_clip = QAction(self.LABELS.get("add_audio_paste_clipboard", "Paste from clipboard"), self)
+        act_img_clip.triggered.connect(self._handle_paste_audio_image)
+        add_img_menu.addAction(act_img_clip)
+        self.add_image_audio_button.setMenu(add_img_menu)
         controls_row.addWidget(self.add_image_audio_button)
         self.stop_image_record_button = QPushButton(self.LABELS.get("stop_recording", "Stop Recording"))
         self.stop_image_record_button.clicked.connect(self._handle_stop_image_record)
@@ -2385,6 +2412,145 @@ class VideoAnnotationApp(QMainWindow):
                 pass
             # Refresh controls and badges
             self.update_media_controls()
+        except Exception:
+            pass
+    def _convert_audio_to_wav(self, src_path: str, target_wav: str) -> None:
+        seg = AudioSegment.from_file(src_path)
+        seg = seg.set_channels(1).set_frame_rate(44100).set_sample_width(2)
+        seg.export(target_wav, format="wav")
+    def _clipboard_audio_to_tempfile(self, mime) -> str | None:
+        try:
+            # Prefer file URLs on the clipboard
+            if mime.hasUrls():
+                for url in mime.urls():
+                    try:
+                        if isinstance(url, QUrl) and url.isLocalFile():
+                            p = url.toLocalFile()
+                            if p and os.path.exists(p):
+                                return p
+                    except Exception:
+                        continue
+            # Next, check for plain-text paths or file:// URLs
+            if mime.hasText():
+                txt = (mime.text() or "").strip()
+                if txt:
+                    if os.path.exists(txt):
+                        return txt
+                    try:
+                        u = QUrl(txt)
+                        if u.isLocalFile():
+                            p = u.toLocalFile()
+                            if p and os.path.exists(p):
+                                return p
+                    except Exception:
+                        pass
+            # Finally, handle raw audio bytes for known MIME types
+            format_map = {
+                "audio/wav": ".wav",
+                "audio/x-wav": ".wav",
+                "audio/mpeg": ".mp3",
+                "audio/mp3": ".mp3",
+                "audio/ogg": ".ogg",
+                "application/ogg": ".ogg",
+                "audio/aac": ".aac",
+                "audio/flac": ".flac",
+                "audio/opus": ".opus",
+                "audio/webm": ".webm",
+                "audio/aiff": ".aiff",
+                "audio/x-aiff": ".aif",
+            }
+            for fmt, ext in format_map.items():
+                try:
+                    if fmt in mime.formats():
+                        data = mime.data(fmt)
+                        if data and len(data) > 0:
+                            import tempfile
+                            fd, tmp = tempfile.mkstemp(suffix=ext)
+                            os.write(fd, bytes(data))
+                            os.close(fd)
+                            return tmp
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return None
+    def _handle_paste_audio_video(self):
+        try:
+            if not self.current_video or not self.fs.current_folder:
+                return
+            target_wav = self.fs.wav_path_for(self.current_video)
+            if os.path.exists(target_wav):
+                reply = QMessageBox.question(
+                    self,
+                    self.LABELS.get("overwrite", "Overwrite?"),
+                    self.LABELS.get("overwrite_audio", "Audio file already exists. Overwrite?"),
+                    QMessageBox.Yes | QMessageBox.No,
+                )
+                if reply == QMessageBox.No:
+                    return
+            cb = QGuiApplication.clipboard()
+            mime = cb.mimeData()
+            src = self._clipboard_audio_to_tempfile(mime)
+            if not src:
+                QMessageBox.warning(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("paste_audio_failed", "Clipboard does not contain audio or an audio file path."))
+                return
+            try:
+                self._convert_audio_to_wav(src, target_wav)
+            finally:
+                # Clean temp file if we created one
+                try:
+                    if src and os.path.basename(src).startswith("tmp") and not os.path.isdir(src):
+                        pass
+                except Exception:
+                    pass
+            self.update_media_controls()
+        except Exception:
+            pass
+    def _handle_paste_audio_image(self):
+        try:
+            sel = self.images_list.currentItem()
+            if sel is None:
+                return
+            path = None
+            try:
+                path = sel.data(Qt.UserRole)
+            except Exception:
+                path = None
+            if not path:
+                name = sel.text()
+                path = os.path.join(self.fs.current_folder or "", name)
+            if not path:
+                return
+            existing = self.fs.find_existing_image_audio(path)
+            target_wav = self.fs.wav_path_for_image(path)
+            if existing and os.path.exists(existing):
+                reply = QMessageBox.question(
+                    self,
+                    self.LABELS.get("overwrite", "Overwrite?"),
+                    self.LABELS.get("overwrite_audio", "Audio file already exists. Overwrite?"),
+                    QMessageBox.Yes | QMessageBox.No,
+                )
+                if reply == QMessageBox.No:
+                    return
+            cb = QGuiApplication.clipboard()
+            mime = cb.mimeData()
+            src = self._clipboard_audio_to_tempfile(mime)
+            if not src:
+                QMessageBox.warning(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("paste_audio_failed", "Clipboard does not contain audio or an audio file path."))
+                return
+            try:
+                self._convert_audio_to_wav(src, target_wav)
+            finally:
+                try:
+                    if src and os.path.basename(src).startswith("tmp") and not os.path.isdir(src):
+                        pass
+                except Exception:
+                    pass
+            try:
+                self._update_image_record_controls(path)
+            except Exception:
+                pass
+            self.update_video_file_checks()
         except Exception:
             pass
     def _handle_add_existing_audio_image(self):
