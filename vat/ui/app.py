@@ -15,17 +15,22 @@ from PySide6.QtWidgets import (
     QPushButton, QListWidget, QListWidgetItem, QLabel, QTextEdit, QMessageBox,
     QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle, QSizePolicy,
     QListView, QStyledItemDelegate, QApplication, QCheckBox, QGraphicsDropShadowEffect,
-    QMenu
+    QMenu, QProgressDialog
 )
 from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize, QRect, QPoint, QLocale, QMetaObject, QUrl, QMimeData
 import time
 from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence, QImageReader, QPen, QColor, QGuiApplication, QAction, QCursor
+import tempfile
+import shlex
+import threading
+import zipfile
 
 from vat.audio import PYAUDIO_AVAILABLE
 from vat.audio.playback import AudioPlaybackWorker
 from vat.audio.recording import AudioRecordingWorker
 from vat.audio.joiner import JoinWavsWorker
 from vat.utils.resources import resource_path
+from vat.utils.video_convert import VideoConvertWorker, ConvertSpec, needs_reencode_to_mp4
 from vat.ui.fullscreen import FullscreenVideoViewer, FullscreenImageViewer
 from vat.utils.fs_access import (
     FolderAccessManager,
@@ -222,6 +227,8 @@ class VideoAnnotationApp(QMainWindow):
         self.join_thread = None
         self.join_worker = None
         self._suppress_item_changed = False
+        # Pending selection target (used to auto-select a file after folder refresh)
+        self._pending_select_video_name = None
         # Cache for full-resolution image pixmaps (used by thumbnails and fullscreen)
         self._image_pixmap_cache = {}
         # Fullscreen viewer state
@@ -502,6 +509,10 @@ class VideoAnnotationApp(QMainWindow):
     def _on_videos_updated(self, files: list):
         # Populate listbox and internal state from FS manager update
         try:
+            try:
+                logging.info(f"UI._on_videos_updated: received {len(files)} files; pending_select={self._pending_select_video_name}; last={self.last_video_name}")
+            except Exception:
+                pass
             self.video_files = list(files)
             if not getattr(self, '_ui_ready', False) or getattr(self, 'video_listbox', None) is None:
                 return
@@ -512,10 +523,32 @@ class VideoAnnotationApp(QMainWindow):
                 wav_exists = os.path.exists(self.fs.wav_path_for(name))
                 item.setIcon(self._check_icon if wav_exists else self._empty_icon)
                 self.video_listbox.addItem(item)
-            if self.last_video_name and self.last_video_name in basenames:
+            # If there's a pending selection target, prefer that
+            if self._pending_select_video_name and self._pending_select_video_name in basenames:
+                try:
+                    logging.info(f"UI._on_videos_updated: selecting pending {self._pending_select_video_name}")
+                except Exception:
+                    pass
+                idx = basenames.index(self._pending_select_video_name)
+                self.video_listbox.setCurrentRow(idx)
+                try:
+                    self.current_video = self._pending_select_video_name
+                    self.last_video_name = self._pending_select_video_name
+                except Exception:
+                    pass
+                self._pending_select_video_name = None
+            elif self.last_video_name and self.last_video_name in basenames:
+                try:
+                    logging.info(f"UI._on_videos_updated: reselecting last {self.last_video_name}")
+                except Exception:
+                    pass
                 idx = basenames.index(self.last_video_name)
                 self.video_listbox.setCurrentRow(idx)
             elif basenames:
+                try:
+                    logging.info("UI._on_videos_updated: selecting first item by default")
+                except Exception:
+                    pass
                 # Auto-select the first video on folder change
                 self.video_listbox.setCurrentRow(0)
             if not self.video_files:
@@ -524,6 +557,69 @@ class VideoAnnotationApp(QMainWindow):
             logging.warning(f"Failed to refresh videos from FS manager: {e}")
         self.update_media_controls()
         self.update_video_file_checks()
+    def _reload_folder_and_select(self, target_name: str, retries: int = 6, delay_ms: int = 250):
+        """Force a folder reload and try to select target_name after refresh. Retries with a short delay if needed."""
+        try:
+            try:
+                logging.info(f"UI._reload_folder_and_select: target={target_name}, retries={retries}, delay={delay_ms}ms")
+            except Exception:
+                pass
+            if not target_name:
+                return
+            self._pending_select_video_name = target_name
+            cur = self.fs.current_folder
+            if cur:
+                try:
+                    logging.info(f"UI._reload_folder_and_select: calling fs.set_folder({cur})")
+                except Exception:
+                    pass
+                self.fs.set_folder(cur)
+            # After a short delay, verify selection; retry if not applied yet
+            def _verify_or_retry():
+                try:
+                    basenames = [os.path.basename(vp) for vp in self.video_files]
+                    logging.info(f"UI._reload_folder_and_select.verify: have {len(basenames)} items; looking for {target_name}")
+                    if target_name in basenames:
+                        idx = basenames.index(target_name)
+                        if getattr(self, 'video_listbox', None):
+                            self.video_listbox.setCurrentRow(idx)
+                        self.current_video = target_name
+                        self.last_video_name = target_name
+                        self.show_first_frame()
+                        self.update_media_controls()
+                        try:
+                            self.statusBar().showMessage(self.LABELS.get("selected_converted", "Converted video selected"), 2000)
+                        except Exception:
+                            pass
+                        return
+                except Exception:
+                    pass
+                if retries > 0:
+                    try:
+                        logging.info(f"UI._reload_folder_and_select.verify: target not found yet; retrying ({retries-1} left)")
+                    except Exception:
+                        pass
+                    QTimer.singleShot(delay_ms, lambda: self._reload_folder_and_select(target_name, retries - 1, delay_ms))
+                else:
+                    try:
+                        logging.warning("UI._reload_folder_and_select.verify: selection failed after retries")
+                    except Exception:
+                        pass
+                    try:
+                        resp = QMessageBox.question(
+                            self,
+                            self.LABELS.get("selection_failed_title", "Selection failed"),
+                            self.LABELS.get("selection_failed_msg", "Could not select the converted video yet. Retry?"),
+                            QMessageBox.Retry | QMessageBox.Cancel,
+                            QMessageBox.Retry,
+                        )
+                        if resp == QMessageBox.Retry:
+                            self._reload_folder_and_select(target_name, retries=6, delay_ms=250)
+                    except Exception:
+                        pass
+            QTimer.singleShot(delay_ms, _verify_or_retry)
+        except Exception:
+            pass
     def init_ui(self):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -790,6 +886,15 @@ class VideoAnnotationApp(QMainWindow):
         self.badge_label.setFixedSize(22, 22)
         self.badge_label.setStyleSheet("background-color: #2ecc71; color: white; border-radius: 11px;")
         self.badge_label.setVisible(False)
+        # Format badge (shows non-MP4 extension)
+        self.format_badge_label = QLabel(self.video_label)
+        self.format_badge_label.setText("")
+        self.format_badge_label.setAlignment(Qt.AlignCenter)
+        try:
+            self.format_badge_label.setStyleSheet("background-color: #e67e22; color: white; border-radius: 4px; padding: 2px 6px; font-weight: bold;")
+        except Exception:
+            pass
+        self.format_badge_label.setVisible(False)
         self.video_label.installEventFilter(self)
         video_controls_layout = QHBoxLayout()
         self.prev_button = QToolButton()
@@ -808,6 +913,11 @@ class VideoAnnotationApp(QMainWindow):
         self.stop_video_button.clicked.connect(self.stop_video)
         self.stop_video_button.setEnabled(False)
         video_controls_layout.addWidget(self.stop_video_button)
+        # Convert to MP4 button (in-place)
+        self.convert_mp4_button = QPushButton(self.LABELS.get("convert_to_mp4", "Convert to MP4"))
+        self.convert_mp4_button.clicked.connect(self._convert_current_video_in_place)
+        self.convert_mp4_button.setEnabled(False)
+        video_controls_layout.addWidget(self.convert_mp4_button)
         self.next_button = QToolButton()
         try:
             self.next_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipForward))
@@ -1594,6 +1704,7 @@ class VideoAnnotationApp(QMainWindow):
         self.show_first_frame()
         try:
             self._position_badge()
+            self._position_format_badge()
         except Exception:
             pass
     def _resolve_current_video_path(self) -> str:
@@ -1655,6 +1766,8 @@ class VideoAnnotationApp(QMainWindow):
         if self.current_video:
             self.play_video_button.setEnabled(True)
             self.stop_video_button.setEnabled(True)
+            if getattr(self, 'convert_mp4_button', None):
+                self.convert_mp4_button.setEnabled(True)
             self.record_button.setEnabled(True)
             self.record_button.setText(self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
             self.update_recording_indicator()
@@ -1675,10 +1788,29 @@ class VideoAnnotationApp(QMainWindow):
                 self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
                 if getattr(self, 'badge_label', None):
                     self.badge_label.setVisible(False)
+            # Update format badge visibility/text based on extension
+            try:
+                vp = self._resolve_current_video_path()
+                ext = os.path.splitext(vp)[1].lower() if vp else ""
+                show_fmt = bool(ext) and ext != ".mp4"
+                if getattr(self, 'format_badge_label', None):
+                    if show_fmt:
+                        self.format_badge_label.setText(ext[1:].upper())
+                        try:
+                            self.format_badge_label.adjustSize()
+                        except Exception:
+                            pass
+                        self.format_badge_label.setVisible(True)
+                    else:
+                        self.format_badge_label.setVisible(False)
+            except Exception:
+                pass
         else:
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
             self.play_video_button.setEnabled(False)
             self.stop_video_button.setEnabled(False)
+            if getattr(self, 'convert_mp4_button', None):
+                self.convert_mp4_button.setEnabled(False)
             self.play_audio_button.setEnabled(False)
             self.stop_audio_button.setEnabled(False)
             self.record_button.setEnabled(False)
@@ -1689,6 +1821,8 @@ class VideoAnnotationApp(QMainWindow):
             self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
             if getattr(self, 'badge_label', None):
                 self.badge_label.setVisible(False)
+            if getattr(self, 'format_badge_label', None):
+                self.format_badge_label.setVisible(False)
         self.update_video_file_checks()
     def update_recording_indicator(self):
         if getattr(self, 'recording_status_label', None) is None:
@@ -1780,6 +1914,10 @@ class VideoAnnotationApp(QMainWindow):
             logging.error(f"Video frame update failed: {e}")
             self.stop_video()
             self.video_label.setText(self.LABELS.get("cannot_open_video", "Cannot open video file."))
+        try:
+            self._position_format_badge()
+        except Exception:
+            pass
     def stop_video(self):
         self.playing_video = False
         self.video_timer.stop()
@@ -1789,8 +1927,25 @@ class VideoAnnotationApp(QMainWindow):
         self.show_first_frame()
         try:
             self._position_badge()
+            self._position_format_badge()
         except Exception:
             pass
+    def _release_video_handle(self):
+        """Release any active video capture without refreshing preview."""
+        try:
+            self.playing_video = False
+        except Exception:
+            pass
+        try:
+            self.video_timer.stop()
+        except Exception:
+            pass
+        if getattr(self, 'cap', None):
+            try:
+                self.cap.release()
+            except Exception:
+                pass
+            self.cap = None
     def play_audio(self):
         if not self.current_video:
             return
@@ -1900,6 +2055,14 @@ class VideoAnnotationApp(QMainWindow):
             save_act = QAction(self.LABELS.get("save_image_as", "Save Image as…"), self)
             save_act.triggered.connect(self._save_current_image_as)
             menu.addAction(save_act)
+            # Add Reveal action (third), with platform-specific label
+            try:
+                label = self._platform_reveal_label()
+            except Exception:
+                label = "Reveal in File Manager"
+            reveal_act = QAction(label, self)
+            reveal_act.triggered.connect(lambda: self._reveal_in_file_manager(self._current_image_path()))
+            menu.addAction(reveal_act)
             try:
                 global_pos = self.images_list.mapToGlobal(pos)
             except Exception:
@@ -1910,6 +2073,25 @@ class VideoAnnotationApp(QMainWindow):
                 menu.exec(QCursor.pos())
         except Exception:
             pass
+    def _current_image_path(self) -> str:
+        """Resolve full path of the currently selected image thumbnail."""
+        try:
+            sel = getattr(self, 'images_list', None).currentItem() if getattr(self, 'images_list', None) else None
+            if sel is None:
+                return ""
+            path = None
+            try:
+                path = sel.data(Qt.UserRole)
+            except Exception:
+                path = None
+            if not path:
+                name = sel.text()
+                path = os.path.join(self.fs.current_folder or "", name)
+            if path and os.path.exists(path):
+                return path
+        except Exception:
+            pass
+        return ""
     def _copy_current_image_to_clipboard(self):
         try:
             sel = self.images_list.currentItem()
@@ -1973,6 +2155,11 @@ class VideoAnnotationApp(QMainWindow):
             video_path = self._resolve_current_video_path()
             if not (video_path and os.path.exists(video_path)):
                 return
+            # Convert if needed (extension/codec/pix_fmt/audio) for WhatsApp compatibility
+            if needs_reencode_to_mp4(video_path):
+                self._convert_video_to_mp4_and_copy(video_path)
+                return
+            # Already MP4: copy the file URL directly
             mime = QMimeData()
             try:
                 mime.setUrls([QUrl.fromLocalFile(video_path)])
@@ -1987,6 +2174,139 @@ class VideoAnnotationApp(QMainWindow):
                 self.statusBar().showMessage(self.LABELS.get("copied_video", "Video copied to clipboard"), 2000)
             except Exception:
                 pass
+        except Exception:
+            pass
+
+    def _convert_video_to_mp4_and_copy(self, src_path: str):
+        """Convert the given video to MP4 using worker+progress, then copy the result."""
+        try:
+            if not (src_path and os.path.exists(src_path)):
+                return
+            base = os.path.splitext(os.path.basename(src_path))[0]
+            tmp_dir = tempfile.mkdtemp(prefix="vat_convert_")
+            dst_path = os.path.join(tmp_dir, base + ".mp4")
+            try:
+                logging.info(f"UI.copy_convert: starting worker: src={src_path}, dst={dst_path}")
+            except Exception:
+                pass
+            worker = VideoConvertWorker(ConvertSpec(src_path, dst_path))
+            self._convert_worker = worker
+            dlg = QProgressDialog(self.LABELS.get("converting_video", "Converting…"), self.LABELS.get("cancel", "Cancel"), 0, 100, self)
+            dlg.setWindowTitle(self.LABELS.get("converting_title", "Converting"))
+            dlg.setWindowModality(Qt.WindowModal)
+            dlg.setAutoClose(True)
+            dlg.setAutoReset(True)
+            def do_cancel():
+                worker.cancel()
+            dlg.canceled.connect(do_cancel)
+            worker.progress.connect(dlg.setValue)
+            def on_finished(out_path: str):
+                try:
+                    logging.info(f"UI.copy_convert: finished: out={out_path}")
+                except Exception:
+                    pass
+                try:
+                    mime = QMimeData()
+                    mime.setUrls([QUrl.fromLocalFile(out_path)])
+                    mime.setText(out_path)
+                    QGuiApplication.clipboard().setMimeData(mime)
+                    self.statusBar().showMessage(self.LABELS.get("copied_video", "Video copied to clipboard"), 2000)
+                except Exception:
+                    pass
+                try:
+                    dlg.close()
+                except Exception:
+                    pass
+            def on_error(msg: str):
+                try:
+                    logging.error(f"UI.copy_convert: error: {msg}")
+                except Exception:
+                    pass
+                try:
+                    dlg.close()
+                except Exception:
+                    pass
+                QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"{self.LABELS.get('conversion_failed', 'Conversion failed')}: {msg}")
+            def on_canceled():
+                try:
+                    logging.info("UI.copy_convert: canceled")
+                except Exception:
+                    pass
+                try:
+                    dlg.close()
+                except Exception:
+                    pass
+                # Cleanup temp dir on cancel/error
+                try:
+                    if os.path.isdir(tmp_dir):
+                        shutil.rmtree(tmp_dir, ignore_errors=True)
+                except Exception:
+                    pass
+            def _cleanup_refs(*args, **kwargs):
+                try:
+                    self._convert_worker = None
+                except Exception:
+                    pass
+            worker.finished.connect(_cleanup_refs)
+            worker.error.connect(_cleanup_refs)
+            worker.canceled.connect(_cleanup_refs)
+            worker.finished.connect(on_finished)
+            worker.error.connect(on_error)
+            worker.canceled.connect(on_canceled)
+            # Fallback: also handle base QThread finished() if custom signal is not delivered
+            done = {"value": False}
+            def _mark_done():
+                done["value"] = True
+            def _fallback_on_thread_finished():
+                try:
+                    if done["value"]:
+                        return
+                    # Use worker state to decide
+                    out = getattr(worker, "output_path", None)
+                    if getattr(worker, "succeeded", False) and out and os.path.exists(out):
+                        logging.info("UI.copy_convert: fallback via QThread.finished; invoking on_finished")
+                        on_finished(out)
+                        _mark_done()
+                except Exception:
+                    pass
+            try:
+                worker.finished.connect(lambda *_: _mark_done())
+            except Exception:
+                pass
+            try:
+                super(VideoConvertWorker, worker).finished.connect(_fallback_on_thread_finished)  # type: ignore
+            except Exception:
+                # PySide may not allow super() signal access; try attribute on instance
+                try:
+                    worker.finished.connect(_fallback_on_thread_finished)  # best-effort
+                except Exception:
+                    pass
+            # Timer-based fallback: poll for output existence briefly
+            attempts = {"n": 25}  # ~5s @200ms
+            def _poll_fallback():
+                try:
+                    if done["value"]:
+                        return
+                    out = getattr(worker, "output_path", None) or dst_path
+                    if out and os.path.exists(out):
+                        logging.info("UI.copy_convert: timer fallback found output; invoking on_finished")
+                        on_finished(out)
+                        _mark_done()
+                        return
+                    if attempts["n"] > 0:
+                        attempts["n"] -= 1
+                        QTimer.singleShot(200, _poll_fallback)
+                except Exception:
+                    pass
+            QTimer.singleShot(300, _poll_fallback)
+            # Extra debug hooks
+            try:
+                worker.finished.connect(lambda *_: logging.info("UI.copy_convert: finished signal received"))
+                worker.canceled.connect(lambda *_: logging.info("UI.copy_convert: canceled signal received"))
+            except Exception:
+                pass
+            worker.start()
+            dlg.show()
         except Exception:
             pass
     def _save_current_video_as(self):
@@ -2010,6 +2330,180 @@ class VideoAnnotationApp(QMainWindow):
             except Exception as e:
                 QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"Failed to save video: {e}")
                 return
+        except Exception:
+            pass
+
+    def _convert_current_video_in_place(self):
+        """Convert the current video to MP4 next to original, delete original on success, update UI."""
+        try:
+            if not self.current_video:
+                return
+            src_path = self._resolve_current_video_path()
+            if not (src_path and os.path.exists(src_path)):
+                return
+            folder = os.path.dirname(src_path)
+            base = os.path.splitext(os.path.basename(src_path))[0]
+            dst_path = os.path.join(folder, base + ".mp4")
+            try:
+                logging.info(f"UI.convert_in_place: begin: src={src_path}, dst={dst_path}")
+                self.statusBar().showMessage(self.LABELS.get("converting_video", "Converting…"), 2000)
+            except Exception:
+                pass
+            if os.path.exists(dst_path):
+                resp = QMessageBox.question(
+                    self,
+                    self.LABELS.get("overwrite_title", "Overwrite?"),
+                    self.LABELS.get("mp4_exists_overwrite", "MP4 already exists. Overwrite?"),
+                )
+                if resp != QMessageBox.Yes:
+                    return
+                try:
+                    os.remove(dst_path)
+                except Exception:
+                    pass
+            worker = VideoConvertWorker(ConvertSpec(src_path, dst_path))
+            self._convert_worker = worker
+            dlg = QProgressDialog(self.LABELS.get("converting_video", "Converting…"), self.LABELS.get("cancel", "Cancel"), 0, 100, self)
+            dlg.setWindowTitle(self.LABELS.get("converting_title", "Converting"))
+            dlg.setWindowModality(Qt.WindowModal)
+            dlg.setAutoClose(True)
+            dlg.setAutoReset(True)
+            dlg.canceled.connect(worker.cancel)
+            worker.progress.connect(dlg.setValue)
+            def on_finished(out_path: str):
+                try:
+                    logging.info(f"UI.convert_in_place: finished ffmpeg: src={src_path}, out={out_path}")
+                except Exception:
+                    pass
+                # 1) Release any active handle on the original without reloading preview
+                try:
+                    logging.info("UI.convert_in_place: releasing video handle")
+                except Exception:
+                    pass
+                self._release_video_handle()
+                new_name = os.path.basename(out_path)
+                # 2) Zip the original file into filename.ext.bak.zip (with original filename inside) and delete original
+                try:
+                    logging.info("UI.convert_in_place: creating zip backup of original")
+                    if os.path.exists(src_path):
+                        zip_path = src_path + ".bak.zip"
+                        # Ensure unique zip name if exists
+                        if os.path.exists(zip_path):
+                            i = 2
+                            while True:
+                                alt = f"{src_path}.bak{i}.zip"
+                                if not os.path.exists(alt):
+                                    zip_path = alt
+                                    break
+                                i += 1
+                        with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+                            zf.write(src_path, arcname=os.path.basename(src_path))
+                        try:
+                            os.remove(src_path)
+                        except Exception:
+                            pass
+                        try:
+                            logging.info(f"UI.convert_in_place: backup created at {zip_path} and original removed")
+                        except Exception:
+                            pass
+                except Exception as e:
+                    try:
+                        QMessageBox.warning(self, self.LABELS.get("error_title", "Error"), f"{self.LABELS.get('backup_failed', 'Backup failed')}: {e}")
+                    except Exception:
+                        pass
+                # 3) Reload the current folder and reselect the new MP4 after refresh (pending selection with retry)
+                try:
+                    logging.info("UI.convert_in_place: reloading folder and selecting new mp4 (extended retries)")
+                    self._reload_folder_and_select(new_name, retries=6, delay_ms=250)
+                except Exception:
+                    pass
+                try:
+                    self.statusBar().showMessage(self.LABELS.get("conversion_done", "Conversion complete"), 2000)
+                    dlg.close()
+                except Exception:
+                    pass
+            def on_error(msg: str):
+                try:
+                    logging.error(f"UI.convert_in_place: error: {msg}")
+                except Exception:
+                    pass
+                try:
+                    dlg.close()
+                except Exception:
+                    pass
+                QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"{self.LABELS.get('conversion_failed', 'Conversion failed')}: {msg}")
+            def on_canceled():
+                try:
+                    logging.info("UI.convert_in_place: canceled")
+                except Exception:
+                    pass
+                try:
+                    dlg.close()
+                except Exception:
+                    pass
+            def _cleanup_refs2(*args, **kwargs):
+                try:
+                    self._convert_worker = None
+                except Exception:
+                    pass
+            worker.finished.connect(_cleanup_refs2)
+            worker.error.connect(_cleanup_refs2)
+            worker.canceled.connect(_cleanup_refs2)
+            worker.finished.connect(on_finished)
+            worker.error.connect(on_error)
+            worker.canceled.connect(on_canceled)
+            # Fallback: handle base QThread finished() in case custom signal is not delivered
+            done2 = {"value": False}
+            def _mark_done2():
+                done2["value"] = True
+            def _fallback_on_thread_finished2():
+                try:
+                    if done2["value"]:
+                        return
+                    out = getattr(worker, "output_path", None)
+                    if getattr(worker, "succeeded", False) and out and os.path.exists(out):
+                        logging.info("UI.convert_in_place: fallback via QThread.finished; invoking on_finished")
+                        on_finished(out)
+                        _mark_done2()
+                except Exception:
+                    pass
+            try:
+                worker.finished.connect(lambda *_: _mark_done2())
+            except Exception:
+                pass
+            try:
+                super(VideoConvertWorker, worker).finished.connect(_fallback_on_thread_finished2)  # type: ignore
+            except Exception:
+                try:
+                    worker.finished.connect(_fallback_on_thread_finished2)  # best-effort
+                except Exception:
+                    pass
+            # Timer-based fallback: poll for output existence briefly
+            attempts2 = {"n": 25}  # ~5s @200ms
+            def _poll_fallback2():
+                try:
+                    if done2["value"]:
+                        return
+                    out = getattr(worker, "output_path", None) or dst_path
+                    if out and os.path.exists(out):
+                        logging.info("UI.convert_in_place: timer fallback found output; invoking on_finished")
+                        on_finished(out)
+                        _mark_done2()
+                        return
+                    if attempts2["n"] > 0:
+                        attempts2["n"] -= 1
+                        QTimer.singleShot(200, _poll_fallback2)
+                except Exception:
+                    pass
+            QTimer.singleShot(300, _poll_fallback2)
+            # Extra debug hooks
+            try:
+                worker.finished.connect(lambda *_: logging.info("UI.convert_in_place: finished signal received"))
+                worker.canceled.connect(lambda *_: logging.info("UI.convert_in_place: canceled signal received"))
+            except Exception:
+                pass
+            worker.start()
+            dlg.show()
         except Exception:
             pass
     def _save_current_image_as(self):
@@ -2879,6 +3373,26 @@ class VideoAnnotationApp(QMainWindow):
                 if event.type() == QEvent.MouseButtonDblClick and self.current_video and self.fs.current_folder:
                     self._open_fullscreen_video()
                     return True
+                # Right-click context menu on video frame
+                if event.type() == QEvent.MouseButtonPress:
+                    try:
+                        from PySide6.QtGui import QMouseEvent
+                    except Exception:
+                        QMouseEvent = None
+                    try:
+                        btn = event.button() if hasattr(event, 'button') else None
+                    except Exception:
+                        btn = None
+                    if btn == Qt.RightButton:
+                        try:
+                            global_pos = event.globalPos() if hasattr(event, 'globalPos') else None
+                        except Exception:
+                            global_pos = None
+                        try:
+                            self._on_video_frame_context_menu(global_pos)
+                        except Exception:
+                            pass
+                        return True
             except Exception:
                 pass
             try:
@@ -2893,6 +3407,83 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             pass
         return super().eventFilter(obj, event)
+
+    def _on_video_frame_context_menu(self, global_pos: QPoint | None):
+        """Show Copy/Save As/Reveal menu for the current video on the frame."""
+        try:
+            # Build menu with required ordering
+            menu = QMenu(self)
+            copy_act = QAction(self.LABELS.get("copy_video", "Copy Video"), self)
+            copy_act.triggered.connect(self._copy_current_video_to_clipboard)
+            menu.addAction(copy_act)
+            save_act = QAction(self.LABELS.get("save_video_as", "Save Video as…"), self)
+            save_act.triggered.connect(self._save_current_video_as)
+            menu.addAction(save_act)
+            # Platform-specific label for Reveal
+            label = self._platform_reveal_label()
+            reveal_act = QAction(label, self)
+            reveal_act.triggered.connect(lambda: self._reveal_in_file_manager(self._resolve_current_video_path()))
+            menu.addAction(reveal_act)
+            # Position
+            if global_pos:
+                menu.exec(global_pos)
+            else:
+                try:
+                    menu.exec(QCursor.pos())
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def _platform_reveal_label(self) -> str:
+        """Return OS-appropriate label for reveal action."""
+        try:
+            import sys
+            if sys.platform.startswith("darwin"):
+                return self.LABELS.get("reveal_in_finder", "Reveal in Finder")
+            if sys.platform.startswith("win"):
+                return self.LABELS.get("reveal_in_explorer", "Reveal in Explorer")
+            return self.LABELS.get("reveal_in_file_manager", "Reveal in File Manager")
+        except Exception:
+            return "Reveal in File Manager"
+
+    def _reveal_in_file_manager(self, path: str | None):
+        """Reveal the given file in the OS file manager (select/highlight if supported)."""
+        try:
+            if not path:
+                return
+            if not os.path.exists(path):
+                return
+            import sys
+            if sys.platform.startswith("darwin"):
+                try:
+                    subprocess.run(["open", "-R", path], check=False)
+                    return
+                except Exception:
+                    pass
+            elif sys.platform.startswith("win"):
+                try:
+                    subprocess.run(["explorer", f"/select,", path], check=False)
+                    return
+                except Exception:
+                    pass
+            else:
+                try:
+                    # Reveal containing folder; selection not universally supported
+                    folder = os.path.dirname(path)
+                    if folder:
+                        subprocess.run(["xdg-open", folder], check=False)
+                        return
+                except Exception:
+                    pass
+            # Fallback: try opening the folder via desktop services if available
+            try:
+                from PySide6.QtGui import QDesktopServices
+                QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.dirname(path)))
+            except Exception:
+                pass
+        except Exception:
+            pass
 
     def _show_welcome_dialog(self):
         """Display a brief purpose + best-practices message on startup."""
@@ -3554,6 +4145,21 @@ class VideoAnnotationApp(QMainWindow):
         x = max(0, w - bw - 8)
         y = 8
         self.badge_label.move(x, y)
+
+    def _position_format_badge(self):
+        if not getattr(self, 'format_badge_label', None):
+            return
+        if not self.format_badge_label.isVisible():
+            return
+        w = self.video_label.width()
+        try:
+            self.format_badge_label.adjustSize()
+        except Exception:
+            pass
+        fw = self.format_badge_label.width()
+        x = max(0, w - fw - 8)
+        y = 8
+        self.format_badge_label.move(x, y)
 
 
 class ImageGridDelegate(QStyledItemDelegate):
