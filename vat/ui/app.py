@@ -886,15 +886,7 @@ class VideoAnnotationApp(QMainWindow):
         self.badge_label.setFixedSize(22, 22)
         self.badge_label.setStyleSheet("background-color: #2ecc71; color: white; border-radius: 11px;")
         self.badge_label.setVisible(False)
-        # Format badge (shows non-MP4 extension)
-        self.format_badge_label = QLabel(self.video_label)
-        self.format_badge_label.setText("")
-        self.format_badge_label.setAlignment(Qt.AlignCenter)
-        try:
-            self.format_badge_label.setStyleSheet("background-color: #e67e22; color: white; border-radius: 4px; padding: 2px 6px; font-weight: bold;")
-        except Exception:
-            pass
-        self.format_badge_label.setVisible(False)
+        # Note: format badge removed per UX decision.
         self.video_label.installEventFilter(self)
         video_controls_layout = QHBoxLayout()
         self.prev_button = QToolButton()
@@ -1373,6 +1365,19 @@ class VideoAnnotationApp(QMainWindow):
                             return True
         except Exception:
             pass
+        # Keep video badges anchored on video label show/resize
+        try:
+            if obj is getattr(self, 'video_label', None):
+                et = event.type()
+                if et in (QEvent.Show, QEvent.Resize, QEvent.Paint, QEvent.LayoutRequest):
+                    # Reposition synchronously during paint/resize/show to avoid visible drift
+                    try:
+                        self._position_badge()
+                    except Exception:
+                        pass
+                    # Format badge removed; no additional positioning needed
+        except Exception:
+            pass
         try:
             return super().eventFilter(obj, event)
         except Exception:
@@ -1704,7 +1709,6 @@ class VideoAnnotationApp(QMainWindow):
         self.show_first_frame()
         try:
             self._position_badge()
-            self._position_format_badge()
         except Exception:
             pass
     def _resolve_current_video_path(self) -> str:
@@ -1755,6 +1759,12 @@ class VideoAnnotationApp(QMainWindow):
             except Exception:
                 pass
             self.video_label.setPixmap(pixmap)
+            try:
+                self._position_badge()
+            except Exception:
+                pass
+            # Ensure format badge is shown/hidden correctly after geometry is ready
+            # Format badge removed
         except Exception as e:
             logging.error(f"Failed to load first frame for {video_path}: {e}")
             # Silent UI update; avoid popup on auto-selection
@@ -1784,6 +1794,10 @@ class VideoAnnotationApp(QMainWindow):
                 self.stop_audio_button.setEnabled(True)
                 self.video_label.setStyleSheet("background-color: black; color: white; border: 3px solid #2ecc71;")
                 if getattr(self, 'badge_label', None):
+                    try:
+                        self._position_badge()
+                    except Exception:
+                        pass
                     self.badge_label.setVisible(True)
             else:
                 self.play_audio_button.setEnabled(False)
@@ -1791,23 +1805,7 @@ class VideoAnnotationApp(QMainWindow):
                 self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
                 if getattr(self, 'badge_label', None):
                     self.badge_label.setVisible(False)
-            # Update format badge visibility/text based on extension
-            try:
-                vp = self._resolve_current_video_path()
-                ext = os.path.splitext(vp)[1].lower() if vp else ""
-                show_fmt = bool(ext) and ext != ".mp4"
-                if getattr(self, 'format_badge_label', None):
-                    if show_fmt:
-                        self.format_badge_label.setText(ext[1:].upper())
-                        try:
-                            self.format_badge_label.adjustSize()
-                        except Exception:
-                            pass
-                        self.format_badge_label.setVisible(True)
-                    else:
-                        self.format_badge_label.setVisible(False)
-            except Exception:
-                pass
+            # Format badge removed
         else:
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
             self.play_video_button.setEnabled(False)
@@ -1824,8 +1822,7 @@ class VideoAnnotationApp(QMainWindow):
             self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
             if getattr(self, 'badge_label', None):
                 self.badge_label.setVisible(False)
-            if getattr(self, 'format_badge_label', None):
-                self.format_badge_label.setVisible(False)
+            # Format badge removed
         self.update_video_file_checks()
     def update_recording_indicator(self):
         if getattr(self, 'recording_status_label', None) is None:
@@ -1917,10 +1914,7 @@ class VideoAnnotationApp(QMainWindow):
             logging.error(f"Video frame update failed: {e}")
             self.stop_video()
             self.video_label.setText(self.LABELS.get("cannot_open_video", "Cannot open video file."))
-        try:
-            self._position_format_badge()
-        except Exception:
-            pass
+        # Format badge removed
     def stop_video(self):
         self.playing_video = False
         self.video_timer.stop()
@@ -1930,7 +1924,6 @@ class VideoAnnotationApp(QMainWindow):
         self.show_first_frame()
         try:
             self._position_badge()
-            self._position_format_badge()
         except Exception:
             pass
     def _release_video_handle(self):
@@ -4188,29 +4181,23 @@ class VideoAnnotationApp(QMainWindow):
     def _position_badge(self):
         if not getattr(self, 'badge_label', None):
             return
-        if not self.badge_label.isVisible():
-            return
         w = self.video_label.width()
+        if not w or w <= 0:
+            try:
+                w = max(0, int(self.video_label.minimumWidth()))
+            except Exception:
+                w = 480
         h = self.video_label.height()
         bw = self.badge_label.width()
         x = max(0, w - bw - 8)
         y = 8
         self.badge_label.move(x, y)
-
-    def _position_format_badge(self):
-        if not getattr(self, 'format_badge_label', None):
-            return
-        if not self.format_badge_label.isVisible():
-            return
-        w = self.video_label.width()
         try:
-            self.format_badge_label.adjustSize()
+            self.badge_label.raise_()
         except Exception:
             pass
-        fw = self.format_badge_label.width()
-        x = max(0, w - fw - 8)
-        y = 8
-        self.format_badge_label.move(x, y)
+
+    # _position_format_badge removed with format badge
 
 
 class ImageGridDelegate(QStyledItemDelegate):
