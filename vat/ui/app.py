@@ -1015,6 +1015,23 @@ class VideoAnnotationApp(QMainWindow):
         self.record_image_button.clicked.connect(self._handle_record_image)
         self.record_image_button.setEnabled(False)
         controls_row.addWidget(self.record_image_button)
+        # Add Image dropdown (From file / Paste from clipboard)
+        self.add_image_button = QToolButton()
+        self.add_image_button.setText(self.LABELS.get("add_image", "Add image…"))
+        try:
+            self.add_image_button.setPopupMode(QToolButton.InstantPopup)
+        except Exception:
+            pass
+        self.add_image_button.setEnabled(True)
+        add_img_src_menu = QMenu(self)
+        act_img_src_file = QAction(self.LABELS.get("add_image_from_file", "From file…"), self)
+        act_img_src_file.triggered.connect(self._handle_add_existing_image)
+        add_img_src_menu.addAction(act_img_src_file)
+        act_img_src_clip = QAction(self.LABELS.get("add_image_paste_clipboard", "Paste from clipboard"), self)
+        act_img_src_clip.triggered.connect(self._handle_paste_image)
+        add_img_src_menu.addAction(act_img_src_clip)
+        self.add_image_button.setMenu(add_img_src_menu)
+        controls_row.addWidget(self.add_image_button)
         # Add audio dropdown (From file / Paste from clipboard)
         self.add_image_audio_button = QToolButton()
         self.add_image_audio_button.setText(self.LABELS.get("add_existing_audio", "Add audio…"))
@@ -2647,6 +2664,259 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             pass
         return None
+    def _clipboard_image_to_tempfile(self, mime) -> str | None:
+        """Extract an image from the system clipboard into a temporary file, safely.
+        Order of attempts (safer first): URLs -> raw image bytes -> HTML data URLs -> text paths -> direct image() last.
+        """
+        # 1) File URLs on the clipboard
+        try:
+            if mime and mime.hasUrls():
+                for url in mime.urls():
+                    try:
+                        if isinstance(url, QUrl) and url.isLocalFile():
+                            p = url.toLocalFile()
+                            if p and os.path.exists(p):
+                                return p
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+        # 2) Raw image bytes in known formats
+        try:
+            if mime:
+                fmt_map = {
+                    "image/png": ".png",
+                    "image/jpeg": ".jpg",
+                    "image/jpg": ".jpg",
+                    "image/gif": ".gif",
+                    "image/bmp": ".bmp",
+                    "image/tiff": ".tiff",
+                }
+                available = set(mime.formats() or [])
+                for fmt, ext in fmt_map.items():
+                    if fmt in available:
+                        data = mime.data(fmt)
+                        if data and len(data) > 0:
+                            import tempfile
+                            fd, tmp_path = tempfile.mkstemp(suffix=ext)
+                            try:
+                                os.write(fd, bytes(data))
+                            finally:
+                                os.close(fd)
+                            if os.path.exists(tmp_path):
+                                return tmp_path
+        except Exception:
+            pass
+        # 3) HTML with data URL image
+        try:
+            if mime and mime.hasHtml():
+                html = mime.html() or ""
+                import re, base64, tempfile
+                m = re.search(r"data:(image/[^;]+);base64,([A-Za-z0-9+/=]+)", html)
+                if m:
+                    mime_type = m.group(1)
+                    b64 = m.group(2)
+                    ext = ".png" if mime_type == "image/png" else ".jpg"
+                    raw = base64.b64decode(b64)
+                    fd, tmp_path = tempfile.mkstemp(suffix=ext)
+                    try:
+                        os.write(fd, raw)
+                    finally:
+                        os.close(fd)
+                    if os.path.exists(tmp_path):
+                        return tmp_path
+        except Exception:
+            pass
+        # 4) Plain text path or file:// URL
+        try:
+            if mime and mime.hasText():
+                txt = (mime.text() or "").strip()
+                if txt:
+                    if txt.startswith("file://"):
+                        try:
+                            from urllib.parse import urlparse
+                            p = urlparse(txt)
+                            if p.scheme == "file":
+                                loc = p.path
+                                if loc and os.path.exists(loc):
+                                    return loc
+                        except Exception:
+                            pass
+                    if os.path.exists(txt):
+                        return txt
+        except Exception:
+            pass
+        # 5) Do not call QClipboard.image() (can be unstable on some macOS setups)
+        return None
+
+    def _handle_paste_image(self):
+        try:
+            if not self.fs.current_folder:
+                QMessageBox.information(self, self.LABELS.get("no_folder_selected", "No folder selected"), self.LABELS.get("no_folder_selected", "No folder selected"))
+                return
+            try:
+                mime = QGuiApplication.clipboard().mimeData()
+            except Exception as e:
+                QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("clipboard_access_failed", "Failed to access clipboard."))
+                return
+            src = None
+            try:
+                src = self._clipboard_image_to_tempfile(mime)
+            except Exception as e:
+                QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("clipboard_parse_failed", "Clipboard content could not be parsed as an image."))
+                return
+            if not src:
+                QMessageBox.warning(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("clipboard_no_image", "No image found on clipboard"))
+                return
+            self._import_image_with_prompt(src)
+        except Exception as e:
+            QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("paste_failed_generic", "Paste failed unexpectedly."))
+
+    def _import_image_with_prompt(self, src_path: str):
+        try:
+            from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QRadioButton, QLineEdit, QCheckBox, QPushButton
+        except Exception:
+            QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), "Unable to open import options dialog.")
+            return
+        try:
+            folder = self.fs.current_folder or ""
+            base_name = os.path.basename(src_path)
+            src_ext = os.path.splitext(base_name)[1].lower()
+            dlg = QDialog(self)
+            dlg.setWindowTitle(self.LABELS.get("add_image_options", "Import Image"))
+            layout = QVBoxLayout(dlg)
+            tip = QLabel(self.LABELS.get("add_image_tip", "Images are shown in filename order. Consider putting numbers first (e.g., 001_name.jpg) to control sort order."))
+            tip.setWordWrap(True)
+            layout.addWidget(tip)
+            rb_auto = QRadioButton(self.LABELS.get("name_auto_number", "Autonumber: vat_0000"))
+            rb_orig = QRadioButton(self.LABELS.get("name_original", "Original filename & format"))
+            rb_custom = QRadioButton(self.LABELS.get("name_custom", "Custom filename"))
+            rb_auto.setChecked(True)
+            layout.addWidget(rb_auto)
+            layout.addWidget(rb_orig)
+            layout.addWidget(rb_custom)
+            custom_row = QHBoxLayout()
+            custom_row.addWidget(QLabel(self.LABELS.get("custom_filename_label", "Filename:")))
+            le_custom = QLineEdit()
+            le_custom.setPlaceholderText(self.LABELS.get("custom_filename_placeholder", "e.g., 001_scene.jpg"))
+            le_custom.setEnabled(False)
+            custom_row.addWidget(le_custom)
+            layout.addLayout(custom_row)
+            def _toggle_custom():
+                le_custom.setEnabled(rb_custom.isChecked())
+            rb_custom.toggled.connect(_toggle_custom)
+            cb_jpg = QCheckBox(self.LABELS.get("convert_to_jpg", "Convert to JPG"))
+            cb_jpg.setChecked(True)
+            layout.addWidget(cb_jpg)
+            btns = QHBoxLayout()
+            ok_btn = QPushButton(self.LABELS.get("ok", "OK"))
+            cancel_btn = QPushButton(self.LABELS.get("cancel", "Cancel"))
+            btns.addWidget(ok_btn)
+            btns.addWidget(cancel_btn)
+            layout.addLayout(btns)
+            cancel_btn.clicked.connect(dlg.reject)
+            ok_btn.clicked.connect(dlg.accept)
+            dlg.resize(520, 240)
+            if dlg.exec() != QDialog.Accepted:
+                return
+            to_jpg = cb_jpg.isChecked()
+            ext_out = ".jpg" if to_jpg else (src_ext or ".jpg")
+            def _next_vat_name():
+                i = 0
+                while True:
+                    name = f"vat_{i:04d}{ext_out}"
+                    cand = os.path.join(folder, name)
+                    if not os.path.exists(cand):
+                        return cand
+                    i += 1
+            if rb_auto.isChecked():
+                dst_path = _next_vat_name()
+            elif rb_orig.isChecked():
+                base_no_ext = os.path.splitext(base_name)[0]
+                dst_path = os.path.join(folder, base_no_ext + ext_out)
+                if os.path.exists(dst_path):
+                    reply = QMessageBox.question(self, self.LABELS.get("overwrite_title", "Overwrite?"), self.LABELS.get("file_exists_overwrite", "File already exists. Overwrite?"))
+                    if reply != QMessageBox.Yes:
+                        return
+            else:
+                name_in = (le_custom.text() or "").strip()
+                if not name_in:
+                    QMessageBox.warning(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("custom_name_required", "Please enter a filename."))
+                    return
+                root, ext_in = os.path.splitext(name_in)
+                if not ext_in:
+                    name_in = root + ext_out
+                elif to_jpg and ext_in.lower() != ".jpg":
+                    name_in = root + ext_out
+                dst_path = os.path.join(folder, name_in)
+                if os.path.exists(dst_path):
+                    reply = QMessageBox.question(self, self.LABELS.get("overwrite_title", "Overwrite?"), self.LABELS.get("file_exists_overwrite", "File already exists. Overwrite?"))
+                    if reply != QMessageBox.Yes:
+                        return
+            try:
+                if to_jpg:
+                    # Prefer Qt path to avoid native codec crashes
+                    try:
+                        from PySide6.QtGui import QImage
+                        qimg = QImage(src_path)
+                        if not qimg.isNull():
+                            # Ensure no alpha for JPEG
+                            if qimg.hasAlphaChannel():
+                                qimg = qimg.convertToFormat(QImage.Format_RGB888)
+                            if qimg.save(dst_path, "JPG"):
+                                pass
+                            else:
+                                raise RuntimeError("QImage save to JPG failed")
+                        else:
+                            raise RuntimeError("QImage failed to load")
+                    except Exception:
+                        # Fallback to OpenCV conversion
+                        import cv2
+                        img = cv2.imread(src_path, cv2.IMREAD_UNCHANGED)
+                        if img is None:
+                            QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("import_failed", "Failed to read image for conversion."))
+                            return
+                        if len(img.shape) == 3 and img.shape[2] == 4:
+                            img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+                        quality = 92
+                        ok = cv2.imwrite(dst_path, img, [int(cv2.IMWRITE_JPEG_QUALITY), quality])
+                        if not ok:
+                            QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("import_failed", "Failed to write JPG."))
+                            return
+                else:
+                    shutil.copyfile(src_path, dst_path)
+            except Exception as e:
+                QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"Failed to import image: {e}")
+                return
+            imgs = self.fs.list_images()
+            self._on_images_updated(self.fs.current_folder, imgs)
+            basename = os.path.basename(dst_path)
+            for i in range(self.images_list.count()):
+                it = self.images_list.item(i)
+                if it and it.text() == basename:
+                    self.images_list.setCurrentRow(i)
+                    break
+            self.statusBar().showMessage(self.LABELS.get("image_imported", "Image imported"), 2000)
+        except Exception:
+            pass
+
+    def _handle_add_existing_image(self):
+        try:
+            if not self.fs.current_folder:
+                QMessageBox.information(self, self.LABELS.get("no_folder_selected", "No folder selected"), self.LABELS.get("no_folder_selected", "No folder selected"))
+                return
+            src_path, _ = QFileDialog.getOpenFileName(
+                self,
+                self.LABELS.get("select_image_file_dialog", "Select Image File"),
+                self.fs.current_folder or "",
+                "Image files (*.jpg *.jpeg *.png *.bmp *.tiff *.tif *.gif);;All files (*)",
+            )
+            if not src_path:
+                return
+            self._import_image_with_prompt(src_path)
+        except Exception:
+            pass
+
     def _handle_paste_audio_video(self):
         try:
             if not self.current_video or not self.fs.current_folder:
