@@ -1766,8 +1766,11 @@ class VideoAnnotationApp(QMainWindow):
         if self.current_video:
             self.play_video_button.setEnabled(True)
             self.stop_video_button.setEnabled(True)
+            # Enable Convert to MP4 only when current selection is not already MP4
             if getattr(self, 'convert_mp4_button', None):
-                self.convert_mp4_button.setEnabled(True)
+                vp_for_convert = self._resolve_current_video_path()
+                ext_for_convert = os.path.splitext(vp_for_convert)[1].lower() if vp_for_convert else ""
+                self.convert_mp4_button.setEnabled(bool(vp_for_convert) and ext_for_convert != ".mp4")
             self.record_button.setEnabled(True)
             self.record_button.setText(self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
             self.update_recording_indicator()
@@ -2196,8 +2199,13 @@ class VideoAnnotationApp(QMainWindow):
             dlg.setWindowModality(Qt.WindowModal)
             dlg.setAutoClose(True)
             dlg.setAutoReset(True)
+            # Guard so closing dialog after success doesn't trigger cancel
+            done = {"value": False}
+            def _mark_done():
+                done["value"] = True
             def do_cancel():
-                worker.cancel()
+                if not done["value"]:
+                    worker.cancel()
             dlg.canceled.connect(do_cancel)
             worker.progress.connect(dlg.setValue)
             def on_finished(out_path: str):
@@ -2214,6 +2222,12 @@ class VideoAnnotationApp(QMainWindow):
                 except Exception:
                     pass
                 try:
+                    # prevent canceled signal from firing a cancel after success
+                    try:
+                        dlg.canceled.disconnect(do_cancel)
+                    except Exception:
+                        pass
+                    _mark_done()
                     dlg.close()
                 except Exception:
                     pass
@@ -2254,9 +2268,6 @@ class VideoAnnotationApp(QMainWindow):
             worker.error.connect(on_error)
             worker.canceled.connect(on_canceled)
             # Fallback: also handle base QThread finished() if custom signal is not delivered
-            done = {"value": False}
-            def _mark_done():
-                done["value"] = True
             def _fallback_on_thread_finished():
                 try:
                     if done["value"]:
@@ -2266,7 +2277,7 @@ class VideoAnnotationApp(QMainWindow):
                     if getattr(worker, "succeeded", False) and out and os.path.exists(out):
                         logging.info("UI.copy_convert: fallback via QThread.finished; invoking on_finished")
                         on_finished(out)
-                        _mark_done()
+                        # on_finished marks done
                 except Exception:
                     pass
             try:
@@ -2287,11 +2298,11 @@ class VideoAnnotationApp(QMainWindow):
                 try:
                     if done["value"]:
                         return
+                    # Only consider fallback when the worker reports success or the thread finished
                     out = getattr(worker, "output_path", None) or dst_path
-                    if out and os.path.exists(out):
-                        logging.info("UI.copy_convert: timer fallback found output; invoking on_finished")
+                    if (getattr(worker, "succeeded", False) or worker.isFinished()) and out and os.path.exists(out):
+                        logging.info("UI.copy_convert: timer fallback detected completion; invoking on_finished")
                         on_finished(out)
-                        _mark_done()
                         return
                     if attempts["n"] > 0:
                         attempts["n"] -= 1
@@ -2368,7 +2379,13 @@ class VideoAnnotationApp(QMainWindow):
             dlg.setWindowModality(Qt.WindowModal)
             dlg.setAutoClose(True)
             dlg.setAutoReset(True)
-            dlg.canceled.connect(worker.cancel)
+            done2 = {"value": False}
+            def _mark_done2():
+                done2["value"] = True
+            def _cancel2():
+                if not done2["value"]:
+                    worker.cancel()
+            dlg.canceled.connect(_cancel2)
             worker.progress.connect(dlg.setValue)
             def on_finished(out_path: str):
                 try:
@@ -2419,6 +2436,11 @@ class VideoAnnotationApp(QMainWindow):
                     pass
                 try:
                     self.statusBar().showMessage(self.LABELS.get("conversion_done", "Conversion complete"), 2000)
+                    try:
+                        dlg.canceled.disconnect(_cancel2)
+                    except Exception:
+                        pass
+                    _mark_done2()
                     dlg.close()
                 except Exception:
                     pass
@@ -2453,9 +2475,6 @@ class VideoAnnotationApp(QMainWindow):
             worker.error.connect(on_error)
             worker.canceled.connect(on_canceled)
             # Fallback: handle base QThread finished() in case custom signal is not delivered
-            done2 = {"value": False}
-            def _mark_done2():
-                done2["value"] = True
             def _fallback_on_thread_finished2():
                 try:
                     if done2["value"]:
@@ -2464,7 +2483,7 @@ class VideoAnnotationApp(QMainWindow):
                     if getattr(worker, "succeeded", False) and out and os.path.exists(out):
                         logging.info("UI.convert_in_place: fallback via QThread.finished; invoking on_finished")
                         on_finished(out)
-                        _mark_done2()
+                        # on_finished marks done
                 except Exception:
                     pass
             try:
@@ -2485,10 +2504,9 @@ class VideoAnnotationApp(QMainWindow):
                     if done2["value"]:
                         return
                     out = getattr(worker, "output_path", None) or dst_path
-                    if out and os.path.exists(out):
-                        logging.info("UI.convert_in_place: timer fallback found output; invoking on_finished")
+                    if (getattr(worker, "succeeded", False) or worker.isFinished()) and out and os.path.exists(out):
+                        logging.info("UI.convert_in_place: timer fallback detected completion; invoking on_finished")
                         on_finished(out)
-                        _mark_done2()
                         return
                     if attempts2["n"] > 0:
                         attempts2["n"] -= 1
@@ -3422,7 +3440,7 @@ class VideoAnnotationApp(QMainWindow):
             # Platform-specific label for Reveal
             label = self._platform_reveal_label()
             reveal_act = QAction(label, self)
-            reveal_act.triggered.connect(lambda: self._reveal_in_file_manager(self._resolve_current_video_path()))
+            reveal_act.triggered.connect(self._reveal_current_video_with_warning)
             menu.addAction(reveal_act)
             # Position
             if global_pos:
@@ -3446,6 +3464,39 @@ class VideoAnnotationApp(QMainWindow):
             return self.LABELS.get("reveal_in_file_manager", "Reveal in File Manager")
         except Exception:
             return "Reveal in File Manager"
+
+    def _reveal_current_video_with_warning(self):
+        """Warn if the current video is not MP4, then reveal if confirmed."""
+        try:
+            path = self._resolve_current_video_path()
+            if not (path and os.path.exists(path)):
+                return
+            ext = os.path.splitext(path)[1].lower()
+            if ext and ext != ".mp4":
+                title = self.LABELS.get("non_mp4_reveal_warn_title", "Not an MP4")
+                reveal_lbl = self._platform_reveal_label()
+                msg = (
+                    self.LABELS.get(
+                        "non_mp4_reveal_warn_msg_simple",
+                        "This video is not in MP4 format.\n\nWhatsApp and many other common apps can only play MP4 videos. Please Cancel now, click 'Convert to MP4', then try again.\n\n{action} anyway?",
+                    )
+                )
+                try:
+                    msg_fmt = msg.format(action=reveal_lbl)
+                except Exception:
+                    msg_fmt = msg
+                resp = QMessageBox.question(
+                    self,
+                    title,
+                    msg_fmt,
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No,
+                )
+                if resp != QMessageBox.Yes:
+                    return
+            self._reveal_in_file_manager(path)
+        except Exception:
+            pass
 
     def _reveal_in_file_manager(self, path: str | None):
         """Reveal the given file in the OS file manager (select/highlight if supported)."""

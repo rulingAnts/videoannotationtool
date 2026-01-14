@@ -60,6 +60,18 @@ LABELS_ALL = {
         "success": "Success",
         "wavs_joined": "All WAV files successfully joined into:",
         "videos_tab_title": "Videos",
+        # Conversion/Reveals
+        "convert_to_mp4": "Convert to MP4",
+        "non_mp4_reveal_warn_title": "Not an MP4",
+        "non_mp4_reveal_warn_msg_simple": (
+            "This video is not in MP4 format.\n\n"
+            "WhatsApp and many other common apps can only play MP4 videos. "
+            "Please Cancel now, click 'Convert to MP4', then try again.\n\n"
+            "{action} anyway?"
+        ),
+        "reveal_in_finder": "Reveal in Finder",
+        "reveal_in_explorer": "Reveal in Explorer",
+        "reveal_in_file_manager": "Reveal in File Manager",
         "select_folder_dialog": "Select Folder with Video Files",
         "cleanup_errors_title": "Cleanup Errors",
         "permission_denied_title": "Permission Denied",
