@@ -1,0 +1,26 @@
+# Localization labels overlay
+# Provide language keys mapping to label dictionaries.
+# Any keys present here override built-in defaults in the app.
+# Example structure:
+# English:
+#   app_title: "Visual Stimulus Kit Tool"
+#   review_tab_title: "Review"
+#   # ... add more keys as needed
+# 한국어:
+#   review_tab_title: "리뷰"
+#   # ...
+# Español (Latinoamérica):
+#   review_tab_title: "Revisión"
+#   # ...
+# Bahasa Indonesia:
+#   review_tab_title: "Ulasan"
+#   # ...
+# Nederlands:
+#   review_tab_title: "Review"
+#   # ...
+# Português (Brasil):
+#   review_tab_title: "Revisão"
+#   # ...
+# Afrikaans:
+#   review_tab_title: "Hersiening"
+#   # ...

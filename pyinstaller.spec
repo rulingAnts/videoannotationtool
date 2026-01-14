@@ -10,6 +10,7 @@ datas = [
     ('assets/ffmpeg-bin/windows/ffprobe.exe', 'assets/ffmpeg-bin/windows'),
 ]
 datas += collect_data_files('PySide6', include_py_files=False)
+datas += [('vat/i18n/labels.yaml', 'vat/i18n')]
 
 a = Analysis([
     'videoannotation.py'

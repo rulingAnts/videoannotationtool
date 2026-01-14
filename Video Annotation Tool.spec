@@ -7,6 +7,9 @@ hiddenimports = ['PySide6.QtCore', 'PySide6.QtGui', 'PySide6.QtWidgets']
 tmp_ret = collect_all('PySide6')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
+# Include i18n YAML overlay
+datas += [('vat\\i18n\\labels.yaml', 'vat\\i18n')]
+
 
 a = Analysis(
     ['C:\\Users\\Seth\\Windows File System Folder\\GIT\\videoannotationtool\\videoannotation.py'],

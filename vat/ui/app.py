@@ -14,16 +14,23 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QListWidget, QListWidgetItem, QLabel, QTextEdit, QMessageBox,
     QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle, QSizePolicy,
-    QListView, QStyledItemDelegate, QApplication, QCheckBox
+    QListView, QStyledItemDelegate, QApplication, QCheckBox, QGraphicsDropShadowEffect,
+    QMenu, QProgressDialog
 )
-from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize, QRect, QPoint, QLocale
-from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence, QImageReader, QPen, QColor
+from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize, QRect, QPoint, QLocale, QMetaObject, QUrl, QMimeData
+import time
+from PySide6.QtGui import QImage, QPixmap, QIcon, QShortcut, QKeySequence, QImageReader, QPen, QColor, QGuiApplication, QAction, QCursor
+import tempfile
+import shlex
+import threading
+import zipfile
 
 from vat.audio import PYAUDIO_AVAILABLE
 from vat.audio.playback import AudioPlaybackWorker
 from vat.audio.recording import AudioRecordingWorker
 from vat.audio.joiner import JoinWavsWorker
 from vat.utils.resources import resource_path
+from vat.utils.video_convert import VideoConvertWorker, ConvertSpec, needs_reencode_to_mp4
 from vat.ui.fullscreen import FullscreenVideoViewer, FullscreenImageViewer
 from vat.utils.fs_access import (
     FolderAccessManager,
@@ -31,615 +38,162 @@ from vat.utils.fs_access import (
     FolderPermissionError,
     FolderNotFoundError,
 )
+from vat.review import ReviewTab
 
-# UI labels for easy translation, with language names in their own language
-LABELS_ALL = {
-    "English": {
-        "language_name": "English",
-        "app_title": "Visual Stimulus Kit Tool",
-        "select_folder": "Select Folder",
-        "open_ocenaudio": "Open all Recordings in Ocenaudio (To Normalize, Trim, Edit...)",
-        "export_wavs": "Export Recorded Data",
-        "clear_wavs": "Clear Recorded Data",
-        "import_wavs": "Import Recorded Data",
-        "join_wavs": "Export as Single Sound File (for SayMore/ELAN)",
-        "video_listbox_no_video": "No video selected",
-        "play_video": "Play Video",
-        "stop_video": "Stop Video",
-        "audio_no_annotation": "No audio annotation",
-        "play_audio": "Play Audio",
-        "stop_audio": "Stop Audio",
-        "record_audio": "Record Audio",
-        "stop_recording": "Stop Recording",
-        "edit_metadata": "Edit Metadata",
-        "save_metadata": "Save",
-        "audio_label_prefix": "Audio: ",
-        "no_folder_selected": "No Folder Selected",
-        "no_videos_found": "No video files found in the selected folder:",
-        "no_files": "No Files",
-        "no_wavs_found": "No WAV files found in the current folder.",
-        "overwrite": "Overwrite?",
-        "overwrite_audio": "Audio file already exists. Overwrite?",
-        "saved": "Saved",
-        "metadata_saved": "Metadata saved!",
-        "success": "Success",
-        "wavs_joined": "All WAV files successfully joined into:",
-        "videos_tab_title": "Videos",
-        "select_folder_dialog": "Select Folder with Video Files",
-        "cleanup_errors_title": "Cleanup Errors",
-        "permission_denied_title": "Permission Denied",
-        "folder_not_found_title": "Folder Not Found",
-        "unexpected_error_title": "An Error Occurred",
-        "error_title": "Error",
-        "cannot_open_video": "Cannot open video file.",
-        "ocenaudio_locate_title": "Locate Ocenaudio Executable",
-        "ocenaudio_not_found_title": "Ocenaudio Not Found",
-        "ocenaudio_open_fail_prefix": "Failed to open Ocenaudio: ",
-        "export_select_folder_dialog": "Select Export Folder for WAV Files",
-        "overwrite_files_title": "Overwrite Files?",
-        "overwrite_export_body_prefix": "The following files already exist in the export folder and will be overwritten:\n",
-        "overwrite_import_body_prefix": "The following files already exist and will be overwritten by import:\n",
-        "overwrite_question_suffix": "\n\nDo you want to overwrite them?",
-        "export_cancelled_title": "Export Cancelled",
-        "export_cancelled_msg": "Export was cancelled to avoid overwriting files.",
-        "delete_errors_title": "Delete Errors",
-        "delete_errors_msg_prefix": "Some files could not be deleted or metadata.txt could not be reset:\n",
-        "clear_success_msg_prefix": "Deleted {count} WAV files and reset metadata.txt.",
-        "import_select_folder_dialog": "Select Folder to Import Files From",
-        "confirm_delete_title": "Confirm Delete",
-        "confirm_import_title": "Confirm Import",
-        "import_errors_title": "Import Errors",
-        "import_errors_msg_prefix": "Some files could not be imported or deleted:\n",
-        "import_success_msg_prefix": "Imported {count} WAV files and metadata.txt.",
-        "wav_mismatch_title": "WAV Filename Mismatch",
-        "wav_mismatch_msg_prefix": "The following WAV files do not match any video filenames and were not imported:\n",
-        "ffmpeg_not_found_msg": "FFmpeg not found. Please ensure FFmpeg is installed or bundled with the executable.",
-        "save_combined_wav_dialog_title": "Save Combined WAV File",
-        "recording_indicator": "● Recording",
-        "recording_started": "Recording started",
-        "recording_stopped": "Recording stopped",
-        "video_fullscreen_tip": "<b>Tip:</b> Double-click the video to open fullscreen. Use <b>+</b> and <b>-</b> to zoom in/out in fullscreen view.",
-        "image_fullscreen_tip": "<b>Tip:</b> Double-click an image to open fullscreen. Use <b>+</b> and <b>-</b> to zoom in/out in fullscreen view.",
-        "image_show_filenames": "Show filenames",
-        "welcome_dialog_title": "Welcome to the Visual Stimulus Kit Tool",
-        "welcome_dialog_body_html": (
-            "<p><b>Welcome!</b> This tool helps you collect clear, well-organised "
-            "examples of how people speak and sign in minority and under-documented languages. "
-            "You will use short video clips or still images (stimuli) to guide speakers and signers "
-            "through specific situations or meanings so you can study the grammar and vocabulary.</p>"
-            "<p><b>Best practices:</b></p>"
-            "<ol>"
-            "<li><b>Follow the instructions for your stimulus kit.</b> Keep the sequence of video clips "
-            "and still images in the same order as the kit instructions. The exact filenames and the "
-            "ordering of still images do not need to match the video list perfectly, but the meanings "
-            "and situations should be presented in the intended sequence.</li>"
-            "<li><b>Make a continuous backup recording whenever possible.</b> In addition to recording "
-            "one short audio file per item in this tool, it is very helpful to keep a separate, "
-            "continuous audio (and/or video) recording of the whole elicitation session. This protects "
-            "you if something goes wrong with individual files.</li>"
-            "</ol>"
-            "<p>For examples of recommended stimulus kits and more background, see the "
-            "<a href=\"https://rulingants.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
-            "section on the project website.</p>"
-        ),
-        "ocenaudio_not_found_body": "Ocenaudio not found. Please install it to use this feature.",
-    },
-    "Bahasa Indonesia": {
-        "language_name": "Bahasa Indonesia",
-        "app_title": "Alat Stimulus Visual",
-        "select_folder": "Pilih Folder",
-        "open_ocenaudio": "Buka semua rekaman di Ocenaudio (Untuk normalisasi, potong, edit...)",
-        "export_wavs": "Ekspor Data Rekaman",
-        "clear_wavs": "Hapus Data Rekaman",
-        "import_wavs": "Impor Data Rekaman",
-        "join_wavs": "Ekspor sebagai Satu Berkas Suara (untuk SayMore/ELAN)",
-        "video_listbox_no_video": "Tidak ada video yang dipilih",
-        "play_video": "Putar Video",
-        "stop_video": "Hentikan Video",
-        "audio_no_annotation": "Tidak ada anotasi audio",
-        "play_audio": "Putar Audio",
-        "stop_audio": "Hentikan Audio",
-        "record_audio": "Rekam Audio",
-        "stop_recording": "Hentikan Rekaman",
-        "edit_metadata": "Edit Metadata",
-        "save_metadata": "Simpan",
-        "audio_label_prefix": "Audio: ",
-        "no_folder_selected": "Tidak ada folder yang dipilih",
-        "no_videos_found": "Tidak ada berkas video di folder yang dipilih:",
-        "no_files": "Tidak Ada Berkas",
-        "no_wavs_found": "Tidak ada berkas WAV di folder ini.",
-        "overwrite": "Timpa?",
-        "overwrite_audio": "Berkas audio sudah ada. Timpa?",
-        "saved": "Tersimpan",
-        "metadata_saved": "Metadata tersimpan!",
-        "success": "Berhasil",
-        "wavs_joined": "Semua berkas WAV berhasil digabungkan menjadi:",
-        "videos_tab_title": "Video",
-        "select_folder_dialog": "Pilih Folder dengan Berkas Video",
-        "cleanup_errors_title": "Kesalahan Pembersihan",
-        "permission_denied_title": "Izin Ditolak",
-        "folder_not_found_title": "Folder Tidak Ditemukan",
-        "unexpected_error_title": "Terjadi Kesalahan",
-        "error_title": "Kesalahan",
-        "cannot_open_video": "Tidak dapat membuka berkas video.",
-        "ocenaudio_locate_title": "Temukan Eksekutabel Ocenaudio",
-        "ocenaudio_not_found_title": "Ocenaudio Tidak Ditemukan",
-        "ocenaudio_open_fail_prefix": "Gagal membuka Ocenaudio: ",
-        "export_select_folder_dialog": "Pilih Folder Ekspor untuk Berkas WAV",
-        "overwrite_files_title": "Timpa Berkas?",
-        "overwrite_export_body_prefix": "Berkas berikut sudah ada di folder ekspor dan akan ditimpa:\n",
-        "overwrite_import_body_prefix": "Berkas berikut sudah ada dan akan ditimpa oleh impor:\n",
-        "overwrite_question_suffix": "\n\nApakah Anda ingin menimpanya?",
-        "export_cancelled_title": "Ekspor Dibatalkan",
-        "export_cancelled_msg": "Ekspor dibatalkan untuk menghindari penimpaan berkas.",
-        "delete_errors_title": "Kesalahan Penghapusan",
-        "delete_errors_msg_prefix": "Beberapa berkas tidak dapat dihapus atau metadata.txt tidak dapat diatur ulang:\n",
-        "clear_success_msg_prefix": "Menghapus {count} berkas WAV dan mengatur ulang metadata.txt.",
-        "import_select_folder_dialog": "Pilih Folder untuk Mengimpor Berkas",
-        "confirm_delete_title": "Konfirmasi Hapus",
-        "confirm_import_title": "Konfirmasi Impor",
-        "import_errors_title": "Kesalahan Impor",
-        "import_errors_msg_prefix": "Beberapa berkas tidak dapat diimpor atau dihapus:\n",
-        "import_success_msg_prefix": "Mengimpor {count} berkas WAV dan metadata.txt.",
-        "wav_mismatch_title": "Nama Berkas WAV Tidak Cocok",
-        "wav_mismatch_msg_prefix": "Berkas WAV berikut tidak cocok dengan nama berkas video manapun dan tidak diimpor:\n",
-        "ffmpeg_not_found_msg": "FFmpeg tidak ditemukan. Pastikan FFmpeg terpasang atau dibundel dengan eksekutabel.",
-        "save_combined_wav_dialog_title": "Simpan Berkas WAV Gabungan",
-        "recording_indicator": "● Merekam",
-        "recording_started": "Perekaman dimulai",
-        "recording_stopped": "Perekaman dihentikan",
-        "video_fullscreen_tip": "<b>Tip:</b> Klik ganda video untuk membukanya dalam mode layar penuh. Gunakan <b>+</b> dan <b>-</b> untuk memperbesar atau memperkecil tampilan layar penuh.",
-        "image_fullscreen_tip": "<b>Tip:</b> Klik ganda gambar untuk membukanya dalam mode layar penuh. Gunakan <b>+</b> dan <b>-</b> untuk memperbesar atau memperkecil tampilan layar penuh.",
-        "image_show_filenames": "Tampilkan nama berkas",
-        "welcome_dialog_title": "Selamat datang di Alat Stimulus Visual",
-        "welcome_dialog_body_html": (
-            "<p><b>Selamat datang!</b> Alat ini membantu Anda mengumpulkan contoh yang jelas dan teratur "
-            "tentang bagaimana orang berbicara dan berbahasa isyarat dalam bahasa minoritas dan yang kurang terdokumentasi. "
-            "Anda akan menggunakan klip video pendek atau gambar diam (stimulus) untuk memandu penutur dan pengguna bahasa isyarat "
-            "melalui situasi atau makna tertentu sehingga Anda dapat mempelajari tata bahasa dan kosakata.</p>"
-            "<p><b>Praktik yang disarankan:</b></p>"
-            "<ol>"
-            "<li><b>Ikuti petunjuk untuk paket stimulus Anda.</b> Pertahankan urutan klip video "
-            "dan gambar diam sesuai dengan urutan dalam petunjuk paket. Nama berkas dan urutan tepat untuk gambar diam "
-            "tidak harus persis sama dengan daftar video, tetapi makna dan situasinya harus disajikan dalam urutan yang dimaksudkan.</li>"
-            "<li><b>Buat rekaman cadangan yang terus menerus bila memungkinkan.</b> Selain merekam satu berkas audio pendek per item di alat ini, "
-            "akan sangat membantu jika Anda juga membuat rekaman audio (dan/atau video) terpisah yang berkelanjutan untuk seluruh sesi elisitasi. "
-            "Ini melindungi Anda jika terjadi masalah dengan berkas individual.</li>"
-            "</ol>"
-            "<p>Untuk contoh paket stimulus yang direkomendasikan dan informasi lebih lanjut, lihat bagian "
-            "<a href=\"https://rulingants.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
-            "di situs web proyek.</p>"
-        ),
-        "ocenaudio_not_found_body": "Ocenaudio tidak ditemukan. Silakan instal agar dapat menggunakan fitur ini.",
-    },
-    "한국어": {
-        "language_name": "한국어",
-        "app_title": "시각 자극 키트 도구",
-        "select_folder": "폴더 선택",
-        "open_ocenaudio": "모든 녹음을 Ocenaudio에서 열기 (정규화, 자르기, 편집...)",
-        "export_wavs": "녹음 데이터 내보내기",
-        "clear_wavs": "녹음 데이터 지우기",
-        "import_wavs": "녹음 데이터 가져오기",
-        "join_wavs": "하나의 오디오 파일로 내보내기 (SayMore/ELAN용)",
-        "video_listbox_no_video": "선택된 비디오 없음",
-        "play_video": "비디오 재생",
-        "stop_video": "비디오 정지",
-        "audio_no_annotation": "오디오 주석 없음",
-        "play_audio": "오디오 재생",
-        "stop_audio": "오디오 정지",
-        "record_audio": "오디오 녹음",
-        "stop_recording": "녹음 중지",
-        "edit_metadata": "메타데이터 편집",
-        "save_metadata": "저장",
-        "audio_label_prefix": "오디오: ",
-        "no_folder_selected": "선택된 폴더 없음",
-        "no_videos_found": "선택한 폴더에 비디오 파일이 없습니다:",
-        "no_files": "파일 없음",
-        "no_wavs_found": "현재 폴더에 WAV 파일이 없습니다.",
-        "overwrite": "덮어쓰기?",
-        "overwrite_audio": "오디오 파일이 이미 존재합니다. 덮어쓸까요?",
-        "saved": "저장됨",
-        "metadata_saved": "메타데이터가 저장되었습니다!",
-        "success": "성공",
-        "wavs_joined": "모든 WAV 파일이 성공적으로 결합되었습니다:",
-        "videos_tab_title": "비디오",
-        "select_folder_dialog": "비디오 파일이 있는 폴더 선택",
-        "cleanup_errors_title": "정리 오류",
-        "permission_denied_title": "권한 거부",
-        "folder_not_found_title": "폴더를 찾을 수 없음",
-        "unexpected_error_title": "오류가 발생했습니다",
-        "error_title": "오류",
-        "cannot_open_video": "비디오 파일을 열 수 없습니다.",
-        "ocenaudio_locate_title": "Ocenaudio 실행 파일 찾기",
-        "ocenaudio_not_found_title": "Ocenaudio를 찾을 수 없음",
-        "ocenaudio_open_fail_prefix": "Ocenaudio를 열지 못했습니다: ",
-        "export_select_folder_dialog": "WAV 파일 내보낼 폴더 선택",
-        "overwrite_files_title": "파일 덮어쓰기?",
-        "overwrite_export_body_prefix": "다음 파일은 내보내기 폴더에 이미 존재하며 덮어쓰게 됩니다:\n",
-        "overwrite_import_body_prefix": "다음 파일은 이미 존재하며 가져오기에 의해 덮어쓰게 됩니다:\n",
-        "overwrite_question_suffix": "\n\n덮어쓰시겠습니까?",
-        "export_cancelled_title": "내보내기 취소됨",
-        "export_cancelled_msg": "파일 덮어쓰기를 피하기 위해 내보내기가 취소되었습니다.",
-        "delete_errors_title": "삭제 오류",
-        "delete_errors_msg_prefix": "일부 파일을 삭제할 수 없거나 metadata.txt를 재설정할 수 없습니다:\n",
-        "clear_success_msg_prefix": "{count}개의 WAV 파일을 삭제하고 metadata.txt를 재설정했습니다.",
-        "import_select_folder_dialog": "가져올 폴더 선택",
-        "confirm_delete_title": "삭제 확인",
-        "confirm_import_title": "가져오기 확인",
-        "import_errors_title": "가져오기 오류",
-        "import_errors_msg_prefix": "일부 파일을 가져오거나 삭제할 수 없습니다:\n",
-        "import_success_msg_prefix": "{count}개의 WAV 파일과 metadata.txt를 가져왔습니다.",
-        "wav_mismatch_title": "WAV 파일명 불일치",
-        "wav_mismatch_msg_prefix": "다음 WAV 파일은 어떤 비디오 파일명과도 일치하지 않아 가져오지 않았습니다:\n",
-        "ffmpeg_not_found_msg": "FFmpeg를 찾을 수 없습니다. FFmpeg가 설치되어 있거나 실행 파일과 함께 제공되는지 확인하세요.",
-        "save_combined_wav_dialog_title": "결합된 WAV 파일 저장",
-        "recording_indicator": "● 녹음 중",
-        "recording_started": "녹음이 시작되었습니다",
-        "recording_stopped": "녹음이 종료되었습니다",
-        "video_fullscreen_tip": "<b>팁:</b> 비디오를 두 번 클릭하면 전체 화면으로 열립니다. 전체 화면에서 <b>+</b>와 <b>-</b> 키로 확대/축소할 수 있습니다.",
-        "image_fullscreen_tip": "<b>팁:</b> 이미지를 두 번 클릭하면 전체 화면으로 열립니다. 전체 화면에서 <b>+</b>와 <b>-</b> 키로 확대/축소할 수 있습니다.",
-        "image_show_filenames": "파일 이름 표시",
-        "welcome_dialog_title": "시각 자극 키트 도구에 오신 것을 환영합니다",
-        "welcome_dialog_body_html": (
-            "<p><b>환영합니다!</b> 이 도구는 소수 언어와 충분히 기록되지 않은 언어에서 사람들이 말하고 수어하는 방식을 "
-            "명확하고 잘 정리된 예문으로 모을 수 있도록 도와줍니다. "
-            "짧은 비디오 클립이나 정지 이미지(자극 자료)를 사용하여 화자와 수어 사용자가 특정 상황이나 의미를 표현하도록 유도하고, "
-            "그 결과를 바탕으로 문법과 어휘를 살펴볼 수 있습니다.</p>"
-            "<p><b>권장 사용 방법:</b></p>"
-            "<ol>"
-            "<li><b>사용 중인 자극 자료(킷)의 안내서를 따르십시오.</b> 비디오 클립과 정지 이미지는 안내서에 제시된 순서를 유지하는 것이 좋습니다. "
-            "정지 이미지의 파일 이름이나 정확한 순서는 비디오 목록과 완전히 같을 필요는 없지만, 의미와 상황은 의도된 순서대로 제시되어야 합니다.</li>"
-            "<li><b>가능하다면 항상 연속적인 백업 녹음을 만드십시오.</b> 이 도구에서 항목마다 짧은 오디오 파일을 하나씩 녹음하는 것과 더불어, "
-            "전체 일리스티테이션 세션을 별도의 연속 오디오(및/또는 비디오)로 기록해 두면 큰 도움이 됩니다. "
-            "이렇게 하면 개별 파일에 문제가 생겨도 자료를 잃지 않을 가능성이 커집니다.</li>"
-            "</ol>"
-            "<p>권장 자극 자료와 더 자세한 배경 설명은 프로젝트 웹사이트의 "
-            "<a href=\"https://rulingants.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
-            "섹션에서 확인할 수 있습니다.</p>"
-        ),
-        "ocenaudio_not_found_body": "Ocenaudio를 찾을 수 없습니다. 이 기능을 사용하려면 먼저 설치해 주세요.",
-    },
-    "Nederlands": {
-        "language_name": "Nederlands",
-        "app_title": "Visuele Stimuluskit Tool",
-        "select_folder": "Selecteer Map",
-        "open_ocenaudio": "Open alle opnamen in Ocenaudio (Normaliseren, Knippen, Bewerken...)",
-        "export_wavs": "Opgenomen Data Exporteren",
-        "clear_wavs": "Opgenomen Data Wissen",
-        "import_wavs": "Opgenomen Data Importeren",
-        "join_wavs": "Exporteren als Enkel Geluidsbestand (voor SayMore/ELAN)",
-        "video_listbox_no_video": "Geen video geselecteerd",
-        "play_video": "Video Afspelen",
-        "stop_video": "Video Stoppen",
-        "audio_no_annotation": "Geen audio annotatie",
-        "play_audio": "Audio Afspelen",
-        "stop_audio": "Audio Stoppen",
-        "record_audio": "Audio Opnemen",
-        "stop_recording": "Opname Stoppen",
-        "edit_metadata": "Metadata Bewerken",
-        "save_metadata": "Opslaan",
-        "audio_label_prefix": "Audio: ",
-        "no_folder_selected": "Geen map geselecteerd",
-        "no_videos_found": "Geen videobestanden gevonden in de geselecteerde map:",
-        "no_files": "Geen bestanden",
-        "no_wavs_found": "Geen WAV-bestanden gevonden in de huidige map.",
-        "overwrite": "Overschrijven?",
-        "overwrite_audio": "Audiobestand bestaat al. Overschrijven?",
-        "saved": "Opgeslagen",
-        "metadata_saved": "Metadata opgeslagen!",
-        "success": "Succes",
-        "wavs_joined": "Alle WAV-bestanden succesvol samengevoegd tot:",
-        "videos_tab_title": "Video's",
-        "select_folder_dialog": "Selecteer map met videobestanden",
-        "cleanup_errors_title": "Opschoningsfouten",
-        "permission_denied_title": "Toegang geweigerd",
-        "folder_not_found_title": "Map niet gevonden",
-        "unexpected_error_title": "Er is een fout opgetreden",
-        "error_title": "Fout",
-        "cannot_open_video": "Kan videobestand niet openen.",
-        "ocenaudio_locate_title": "Ocenaudio-programma zoeken",
-        "ocenaudio_not_found_title": "Ocenaudio niet gevonden",
-        "ocenaudio_open_fail_prefix": "Ocenaudio openen mislukt: ",
-        "export_select_folder_dialog": "Selecteer exportmap voor WAV-bestanden",
-        "overwrite_files_title": "Bestanden overschrijven?",
-        "overwrite_export_body_prefix": "De volgende bestanden bestaan al in de exportmap en zullen worden overschreven:\n",
-        "overwrite_import_body_prefix": "De volgende bestanden bestaan al en zullen door import worden overschreven:\n",
-        "overwrite_question_suffix": "\n\nWilt u ze overschrijven?",
-        "export_cancelled_title": "Export geannuleerd",
-        "export_cancelled_msg": "Export is geannuleerd om overschrijven te voorkomen.",
-        "delete_errors_title": "Verwijderfouten",
-        "delete_errors_msg_prefix": "Sommige bestanden konden niet worden verwijderd of metadata.txt kon niet worden teruggezet:\n",
-        "clear_success_msg_prefix": "{count} WAV-bestanden verwijderd en metadata.txt teruggezet.",
-        "import_select_folder_dialog": "Selecteer map om bestanden uit te importeren",
-        "confirm_delete_title": "Verwijderen bevestigen",
-        "confirm_import_title": "Import bevestigen",
-        "import_errors_title": "Importfouten",
-        "import_errors_msg_prefix": "Sommige bestanden konden niet worden geïmporteerd of verwijderd:\n",
-        "import_success_msg_prefix": "{count} WAV-bestanden en metadata.txt geïmporteerd.",
-        "wav_mismatch_title": "WAV-bestandsnamen komen niet overeen",
-        "wav_mismatch_msg_prefix": "De volgende WAV-bestanden komen met geen enkele videobestandsnaam overeen en zijn niet geïmporteerd:\n",
-        "ffmpeg_not_found_msg": "FFmpeg niet gevonden. Zorg dat FFmpeg is geïnstalleerd of is meegeleverd met de executable.",
-        "save_combined_wav_dialog_title": "Gecombineerd WAV-bestand opslaan",
-        "video_fullscreen_tip": "<b>Tip:</b> Dubbelklik op de video om deze op volledig scherm te openen. Gebruik <b>+</b> en <b>-</b> om in en uit te zoomen in de volledig-schermweergave.",
-        "image_fullscreen_tip": "<b>Tip:</b> Dubbelklik op een afbeelding om deze op volledig scherm te openen. Gebruik <b>+</b> en <b>-</b> om in en uit te zoomen in de volledig-schermweergave.",
-        "image_show_filenames": "Bestandsnamen tonen",
-        "welcome_dialog_title": "Welkom bij de Visuele Stimuluskit Tool",
-        "welcome_dialog_body_html": (
-            "<p><b>Welkom!</b> Deze tool helpt je om duidelijke, goed geordende voorbeelden te verzamelen "
-            "van hoe mensen spreken en gebaren in minderheids- en ondergedocumenteerde talen. "
-            "Je gebruikt korte videoclips of stilstaande beelden (stimuli) om sprekers en gebarende personen "
-            "door specifieke situaties of betekenissen te leiden, zodat je de grammatica en woordenschat kunt bestuderen.</p>"
-            "<p><b>Aanbevolen werkwijze:</b></p>"
-            "<ol>"
-            "<li><b>Volg de instructies van je stimulusset.</b> Houd de volgorde van de videoclips "
-            "en stilstaande beelden hetzelfde als in de handleiding van de set. De exacte bestandsnamen en volgorde van de stilstaande beelden "
-            "hoeven niet precies overeen te komen met de videolijst, maar de betekenissen en situaties moeten wel in de bedoelde volgorde worden aangeboden.</li>"
-            "<li><b>Maak indien mogelijk een doorlopende back-upopname.</b> Naast het opnemen van één kort audiobestand per item in deze tool, "
-            "is het erg nuttig om ook een aparte, doorlopende audio- (en/of video-)opname van de hele elicitatie-sessie te maken. "
-            "Dit beschermt je als er iets misgaat met afzonderlijke bestanden.</li>"
-            "</ol>"
-            "<p>Voor voorbeelden van aanbevolen stimulussets en extra achtergrondinformatie, zie de sectie "
-            "<a href=\"https://rulingants.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
-            "op de projectwebsite.</p>"
-        ),
-        "ocenaudio_not_found_body": "Ocenaudio niet gevonden. Installeer het om deze functie te gebruiken.",
-    },
-    "Português (Brasil)": {
-        "language_name": "Português (Brasil)",
-        "app_title": "Ferramenta de Estímulos Visuais",
-        "select_folder": "Selecionar Pasta",
-        "open_ocenaudio": "Abrir todas as gravações no Ocenaudio (Para normalizar, cortar, editar...)",
-        "export_wavs": "Exportar Dados Gravados",
-        "clear_wavs": "Limpar Dados Gravados",
-        "import_wavs": "Importar Dados Gravados",
-        "join_wavs": "Exportar como Arquivo Único de Áudio (para SayMore/ELAN)",
-        "video_listbox_no_video": "Nenhum vídeo selecionado",
-        "play_video": "Reproduzir Vídeo",
-        "stop_video": "Parar Vídeo",
-        "audio_no_annotation": "Sem anotação de áudio",
-        "play_audio": "Reproduzir Áudio",
-        "stop_audio": "Parar Áudio",
-        "record_audio": "Gravar Áudio",
-        "stop_recording": "Parar Gravação",
-        "edit_metadata": "Editar Metadados",
-        "save_metadata": "Salvar",
-        "audio_label_prefix": "Áudio: ",
-        "no_folder_selected": "Nenhuma pasta selecionada",
-        "no_videos_found": "Nenhum arquivo de vídeo encontrado na pasta selecionada:",
-        "no_files": "Nenhum arquivo",
-        "no_wavs_found": "Nenhum arquivo WAV encontrado na pasta atual.",
-        "overwrite": "Sobrescrever?",
-        "overwrite_audio": "O arquivo de áudio já existe. Sobrescrever?",
-        "saved": "Salvo",
-        "metadata_saved": "Metadados salvos!",
-        "success": "Sucesso",
-        "wavs_joined": "Todos os arquivos WAV foram unidos com sucesso em:",
-        "videos_tab_title": "Vídeos",
-        "select_folder_dialog": "Selecionar pasta com arquivos de vídeo",
-        "cleanup_errors_title": "Erros de limpeza",
-        "permission_denied_title": "Permissão negada",
-        "folder_not_found_title": "Pasta não encontrada",
-        "unexpected_error_title": "Ocorreu um erro",
-        "error_title": "Erro",
-        "cannot_open_video": "Não é possível abrir o arquivo de vídeo.",
-        "ocenaudio_locate_title": "Localizar executável do Ocenaudio",
-        "ocenaudio_not_found_title": "Ocenaudio não encontrado",
-        "ocenaudio_open_fail_prefix": "Falha ao abrir Ocenaudio: ",
-        "export_select_folder_dialog": "Selecionar pasta de exportação para arquivos WAV",
-        "overwrite_files_title": "Sobrescrever arquivos?",
-        "overwrite_export_body_prefix": "Os seguintes arquivos já existem na pasta de exportação e serão sobrescritos:\n",
-        "overwrite_import_body_prefix": "Os seguintes arquivos já existem e serão sobrescritos pela importação:\n",
-        "overwrite_question_suffix": "\n\nDeseja sobrescrevê-los?",
-        "export_cancelled_title": "Exportação cancelada",
-        "export_cancelled_msg": "A exportação foi cancelada para evitar sobrescrições.",
-        "delete_errors_title": "Erros ao excluir",
-        "delete_errors_msg_prefix": "Alguns arquivos não puderam ser excluídos ou metadata.txt não pôde ser redefinido:\n",
-        "clear_success_msg_prefix": "{count} arquivos WAV excluídos e metadata.txt redefinido.",
-        "import_select_folder_dialog": "Selecionar pasta de onde importar arquivos",
-        "confirm_delete_title": "Confirmar exclusão",
-        "confirm_import_title": "Confirmar importação",
-        "import_errors_title": "Erros na importação",
-        "import_errors_msg_prefix": "Alguns arquivos não puderam ser importados ou excluídos:\n",
-        "import_success_msg_prefix": "{count} arquivos WAV e metadata.txt importados.",
-        "wav_mismatch_title": "Incompatibilidade de nomes de arquivos WAV",
-        "wav_mismatch_msg_prefix": "Os seguintes arquivos WAV não correspondem a nenhum nome de arquivo de vídeo e não foram importados:\n",
-        "ffmpeg_not_found_msg": "FFmpeg não encontrado. Certifique-se de que o FFmpeg esteja instalado ou incluído no executável.",
-        "save_combined_wav_dialog_title": "Salvar arquivo WAV combinado",
-        "video_fullscreen_tip": "<b>Dica:</b> Dê um clique duplo no vídeo para abri-lo em tela cheia. Use <b>+</b> e <b>-</b> para aproximar ou afastar na visualização em tela cheia.",
-        "image_fullscreen_tip": "<b>Dica:</b> Dê um clique duplo em uma imagem para abri-la em tela cheia. Use <b>+</b> e <b>-</b> para aproximar ou afastar na visualização em tela cheia.",
-        "image_show_filenames": "Mostrar nomes de arquivos",
-        "welcome_dialog_title": "Bem-vindo à Ferramenta de Estímulos Visuais",
-        "welcome_dialog_body_html": (
-            "<p><b>Bem-vindo!</b> Esta ferramenta ajuda você a coletar exemplos claros e bem organizados "
-            "de como as pessoas falam e sinalizam em línguas minoritárias e pouco documentadas. "
-            "Você usará pequenos clipes de vídeo ou imagens estáticas (estímulos) para guiar falantes e sinalizantes "
-            "por situações ou significados específicos, para então estudar a gramática e o vocabulário.</p>"
-            "<p><b>Boas práticas:</b></p>"
-            "<ol>"
-            "<li><b>Siga as instruções do seu conjunto de estímulos.</b> Mantenha a sequência dos clipes de vídeo "
-            "e das imagens estáticas na mesma ordem do manual do conjunto. Os nomes de arquivo e a ordem exata das imagens estáticas "
-            "não precisam coincidir perfeitamente com a lista de vídeos, mas os significados e as situações devem ser apresentados na sequência pretendida.</li>"
-            "<li><b>Faça uma gravação contínua de reserva sempre que possível.</b> Além de gravar um arquivo de áudio curto por item nesta ferramenta, "
-            "é muito útil manter uma gravação separada e contínua de áudio (e/ou vídeo) de toda a sessão de elicitação. "
-            "Isso protege você caso algo dê errado com arquivos individuais.</li>"
-            "</ol>"
-            "<p>Para exemplos de conjuntos de estímulos recomendados e mais informações de contexto, consulte a seção "
-            "<a href=\"https://rulingants.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
-            "no site do projeto.</p>"
-        ),
-        "ocenaudio_not_found_body": "Ocenaudio não encontrado. Instale-o para usar este recurso.",
-    },
-    "Español (Latinoamérica)": {
-        "language_name": "Español (Latinoamérica)",
-        "app_title": "Herramienta de Estímulos Visuales",
-        "select_folder": "Seleccionar Carpeta",
-        "open_ocenaudio": "Abrir todas las grabaciones en Ocenaudio (Para normalizar, recortar, editar...)",
-        "export_wavs": "Exportar Datos Grabados",
-        "clear_wavs": "Borrar Datos Grabados",
-        "import_wavs": "Importar Datos Grabados",
-        "join_wavs": "Exportar como Archivo Único de Audio (para SayMore/ELAN)",
-        "video_listbox_no_video": "No se seleccionó ningún video",
-        "play_video": "Reproducir Video",
-        "stop_video": "Detener Video",
-        "audio_no_annotation": "Sin anotación de audio",
-        "play_audio": "Reproducir Audio",
-        "stop_audio": "Detener Audio",
-        "record_audio": "Grabar Audio",
-        "stop_recording": "Detener Grabación",
-        "edit_metadata": "Editar Metadatos",
-        "save_metadata": "Guardar",
-        "audio_label_prefix": "Audio: ",
-        "no_folder_selected": "No se seleccionó ninguna carpeta",
-        "no_videos_found": "No se encontraron archivos de video en la carpeta seleccionada:",
-        "no_files": "Sin archivos",
-        "no_wavs_found": "No se encontraron archivos WAV en la carpeta actual.",
-        "overwrite": "¿Sobrescribir?",
-        "overwrite_audio": "El archivo de audio ya existe. ¿Sobrescribir?",
-        "saved": "Guardado",
-        "metadata_saved": "¡Metadatos guardados!",
-        "success": "Éxito",
-        "wavs_joined": "Todos los archivos WAV se unieron exitosamente en:",
-        "videos_tab_title": "Videos",
-        "select_folder_dialog": "Seleccionar carpeta con archivos de video",
-        "cleanup_errors_title": "Errores de limpieza",
-        "permission_denied_title": "Permiso denegado",
-        "folder_not_found_title": "Carpeta no encontrada",
-        "unexpected_error_title": "Ocurrió un error",
-        "error_title": "Error",
-        "cannot_open_video": "No se puede abrir el archivo de video.",
-        "ocenaudio_locate_title": "Ubicar ejecutable de Ocenaudio",
-        "ocenaudio_not_found_title": "Ocenaudio no encontrado",
-        "ocenaudio_open_fail_prefix": "Error al abrir Ocenaudio: ",
-        "export_select_folder_dialog": "Seleccionar carpeta de exportación para archivos WAV",
-        "overwrite_files_title": "¿Sobrescribir archivos?",
-        "overwrite_export_body_prefix": "Los siguientes archivos ya existen en la carpeta de exportación y serán sobrescritos:\n",
-        "overwrite_import_body_prefix": "Los siguientes archivos ya existen y serán sobrescritos al importar:\n",
-        "overwrite_question_suffix": "\n\n¿Desea sobrescribirlos?",
-        "export_cancelled_title": "Exportación cancelada",
-        "export_cancelled_msg": "Se canceló la exportación para evitar sobrescrituras.",
-        "delete_errors_title": "Errores al eliminar",
-        "delete_errors_msg_prefix": "Algunos archivos no se pudieron eliminar o metadata.txt no se pudo restablecer:\n",
-        "clear_success_msg_prefix": "Se eliminaron {count} archivos WAV y se restableció metadata.txt.",
-        "import_select_folder_dialog": "Seleccionar carpeta desde la cual importar archivos",
-        "confirm_delete_title": "Confirmar eliminación",
-        "confirm_import_title": "Confirmar importación",
-        "import_errors_title": "Errores de importación",
-        "import_errors_msg_prefix": "Algunos archivos no se pudieron importar o eliminar:\n",
-        "import_success_msg_prefix": "Se importaron {count} archivos WAV y metadata.txt.",
-        "wav_mismatch_title": "Incompatibilidad en nombres de archivos WAV",
-        "wav_mismatch_msg_prefix": "Los siguientes archivos WAV no coinciden con ningún nombre de archivo de video y no se importaron:\n",
-        "ffmpeg_not_found_msg": "FFmpeg no encontrado. Asegúrate de que FFmpeg esté instalado o incluido con el ejecutable.",
-        "save_combined_wav_dialog_title": "Guardar archivo WAV combinado",
-        "video_fullscreen_tip": "<b>Consejo:</b> Haz doble clic en el video para abrirlo en pantalla completa. Usa <b>+</b> y <b>-</b> para acercar y alejar en la vista de pantalla completa.",
-        "image_fullscreen_tip": "<b>Consejo:</b> Haz doble clic en una imagen para abrirla en pantalla completa. Usa <b>+</b> y <b>-</b> para acercar y alejar en la vista de pantalla completa.",
-        "image_show_filenames": "Mostrar nombres de archivo",
-        "welcome_dialog_title": "Bienvenido a la Herramienta de Estímulos Visuales",
-        "welcome_dialog_body_html": (
-            "<p><b>Bienvenido.</b> Esta herramienta te ayuda a recopilar ejemplos claros y bien organizados "
-            "de cómo las personas hablan y señan en lenguas minoritarias y poco documentadas. "
-            "Usarás videoclips cortos o imágenes fijas (estímulos) para guiar a los hablantes y signantes "
-            "a través de situaciones o significados específicos, de modo que puedas estudiar la gramática y el vocabulario.</p>"
-            "<p><b>Buenas prácticas:</b></p>"
-            "<ol>"
-            "<li><b>Sigue las instrucciones del conjunto de estímulos.</b> Mantén la secuencia de los videoclips "
-            "y de las imágenes fijas en el mismo orden que se indica en las instrucciones del conjunto. Los nombres de archivo y el orden exacto de las imágenes fijas "
-            "no tienen que coincidir perfectamente con la lista de videos, pero los significados y las situaciones sí deben presentarse en la secuencia prevista.</li>"
-            "<li><b>Haz una grabación continua de respaldo siempre que sea posible.</b> Además de grabar un archivo de audio corto por cada elemento en esta herramienta, "
-            "es muy útil mantener una grabación separada y continua de audio (y/o video) de toda la sesión de elicitación. "
-            "Esto te protege si algo sale mal con los archivos individuales.</li>"
-            "</ol>"
-            "<p>Para ver ejemplos de conjuntos de estímulos recomendados y más información de contexto, consulta la sección "
-            "<a href=\"https://rulingants.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
-            "en el sitio web del proyecto.</p>"
-        ),
-        "ocenaudio_not_found_body": "Ocenaudio no encontrado. Instálalo para usar esta función.",
-    },
-    "Afrikaans": {
-        "language_name": "Afrikaans",
-        "app_title": "Visuele Stimulus Hulpmiddel",
-        "select_folder": "Kies Gids",
-        "open_ocenaudio": "Maak alle Opnames in Ocenaudio oop (Vir Normaliseer, Sny, Redigeer...)",
-        "export_wavs": "Voer Opname Data Uit",
-        "clear_wavs": "Vee Opname Data Uit",
-        "import_wavs": "Voer Opname Data In",
-        "join_wavs": "Voer uit as Enkel Klanklêer (vir SayMore/ELAN)",
-        "video_listbox_no_video": "Geen video gekies nie",
-        "play_video": "Speel Video",
-        "stop_video": "Stop Video",
-        "audio_no_annotation": "Geen klankannotasie nie",
-        "play_audio": "Speel Klank",
-        "stop_audio": "Stop Klank",
-        "record_audio": "Neem Klank op",
-        "stop_recording": "Stop Opname",
-        "edit_metadata": "Redigeer Metadata",
-        "save_metadata": "Stoor",
-        "audio_label_prefix": "Klank: ",
-        "no_folder_selected": "Geen gids gekies nie",
-        "no_videos_found": "Geen videolêers in die gekose gids gevind nie:",
-        "no_files": "Geen lêers",
-        "no_wavs_found": "Geen WAV-lêers in die huidige gids gevind nie.",
-        "overwrite": "Oorskryf?",
-        "overwrite_audio": "Klanklêer bestaan reeds. Oorskryf?",
-        "saved": "Gestoor",
-        "metadata_saved": "Metadata gestoor!",
-        "success": "Sukses",
-        "wavs_joined": "Alle WAV-lêers suksesvol saamgevoeg tot:",
-        "videos_tab_title": "Video's",
-        "select_folder_dialog": "Kies gids met videolêers",
-        "cleanup_errors_title": "Opruimfoute",
-        "permission_denied_title": "Toegang geweier",
-        "folder_not_found_title": "Gids nie gevind nie",
-        "unexpected_error_title": "'n Fout het plaasgevind",
-        "error_title": "Fout",
-        "cannot_open_video": "Kan videolêer nie oopmaak nie.",
-        "ocenaudio_locate_title": "Skep Ocenaudio uitvoerbare",
-        "ocenaudio_not_found_title": "Ocenaudio nie gevind nie",
-        "ocenaudio_open_fail_prefix": "Kon Ocenaudio nie oopmaak nie: ",
-        "export_select_folder_dialog": "Kies uitvoergids vir WAV-lêers",
-        "overwrite_files_title": "Oorskryf lêers?",
-        "overwrite_export_body_prefix": "Die volgende lêers bestaan reeds in die uitvoergids en sal oorskryf word:\n",
-        "overwrite_import_body_prefix": "Die volgende lêers bestaan reeds en sal deur invoer oorskryf word:\n",
-        "overwrite_question_suffix": "\n\nWil u dit oorskryf?",
-        "export_cancelled_title": "Uitvoer gekanselleer",
-        "export_cancelled_msg": "Uitvoer is gekanselleer om oorskrywing te vermy.",
-        "delete_errors_title": "Skrapfoute",
-        "delete_errors_msg_prefix": "Sommige lêers kon nie geskrap word nie of metadata.txt kon nie teruggestel word nie:\n",
-        "clear_success_msg_prefix": "{count} WAV-lêers geskrap en metadata.txt teruggestel.",
-        "import_select_folder_dialog": "Kies gids om vanaf te invoer",
-        "confirm_delete_title": "Bevestig skrap",
-        "confirm_import_title": "Bevestig invoer",
-        "import_errors_title": "Invoerfoute",
-        "import_errors_msg_prefix": "Sommige lêers kon nie ingevoer of geskrap word nie:\n",
-        "import_success_msg_prefix": "{count} WAV-lêers en metadata.txt ingevoer.",
-        "wav_mismatch_title": "WAV-lêernaam stem nie ooreen nie",
-        "wav_mismatch_msg_prefix": "Die volgende WAV-lêers stem met geen videolêernaam ooreen nie en is nie ingevoer nie:\n",
-        "ffmpeg_not_found_msg": "FFmpeg nie gevind nie. Maak seker FFmpeg is geïnstalleer of saam met die uitvoerbare gebundel.",
-        "save_combined_wav_dialog_title": "Stoor saamgevoegde WAV-lêer",
-        "video_fullscreen_tip": "<b>Wenk:</b> Dubbelklik op die video om dit op volle skerm oop te maak. Gebruik <b>+</b> en <b>-</b> om in en uit te zoem in die volskerm-aansig.",
-        "image_fullscreen_tip": "<b>Wenk:</b> Dubbelklik op 'n prent om dit op volle skerm oop te maak. Gebruik <b>+</b> en <b>-</b> om in en uit te zoem in die volskerm-aansig.",
-        "image_show_filenames": "Wys lêername",
-        "welcome_dialog_title": "Welkom by die Visuele Stimulus Hulpmiddel",
-        "welcome_dialog_body_html": (
-            "<p><b>Welkom!</b> Hierdie hulpmiddel help jou om duidelike, goed-geordende voorbeelde te versamel "
-            "van hoe mense praat en gebare maak in minderheidstale en ondergedokumenteerde tale. "
-            "Jy gebruik kort videoklankies of stilbeelde (stimuli) om sprekers en gebaarders te lei deur spesifieke situasies of betekenisse, "
-            "sodat jy hul grammatika en woordeskat kan bestudeer.</p>"
-            "<p><b>Aanbevole praktyke:</b></p>"
-            "<ol>"
-            "<li><b>Volg die instruksies van jou stimulusstel.</b> Hou die volgorde van die videoklankies "
-            "en stilbeelde dieselfde as in die stel se handleiding. Die presiese lêername en volgorde van die stilbeelde "
-            "hoef nie perfek met die videolys te ooreen te stem nie, maar die betekenisse en situasies moet in die bedoelde volgorde aangebied word.</li>"
-            "<li><b>Maak indien moontlik 'n aaneenlopende rugsteunopname.</b> Benewens die een kort oudiolêer per item in hierdie hulpmiddel, "
-            "is dit baie nuttig om ook 'n aparte, aaneenlopende oudio- (en/of video-)opname van die hele elisitasiesessie te maak. "
-            "Dit beskerm jou as daar iets met individuele lêers verkeerd loop.</li>"
-            "</ol>"
-            "<p>Vir voorbeelde van aanbevole stimulusstelle en agtergrondinligting, sien die afdeling "
-            "<a href=\"https://rulingants.github.io/videoannotationtool/#stimulus-kits\">Usage and recommended stimulus kits</a> "
-            "op die projek se webwerf.</p>"
-        ),
-        "ocenaudio_not_found_body": "Ocenaudio nie gevind nie. Installeer dit om hierdie funksie te gebruik.",
-    },
-}
+# Labels are loaded from the builtin module (vat.i18n.builtin_labels)
+# with an optional external YAML/JSON overlay. A minimal English
+# fallback is provided below if the builtin import fails.
+
+# Prefer labels from external builtin module; replace embedded dict at runtime
+try:
+    from vat.i18n.builtin_labels import LABELS_ALL as _EXTERNAL_LABELS_ALL
+    if isinstance(_EXTERNAL_LABELS_ALL, dict) and _EXTERNAL_LABELS_ALL:
+        # Replace any in-file labels with the builtin set to reduce duplication
+        globals()['LABELS_ALL'] = dict(_EXTERNAL_LABELS_ALL)
+    else:
+        raise ValueError("Empty builtin labels")
+except Exception:
+    # Minimal English fallback to keep UI running if builtin labels fail to load
+    globals()['LABELS_ALL'] = {
+        "English": {
+            "language_name": "English",
+            "app_title": "Visual Stimulus Kit Tool",
+            "select_folder": "Select Folder",
+            "images_tab_title": "Images",
+            "videos_tab_title": "Videos",
+            "video_fullscreen_tip": "<b>Tip:</b> Double-click the video to open fullscreen. Use <b>+</b> and <b>-</b> to zoom in/out in fullscreen view.",
+            "image_fullscreen_tip": "<b>Tip:</b> Double-click an image to open fullscreen. Use <b>+</b> and <b>-</b> to zoom in/out in fullscreen view.",
+            "image_show_filenames": "Show filenames",
+            "welcome_dialog_title": "Welcome to the Visual Stimulus Kit Tool",
+            "welcome_dialog_body_html": (
+                "<p><b>Welcome!</b> This tool helps you collect clear, well-organised "
+                "examples of how people speak in minority and under-documented languages.</p>"
+            ),
+            "review_tab_title": "Review",
+            "review_tip_html": "<b>Tip:</b> Single-click selects. Right-click, Ctrl/Cmd+Click, or Enter confirms. Double-click opens preview/fullscreen. Press Space to replay prompt.",
+            "time_label_prefix": "Time: ",
+            "review_start": "Start Review",
+            "review_pause": "Pause",
+            "review_resume": "Resume",
+            "review_stop": "Stop",
+            "review_replay": "Replay",
+            "review_set_name_placeholder": "Set name",
+            "review_show_settings": "Show settings",
+            "review_hide_settings": "Hide settings",
+            "review_help_link": "GPA Review Guide",
+            "review_scope_label": "Scope:",
+            "review_scope_images": "Images",
+            "review_scope_videos": "Videos",
+            "review_scope_both": "Both",
+            "review_play_count_label": "Play Count:",
+            "review_time_limit_label": "Time Limit (sec):",
+            "review_time_limit_off": "Off",
+            "review_limit_mode_label": "Limit Mode:",
+            "review_limit_soft": "Soft",
+            "review_limit_hard": "Hard",
+            "review_sfx_label": "Sound Effects",
+            "review_sfx_vol_label": "SFX Vol:",
+            "review_sfx_tone_label": "SFX Tone:",
+            "review_sfx_tone_default": "Default",
+            "review_sfx_tone_gentle": "Gentle",
+            "review_time_weight_label": "Time Weight %:",
+            "review_ui_overhead_label": "UI Overhead (ms):",
+            "review_thumb_size_label": "Thumb Size:",
+            "review_items_per_session_label": "Items per Session:",
+            "review_sessions_label_initial": "Sessions: --",
+            "review_sessions_label_format": "Sessions: {sessions}  |  Items/session: {per}  |  Last: {last_items}",
+            "review_reset": "Reset",
+            "review_reset_defaults": "Reset to Defaults",
+            "review_export_results": "Export Results",
+            "review_export_sets": "Export Sets",
+            "review_export_format_label": "Format:",
+            "review_export_format_folders": "Folders",
+            "review_export_format_zip": "Zip files",
+            "review_progress_format": "{current}/{total} prompts",
+            "review_no_items_title": "No Items",
+            "review_no_items_scope": "No recorded items found for the selected scope.",
+            "review_no_items_group": "No recorded items to group.",
+            "review_no_items_export": "No recorded items to export.",
+            "review_no_session_title": "No Session",
+            "review_no_session_msg": "No session data to export.",
+            "group_export_title": "Grouped Export",
+            "group_export_info": "Export {count} recorded items into organized group folders.",
+            "group_export_items_per_folder": "Items per folder:",
+            "group_export_num_folders": "Number of folders:",
+            "group_export_copy_mode": "Copy files (default, safe)",
+            "group_export_copy_mode_tip": "Uncheck to move files instead (use with caution)",
+            "group_export_export_btn": "Export...",
+            "group_export_cancel_btn": "Cancel",
+            "group_export_preview_none": "No items to export.",
+            "group_export_preview_will_create": "Will create {n} folder(s):\n",
+            "group_export_preview_group_line": "  Group {i:02d}: {count} items\n",
+            "group_export_preview_more": "  ... and {extra} more folders\n",
+            "group_export_preview_last_note": "\nNote: Last folder has {count} items (remainder).",
+            "group_export_no_items_title": "No Items",
+            "group_export_no_items_msg": "No items to export.",
+            "group_export_select_dir": "Select Export Directory",
+            "group_export_confirm_overwrite_title": "Confirm Overwrite",
+            "group_export_confirm_overwrite_msg": "The selected directory already contains {n} Group folder(s).\n\nExisting files may be overwritten. Continue?",
+            "group_export_complete_title": "Export Complete",
+            "group_export_complete_msg": "Successfully exported {items} items into {groups} folders.",
+            "group_export_failed_title": "Export Failed",
+            "group_export_failed_msg": "Failed to export:",
+            "drawer_show": "Show drawer",
+            "drawer_hide": "Hide drawer",
+            "prev_video_tip": "Previous video",
+            "next_video_tip": "Next video",
+        }
+    }
+
+# Optional external labels overlay support (YAML or JSON). This lets us
+# keep LABELS_ALL out of the main UI file for easier maintenance.
+def _deep_merge_labels(base: dict, overlay: dict) -> dict:
+    try:
+        for lang, labels in overlay.items():
+            if lang not in base or not isinstance(base.get(lang), dict):
+                base[lang] = labels
+                continue
+            b = base[lang]
+            if isinstance(labels, dict):
+                for k, v in labels.items():
+                    b[k] = v
+    except Exception:
+        pass
+    return base
+
+def _load_external_labels_overlay() -> None:
+    try:
+        import os, json
+        try:
+            import yaml
+        except Exception:
+            yaml = None
+        from vat.utils.resources import resource_path
+        # Prefer YAML, then JSON
+        yaml_path = resource_path(os.path.join("i18n", "labels.yaml"), check_system=False)
+        json_path = resource_path(os.path.join("i18n", "labels.json"), check_system=False)
+        loaded = None
+        if yaml and os.path.exists(yaml_path):
+            try:
+                with open(yaml_path, 'r', encoding='utf-8') as f:
+                    loaded = yaml.safe_load(f)
+            except Exception:
+                loaded = None
+        elif os.path.exists(json_path):
+            try:
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    loaded = json.load(f)
+            except Exception:
+                loaded = None
+        if isinstance(loaded, dict) and loaded:
+            # Deep-merge overlay onto built-ins
+            globals()['LABELS_ALL'] = _deep_merge_labels(LABELS_ALL, loaded)
+    except Exception:
+        # Non-fatal if external labels cannot be loaded
+        pass
+
+# Attempt to load external overlay at import-time
+_load_external_labels_overlay()
 
 class VideoAnnotationApp(QMainWindow):
     ui_info = Signal(str, str)
@@ -661,14 +215,20 @@ class VideoAnnotationApp(QMainWindow):
         self.cap = None
         self.video_timer = QTimer()
         self.video_timer.timeout.connect(self.update_video_frame)
-        self.audio_thread = None
+        # Persistent audio thread used for all playback
+        self.audio_thread = QThread(self)
         self.audio_worker = None
+        # Unified audio playback state + debounce
+        self.is_playing_audio = False
+        self._last_play_request_ts = 0.0
         self.is_recording = False
         self.recording_thread = None
         self.recording_worker = None
         self.join_thread = None
         self.join_worker = None
         self._suppress_item_changed = False
+        # Pending selection target (used to auto-select a file after folder refresh)
+        self._pending_select_video_name = None
         # Cache for full-resolution image pixmaps (used by thumbnails and fullscreen)
         self._image_pixmap_cache = {}
         # Fullscreen viewer state
@@ -685,8 +245,56 @@ class VideoAnnotationApp(QMainWindow):
         self.load_settings()
         self.init_ui()
         self.setWindowTitle(self.LABELS["app_title"])
-        # Slightly reduced default window size (width and height)
-        self.resize(1120, 680)
+        # More compact default window size; adapt to screen width
+        try:
+            from PySide6.QtGui import QGuiApplication
+            screen = QGuiApplication.primaryScreen()
+            avail = screen.availableGeometry() if screen else None
+            if avail:
+                # Aim for ~70% of screen width with a hard upper cap
+                target_w = max(720, min(int(avail.width() * 0.70), 1200))
+                target_h = min(680, avail.height())
+                self.resize(target_w, target_h)
+                # Prevent initial over-expansion beyond target width
+                try:
+                    self.setMaximumWidth(target_w)
+                    self.setFixedWidth(target_w)
+                except Exception:
+                    pass
+                # Adjust splitter sizes proportionally to target width
+                try:
+                    if hasattr(self, 'main_splitter'):
+                        sizes = self.main_splitter.sizes()
+                        # Respect collapsed default: only adjust if left is visible
+                        if sizes and sizes[0] > 0:
+                            left = max(160, int(target_w * 0.26))
+                            right = max(1, target_w - left)
+                            self.main_splitter.setSizes([left, right])
+                            self._splitter_prev_sizes = [left, right]
+                except Exception:
+                    pass
+                try:
+                    logging.info(f"UI.window: screen_w={avail.width()}, target_w={target_w}, final_w={self.size().width()}, splitter_sizes={getattr(self, 'main_splitter').sizes() if hasattr(self, 'main_splitter') else 'n/a'}")
+                except Exception:
+                    pass
+                # Enforce width cap again after initial layout to avoid expansion
+                try:
+                    QTimer.singleShot(0, self._enforce_window_width_cap)
+                except Exception:
+                    pass
+            else:
+                # Fallback if screen info unavailable
+                self.resize(840, 680)
+                try:
+                    logging.info(f"UI.window: no screen info; final_w={self.size().width()}")
+                except Exception:
+                    pass
+        except Exception:
+            self.resize(840, 680)
+            try:
+                logging.info(f"UI.window: sizing exception; final_w={self.size().width()}")
+            except Exception:
+                pass
         # Global shortcuts: work regardless of focus
         try:
             self._shortcut_log_ctrl = QShortcut(QKeySequence("Ctrl+Shift+L"), self)
@@ -697,8 +305,161 @@ class VideoAnnotationApp(QMainWindow):
             self._shortcut_ff_ctrl.activated.connect(self._show_ffmpeg_diagnostics)
             self._shortcut_ff_meta = QShortcut(QKeySequence("Meta+Shift+F"), self)
             self._shortcut_ff_meta.activated.connect(self._show_ffmpeg_diagnostics)
+            # Drawer toggle shortcut: Ctrl+D and Cmd+D (Meta+D on macOS)
+            self._shortcut_drawer_ctrl = QShortcut(QKeySequence("Ctrl+D"), self)
+            self._shortcut_drawer_ctrl.activated.connect(self._toggle_drawer)
+            self._shortcut_drawer_meta = QShortcut(QKeySequence("Meta+D"), self)
+            self._shortcut_drawer_meta.activated.connect(self._toggle_drawer)
         except Exception:
             pass
+
+    def _is_dark_mode(self) -> bool:
+        """Detect whether the OS/app is currently using a dark color scheme."""
+        try:
+            from PySide6.QtGui import QGuiApplication, QPalette
+            hints = QGuiApplication.styleHints()
+            # Qt 6+ provides a color scheme hint
+            if hasattr(hints, 'colorScheme'):
+                return hints.colorScheme() == Qt.ColorScheme.Dark
+            # Fallback: infer from window color lightness
+            pal = QGuiApplication.palette()
+            base = pal.color(QPalette.Window)
+            return base.lightness() < 128
+        except Exception:
+            return False
+
+    def _apply_theme_styles(self) -> None:
+        """Apply theme-aware styles to overlay drawer and scrim."""
+        try:
+            dark = self._is_dark_mode()
+            # Drawer background and border adapt to theme
+            if getattr(self, 'drawer_layer', None) is not None:
+                bg = 'rgba(32,32,32,0.92)' if dark else 'rgba(248,248,248,0.95)'
+                border = '#555' if dark else '#ccc'
+                self.drawer_layer.setStyleSheet(f"#drawer_layer {{ background-color: {bg}; border-right: 1px solid {border}; }}")
+            # Scrim: slightly stronger in dark mode
+            if getattr(self, 'drawer_scrim', None) is not None:
+                alpha = 0.25 if dark else 0.15
+                self.drawer_scrim.setStyleSheet(f"background-color: rgba(0,0,0,{alpha});")
+            # Icons should adapt to theme as well
+            self._apply_theme_icons()
+        except Exception:
+            pass
+
+    def changeEvent(self, event):
+        """React to palette/theme changes (e.g., macOS auto dark mode)."""
+        try:
+            if event.type() in (QEvent.PaletteChange, QEvent.ApplicationPaletteChange, QEvent.StyleChange):
+                self._apply_theme_styles()
+        except Exception:
+            pass
+        return super().changeEvent(event)
+
+    def _apply_theme_icons(self) -> None:
+        """Update button icons to ensure sufficient contrast in current theme."""
+        try:
+            # Drawer: regenerate hamburger icon with palette-derived color
+            if getattr(self, 'drawer_toggle_btn', None) is not None:
+                self.drawer_toggle_btn.setIcon(self._hamburger_icon())
+            # Prev/Next: re-fetch standard icons so the style supplies theme-appropriate glyphs
+            if getattr(self, 'prev_button', None) is not None:
+                try:
+                    self.prev_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipBackward))
+                except Exception:
+                    pass
+            if getattr(self, 'next_button', None) is not None:
+                try:
+                    self.next_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipForward))
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        # Start persistent audio thread
+        try:
+            if self.audio_thread and not self.audio_thread.isRunning():
+                self.audio_thread.start()
+                logging.info("UI.audio: persistent audio thread started")
+        except Exception:
+            pass
+
+        def _enforce_window_width_cap(self):
+            """Enforce a hard maximum width after layouts settle.
+
+            Prevents child widgets with Expanding policies from widening the
+            main window beyond our desired cap.
+            """
+            try:
+                from PySide6.QtGui import QGuiApplication
+                screen = QGuiApplication.primaryScreen()
+                avail = screen.availableGeometry() if screen else None
+                if avail:
+                    # Cap aligned with target: ~70% of screen, max 1200px
+                    cap_w = max(720, min(int(avail.width() * 0.70), 1200))
+                else:
+                    cap_w = 840
+                # Apply cap
+                try:
+                    self.setMaximumWidth(cap_w)
+                    # Also set a fixed width to prevent Expanding children widening the window
+                    self.setFixedWidth(cap_w)
+                except Exception:
+                    pass
+                if self.width() > cap_w:
+                    self.resize(cap_w, self.height())
+                # Keep splitter aligned only if left panel is visible
+                try:
+                    if hasattr(self, 'main_splitter'):
+                        sizes = self.main_splitter.sizes()
+                        if sizes and sizes[0] > 0:
+                            left = max(180, int(cap_w * 0.26))
+                            right = max(1, cap_w - left)
+                            self.main_splitter.setSizes([left, right])
+                except Exception:
+                    pass
+                try:
+                    logging.info(f"UI.window.cap: applied cap_w={cap_w}, final_w={self.size().width()}")
+                except Exception:
+                    pass
+            except Exception:
+                # Best effort only; avoid crashing UI
+                pass
+
+        def showEvent(self, event):
+            try:
+                super().showEvent(event)
+            except Exception:
+                pass
+            # Enforce width immediately on show
+            try:
+                self._enforce_window_width_cap()
+            except Exception:
+                pass
+            # Ensure drawer starts collapsed
+            try:
+                if hasattr(self, 'main_splitter'):
+                    sizes = self.main_splitter.sizes()
+                    total = sum(sizes) if sizes else self.width()
+                    self.main_splitter.setSizes([0, max(1, total)])
+                    self.drawer_toggle_btn.setToolTip(self.LABELS.get("drawer_show", "Show drawer"))
+            except Exception:
+                pass
+
+        def resizeEvent(self, event):
+            try:
+                super().resizeEvent(event)
+            except Exception:
+                pass
+            # Clamp width on any resize to avoid expansion (e.g., due to content policies)
+            try:
+                self._enforce_window_width_cap()
+            except Exception:
+                pass
+            # Keep drawer and scrim geometry in sync on resize
+            try:
+                if getattr(self, 'drawer_layer', None) is not None and self.drawer_layer.isVisible():
+                    self._position_drawer()
+            except Exception:
+                pass
         self.ui_info.connect(self._show_info)
         self.ui_warning.connect(self._show_warning)
         self.ui_error.connect(self._show_error)
@@ -748,6 +509,10 @@ class VideoAnnotationApp(QMainWindow):
     def _on_videos_updated(self, files: list):
         # Populate listbox and internal state from FS manager update
         try:
+            try:
+                logging.info(f"UI._on_videos_updated: received {len(files)} files; pending_select={self._pending_select_video_name}; last={self.last_video_name}")
+            except Exception:
+                pass
             self.video_files = list(files)
             if not getattr(self, '_ui_ready', False) or getattr(self, 'video_listbox', None) is None:
                 return
@@ -758,10 +523,32 @@ class VideoAnnotationApp(QMainWindow):
                 wav_exists = os.path.exists(self.fs.wav_path_for(name))
                 item.setIcon(self._check_icon if wav_exists else self._empty_icon)
                 self.video_listbox.addItem(item)
-            if self.last_video_name and self.last_video_name in basenames:
+            # If there's a pending selection target, prefer that
+            if self._pending_select_video_name and self._pending_select_video_name in basenames:
+                try:
+                    logging.info(f"UI._on_videos_updated: selecting pending {self._pending_select_video_name}")
+                except Exception:
+                    pass
+                idx = basenames.index(self._pending_select_video_name)
+                self.video_listbox.setCurrentRow(idx)
+                try:
+                    self.current_video = self._pending_select_video_name
+                    self.last_video_name = self._pending_select_video_name
+                except Exception:
+                    pass
+                self._pending_select_video_name = None
+            elif self.last_video_name and self.last_video_name in basenames:
+                try:
+                    logging.info(f"UI._on_videos_updated: reselecting last {self.last_video_name}")
+                except Exception:
+                    pass
                 idx = basenames.index(self.last_video_name)
                 self.video_listbox.setCurrentRow(idx)
             elif basenames:
+                try:
+                    logging.info("UI._on_videos_updated: selecting first item by default")
+                except Exception:
+                    pass
                 # Auto-select the first video on folder change
                 self.video_listbox.setCurrentRow(0)
             if not self.video_files:
@@ -770,6 +557,69 @@ class VideoAnnotationApp(QMainWindow):
             logging.warning(f"Failed to refresh videos from FS manager: {e}")
         self.update_media_controls()
         self.update_video_file_checks()
+    def _reload_folder_and_select(self, target_name: str, retries: int = 6, delay_ms: int = 250):
+        """Force a folder reload and try to select target_name after refresh. Retries with a short delay if needed."""
+        try:
+            try:
+                logging.info(f"UI._reload_folder_and_select: target={target_name}, retries={retries}, delay={delay_ms}ms")
+            except Exception:
+                pass
+            if not target_name:
+                return
+            self._pending_select_video_name = target_name
+            cur = self.fs.current_folder
+            if cur:
+                try:
+                    logging.info(f"UI._reload_folder_and_select: calling fs.set_folder({cur})")
+                except Exception:
+                    pass
+                self.fs.set_folder(cur)
+            # After a short delay, verify selection; retry if not applied yet
+            def _verify_or_retry():
+                try:
+                    basenames = [os.path.basename(vp) for vp in self.video_files]
+                    logging.info(f"UI._reload_folder_and_select.verify: have {len(basenames)} items; looking for {target_name}")
+                    if target_name in basenames:
+                        idx = basenames.index(target_name)
+                        if getattr(self, 'video_listbox', None):
+                            self.video_listbox.setCurrentRow(idx)
+                        self.current_video = target_name
+                        self.last_video_name = target_name
+                        self.show_first_frame()
+                        self.update_media_controls()
+                        try:
+                            self.statusBar().showMessage(self.LABELS.get("selected_converted", "Converted video selected"), 2000)
+                        except Exception:
+                            pass
+                        return
+                except Exception:
+                    pass
+                if retries > 0:
+                    try:
+                        logging.info(f"UI._reload_folder_and_select.verify: target not found yet; retrying ({retries-1} left)")
+                    except Exception:
+                        pass
+                    QTimer.singleShot(delay_ms, lambda: self._reload_folder_and_select(target_name, retries - 1, delay_ms))
+                else:
+                    try:
+                        logging.warning("UI._reload_folder_and_select.verify: selection failed after retries")
+                    except Exception:
+                        pass
+                    try:
+                        resp = QMessageBox.question(
+                            self,
+                            self.LABELS.get("selection_failed_title", "Selection failed"),
+                            self.LABELS.get("selection_failed_msg", "Could not select the converted video yet. Retry?"),
+                            QMessageBox.Retry | QMessageBox.Cancel,
+                            QMessageBox.Retry,
+                        )
+                        if resp == QMessageBox.Retry:
+                            self._reload_folder_and_select(target_name, retries=6, delay_ms=250)
+                    except Exception:
+                        pass
+            QTimer.singleShot(delay_ms, _verify_or_retry)
+        except Exception:
+            pass
     def init_ui(self):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -810,12 +660,8 @@ class VideoAnnotationApp(QMainWindow):
                 pass
         except Exception:
             pass
-        main_layout.addWidget(self.language_dropdown)
-        # Add a tiny spacer between the dropdown and folder label
-        try:
-            main_layout.addSpacing(6)
-        except Exception:
-            pass
+        # Language dropdown will be placed in the header row next to the folder label
+        # Folder label + drawer toggle row
         self.folder_display_label = QLabel(self.LABELS["no_folder_selected"])
         self.folder_display_label.setAlignment(Qt.AlignLeft)
         self.folder_display_label.setToolTip("")
@@ -825,47 +671,118 @@ class VideoAnnotationApp(QMainWindow):
             self.folder_display_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         except Exception:
             pass
-        main_layout.addWidget(self.folder_display_label)
+        header_row = QHBoxLayout()
+        # Drawer toggle button (top-left)
+        self.drawer_toggle_btn = QToolButton()
+        try:
+            self.drawer_toggle_btn.setToolTip(self.LABELS.get("drawer_show", "Show drawer"))
+            # Use a custom hamburger icon (three horizontal lines)
+            try:
+                self.drawer_toggle_btn.setIcon(self._hamburger_icon())
+            except Exception:
+                self.drawer_toggle_btn.setIcon(self.style().standardIcon(QStyle.SP_TitleBarMenuButton))
+            self.drawer_toggle_btn.setFixedSize(28, 28)
+            self.drawer_toggle_btn.setAutoRaise(True)
+            self.drawer_toggle_btn.clicked.connect(self._toggle_drawer)
+        except Exception:
+            pass
+        header_row.addWidget(self.drawer_toggle_btn)
+        # Small spacing between hamburger and folder name
+        try:
+            header_row.addSpacing(8)
+        except Exception:
+            pass
+        # Folder label follows the drawer button on the left
+        header_row.addWidget(self.folder_display_label)
+
+        # Push the language dropdown to the right edge on the same line
+        try:
+            header_row.addStretch(1)
+        except Exception:
+            pass
+        header_row.addWidget(self.language_dropdown)
+        main_layout.addLayout(header_row)
         splitter = QSplitter(Qt.Horizontal)
         try:
             splitter.setContentsMargins(0, 0, 0, 0)
         except Exception:
             pass
+        self.main_splitter = splitter
+        self._splitter_prev_sizes = [240, 600]
         main_layout.addWidget(splitter)
+        # Build left panel content (will live inside an overlay drawer)
         left_panel = QWidget()
         self.left_panel = left_panel
         left_layout = QVBoxLayout(left_panel)
         try:
-            left_layout.setContentsMargins(0, 0, 0, 0)
-            left_layout.setSpacing(4)
+            left_layout.setContentsMargins(8, 8, 8, 8)
+            left_layout.setSpacing(8)
         except Exception:
             pass
         self.select_button = QPushButton(self.LABELS["select_folder"])
         self.select_button.clicked.connect(self.select_folder)
+        try:
+            self.select_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.select_button.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.select_button)
         self.open_ocenaudio_button = QPushButton(self.LABELS["open_ocenaudio"])
         self.open_ocenaudio_button.clicked.connect(self.open_in_ocenaudio)
         self.open_ocenaudio_button.setEnabled(False)
+        try:
+            self.open_ocenaudio_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.open_ocenaudio_button.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.open_ocenaudio_button)
         self.export_wavs_button = QPushButton(self.LABELS["export_wavs"])
         self.export_wavs_button.clicked.connect(self.export_wavs)
         self.export_wavs_button.setEnabled(False)
+        try:
+            self.export_wavs_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.export_wavs_button.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.export_wavs_button)
         self.clear_wavs_button = QPushButton(self.LABELS["clear_wavs"])
         self.clear_wavs_button.clicked.connect(self.clear_wavs)
         self.clear_wavs_button.setEnabled(False)
+        try:
+            self.clear_wavs_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.clear_wavs_button.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.clear_wavs_button)
         self.import_wavs_button = QPushButton(self.LABELS["import_wavs"])
         self.import_wavs_button.clicked.connect(self.import_wavs)
         self.import_wavs_button.setEnabled(False)
+        try:
+            self.import_wavs_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.import_wavs_button.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.import_wavs_button)
         self.join_wavs_button = QPushButton(self.LABELS["join_wavs"])
         self.join_wavs_button.clicked.connect(self.join_all_wavs)
         self.join_wavs_button.setEnabled(False)
+        try:
+            self.join_wavs_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.join_wavs_button.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.join_wavs_button)
         self.video_listbox = QListWidget()
         try:
             self.video_listbox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        except Exception:
+            pass
+        # Videos context menu and Ctrl+C to copy video file URL
+        try:
+            self.video_listbox.setContextMenuPolicy(Qt.CustomContextMenu)
+            self.video_listbox.customContextMenuRequested.connect(self._on_videos_context_menu)
+            self.copy_video_shortcut = QShortcut(QKeySequence.Copy, self.video_listbox)
+            self.copy_video_shortcut.activated.connect(self._copy_current_video_to_clipboard)
         except Exception:
             pass
         self.video_listbox.currentRowChanged.connect(self.on_video_select)
@@ -874,8 +791,66 @@ class VideoAnnotationApp(QMainWindow):
         self.edit_metadata_btn = QPushButton(self.LABELS["edit_metadata"])
         self.edit_metadata_btn.clicked.connect(self.open_metadata_dialog)
         self.edit_metadata_btn.setEnabled(False)
+        try:
+            self.edit_metadata_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.edit_metadata_btn.setMinimumHeight(30)
+        except Exception:
+            pass
         left_layout.addWidget(self.edit_metadata_btn)
-        splitter.addWidget(left_panel)
+        # Drawer overlay (appears over UI instead of resizing splitter)
+        try:
+            self.drawer_layer = QWidget(central_widget)
+            self.drawer_layer.setVisible(False)
+            self.drawer_layer.setAttribute(Qt.WA_StyledBackground, True)
+            # Targeted style on the drawer container only to avoid affecting child controls
+            self.drawer_layer.setObjectName("drawer_layer")
+            # Initial style; will be updated by _apply_theme_styles()
+            self._apply_theme_styles()
+            dl = QVBoxLayout(self.drawer_layer)
+            dl.setContentsMargins(8, 8, 8, 8)
+            dl.setSpacing(6)
+            dl.addWidget(left_panel)
+            # Ensure child buttons use native style (clear any inherited QSS side-effects)
+            try:
+                for btn in (
+                    self.select_button,
+                    self.open_ocenaudio_button,
+                    self.export_wavs_button,
+                    self.clear_wavs_button,
+                    self.import_wavs_button,
+                    self.join_wavs_button,
+                    self.edit_metadata_btn,
+                ):
+                    btn.setStyleSheet("")
+                    btn.setAutoDefault(False)
+            except Exception:
+                pass
+            # Subtle shadow for visual depth
+            try:
+                shadow = QGraphicsDropShadowEffect(self.drawer_layer)
+                shadow.setBlurRadius(16)
+                shadow.setOffset(0, 0)
+                shadow.setColor(QColor(0, 0, 0, 80))
+                self.drawer_layer.setGraphicsEffect(shadow)
+            except Exception:
+                pass
+            # Background scrim to dim UI and capture clicks to close
+            self.drawer_scrim = QWidget(central_widget)
+            self.drawer_scrim.setVisible(False)
+            self.drawer_scrim.setAttribute(Qt.WA_StyledBackground, True)
+            # Initial style; will be updated by _apply_theme_styles()
+            self._apply_theme_styles()
+            self.drawer_scrim.installEventFilter(self)
+        except Exception:
+            self.drawer_layer = None
+            self.drawer_scrim = None
+        # Placeholder on the splitter's left, to keep API stable
+        self._drawer_placeholder = QWidget()
+        try:
+            self._drawer_placeholder.setMinimumWidth(0)
+        except Exception:
+            pass
+        splitter.addWidget(self._drawer_placeholder)
         right_panel = QTabWidget()
         self.right_panel = right_panel
         videos_tab = QWidget()
@@ -892,7 +867,17 @@ class VideoAnnotationApp(QMainWindow):
         videos_layout.addWidget(self.video_fullscreen_tip)
         self.video_label = QLabel(self.LABELS["video_listbox_no_video"])
         self.video_label.setAlignment(Qt.AlignCenter)
-        self.video_label.setMinimumSize(640, 480)
+        # More compact default size for smaller screens; allow expanding
+        self.video_label.setMinimumSize(480, 360)
+        # Avoid cropping: do not auto-stretch, we will scale pixmaps ourselves
+        try:
+            self.video_label.setScaledContents(False)
+        except Exception:
+            pass
+        try:
+            self.video_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        except Exception:
+            pass
         self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
         videos_layout.addWidget(self.video_label)
         self.badge_label = QLabel(self.video_label)
@@ -901,6 +886,7 @@ class VideoAnnotationApp(QMainWindow):
         self.badge_label.setFixedSize(22, 22)
         self.badge_label.setStyleSheet("background-color: #2ecc71; color: white; border-radius: 11px;")
         self.badge_label.setVisible(False)
+        # Note: format badge removed per UX decision.
         self.video_label.installEventFilter(self)
         video_controls_layout = QHBoxLayout()
         self.prev_button = QToolButton()
@@ -908,7 +894,7 @@ class VideoAnnotationApp(QMainWindow):
             self.prev_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipBackward))
         except Exception:
             self.prev_button.setText("◀")
-        self.prev_button.setToolTip("Previous video")
+        self.prev_button.setToolTip(self.LABELS.get("prev_video_tip", "Previous video"))
         self.prev_button.clicked.connect(self.go_prev)
         video_controls_layout.addWidget(self.prev_button)
         self.play_video_button = QPushButton(self.LABELS["play_video"])
@@ -919,12 +905,17 @@ class VideoAnnotationApp(QMainWindow):
         self.stop_video_button.clicked.connect(self.stop_video)
         self.stop_video_button.setEnabled(False)
         video_controls_layout.addWidget(self.stop_video_button)
+        # Convert to MP4 button (in-place)
+        self.convert_mp4_button = QPushButton(self.LABELS.get("convert_to_mp4", "Convert to MP4"))
+        self.convert_mp4_button.clicked.connect(self._convert_current_video_in_place)
+        self.convert_mp4_button.setEnabled(False)
+        video_controls_layout.addWidget(self.convert_mp4_button)
         self.next_button = QToolButton()
         try:
             self.next_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipForward))
         except Exception:
             self.next_button.setText("▶")
-        self.next_button.setToolTip("Next video")
+        self.next_button.setToolTip(self.LABELS.get("next_video_tip", "Next video"))
         self.next_button.clicked.connect(self.go_next)
         video_controls_layout.addWidget(self.next_button)
         videos_layout.addLayout(video_controls_layout)
@@ -946,6 +937,23 @@ class VideoAnnotationApp(QMainWindow):
         self.record_button.clicked.connect(self.toggle_recording)
         self.record_button.setEnabled(False)
         audio_controls_layout.addWidget(self.record_button)
+        # Add audio dropdown (From file / Paste from clipboard)
+        self.add_audio_button = QToolButton()
+        self.add_audio_button.setText(self.LABELS.get("add_existing_audio", "Add audio…"))
+        try:
+            self.add_audio_button.setPopupMode(QToolButton.InstantPopup)
+        except Exception:
+            pass
+        self.add_audio_button.setEnabled(False)
+        add_menu = QMenu(self)
+        act_file = QAction(self.LABELS.get("add_audio_from_file", "From file…"), self)
+        act_file.triggered.connect(self._handle_add_existing_audio_video)
+        add_menu.addAction(act_file)
+        act_clip = QAction(self.LABELS.get("add_audio_paste_clipboard", "Paste from clipboard"), self)
+        act_clip.triggered.connect(self._handle_paste_audio_video)
+        add_menu.addAction(act_clip)
+        self.add_audio_button.setMenu(add_menu)
+        audio_controls_layout.addWidget(self.add_audio_button)
         self.recording_status_label = QLabel("")
         self.recording_status_label.setStyleSheet("color: red; font-weight: bold;")
         audio_controls_layout.addWidget(self.recording_status_label)
@@ -1007,6 +1015,40 @@ class VideoAnnotationApp(QMainWindow):
         self.record_image_button.clicked.connect(self._handle_record_image)
         self.record_image_button.setEnabled(False)
         controls_row.addWidget(self.record_image_button)
+        # Add Image dropdown (From file / Paste from clipboard)
+        self.add_image_button = QToolButton()
+        self.add_image_button.setText(self.LABELS.get("add_image", "Add image…"))
+        try:
+            self.add_image_button.setPopupMode(QToolButton.InstantPopup)
+        except Exception:
+            pass
+        self.add_image_button.setEnabled(True)
+        add_img_src_menu = QMenu(self)
+        act_img_src_file = QAction(self.LABELS.get("add_image_from_file", "From file…"), self)
+        act_img_src_file.triggered.connect(self._handle_add_existing_image)
+        add_img_src_menu.addAction(act_img_src_file)
+        act_img_src_clip = QAction(self.LABELS.get("add_image_paste_clipboard", "Paste from clipboard"), self)
+        act_img_src_clip.triggered.connect(self._handle_paste_image)
+        add_img_src_menu.addAction(act_img_src_clip)
+        self.add_image_button.setMenu(add_img_src_menu)
+        controls_row.addWidget(self.add_image_button)
+        # Add audio dropdown (From file / Paste from clipboard)
+        self.add_image_audio_button = QToolButton()
+        self.add_image_audio_button.setText(self.LABELS.get("add_existing_audio", "Add audio…"))
+        try:
+            self.add_image_audio_button.setPopupMode(QToolButton.InstantPopup)
+        except Exception:
+            pass
+        self.add_image_audio_button.setEnabled(False)
+        add_img_menu = QMenu(self)
+        act_img_file = QAction(self.LABELS.get("add_audio_from_file", "From file…"), self)
+        act_img_file.triggered.connect(self._handle_add_existing_audio_image)
+        add_img_menu.addAction(act_img_file)
+        act_img_clip = QAction(self.LABELS.get("add_audio_paste_clipboard", "Paste from clipboard"), self)
+        act_img_clip.triggered.connect(self._handle_paste_audio_image)
+        add_img_menu.addAction(act_img_clip)
+        self.add_image_audio_button.setMenu(add_img_menu)
+        controls_row.addWidget(self.add_image_audio_button)
         self.stop_image_record_button = QPushButton(self.LABELS.get("stop_recording", "Stop Recording"))
         self.stop_image_record_button.clicked.connect(self._handle_stop_image_record)
         self.stop_image_record_button.setEnabled(False)
@@ -1025,6 +1067,21 @@ class VideoAnnotationApp(QMainWindow):
         controls_and_tip.addWidget(self.image_fullscreen_tip)
         image_banner.addLayout(controls_and_tip)
         images_layout.addLayout(image_banner)
+        # Thumbnail size slider
+        try:
+            thumb_row = QHBoxLayout()
+            thumb_row.addWidget(QLabel("Thumb Size:"))
+            self.images_thumb_slider = QSlider(Qt.Horizontal)
+            self.images_thumb_slider.setRange(60, 180)  # percent
+            self.images_thumb_slider.setValue(100)
+            self.images_thumb_slider.setMaximumWidth(140)
+            thumb_row.addWidget(self.images_thumb_slider)
+            thumb_row.addStretch(1)
+            images_layout.addLayout(thumb_row)
+            self.images_thumb_scale = 1.0
+            self.images_thumb_slider.valueChanged.connect(self._on_images_thumb_scale_changed)
+        except Exception:
+            self.images_thumb_scale = 1.0
         # Grid of thumbnails
         self.images_list = QListWidget()
         try:
@@ -1033,9 +1090,9 @@ class VideoAnnotationApp(QMainWindow):
             self.images_list.setResizeMode(QListView.Adjust)
             # Fill rows left-to-right to avoid a single tall column
             self.images_list.setFlow(QListView.LeftToRight)
-            # Initial placeholder sizes; will be recomputed adaptively
-            self.images_list.setIconSize(QSize(320, 240))
-            self.images_list.setGridSize(QSize(360, 280))
+            # Initial placeholder sizes; smaller defaults for compact UI (recomputed adaptively)
+            self.images_list.setIconSize(QSize(240, 180))
+            self.images_list.setGridSize(QSize(260, 190))
             self.images_list.setSpacing(6)
             self.images_list.setMovement(QListView.Static)
             self.images_list.setWrapping(True)
@@ -1045,6 +1102,14 @@ class VideoAnnotationApp(QMainWindow):
             self.images_list.setSelectionMode(QListWidget.SingleSelection)
             self.images_list.setSelectionBehavior(QListWidget.SelectItems)
             logging.info("UI.init_ui: images_list ready (IconMode)")
+        except Exception:
+            pass
+        # Context menu and Ctrl+C to copy image to clipboard
+        try:
+            self.images_list.setContextMenuPolicy(Qt.CustomContextMenu)
+            self.images_list.customContextMenuRequested.connect(self._on_images_context_menu)
+            self.copy_image_shortcut = QShortcut(QKeySequence.Copy, self.images_list)
+            self.copy_image_shortcut.activated.connect(self._copy_current_image_to_clipboard)
         except Exception:
             pass
         # Install custom delegate to draw green border and check overlay for recorded images
@@ -1069,15 +1134,33 @@ class VideoAnnotationApp(QMainWindow):
             pass
         images_layout.addWidget(self.images_list)
         right_panel.addTab(images_tab, self.LABELS.get("images_tab_title", "Images"))
+        
+        # Review tab
+        try:
+            from vat import VERSION
+            app_version = VERSION
+        except Exception:
+            app_version = "2.0.3"
+        
+        self.review_tab = ReviewTab(self.fs, app_version, self, labels=self.LABELS)
+        right_panel.addTab(self.review_tab, self.LABELS.get("review_tab_title", "Review"))
+        
         splitter.addWidget(right_panel)
-        splitter.setSizes([400, 1000])
+        # Start with drawer collapsed; remember previous sizes for temporary expand
+        splitter.setSizes([0, 600])
+        self._splitter_prev_sizes = [240, 600]
         # Connect tab change to enable/disable video_listbox
         def _on_tab_changed(idx):
-            # 0 = Videos, 1 = Images (assume order)
-            if idx == 1:
-                self.video_listbox.setEnabled(False)
-            else:
-                self.video_listbox.setEnabled(True)
+            # 0 = Videos, 1 = Images, 2 = Review (assume order)
+            try:
+                self.video_listbox.setEnabled(idx == 0)
+            except Exception:
+                pass
+            # Keep drawer overlay position in sync
+            try:
+                self._position_drawer()
+            except Exception:
+                pass
         self.right_panel.currentChanged.connect(_on_tab_changed)
         # Set initial state
         _on_tab_changed(self.right_panel.currentIndex())
@@ -1101,6 +1184,15 @@ class VideoAnnotationApp(QMainWindow):
                 self._on_images_updated(self.fs.current_folder, imgs)
             except Exception:
                 pass
+            # Also populate the videos list to avoid empty state on startup
+            try:
+                vids = self.fs.list_videos()
+                self._on_videos_updated(vids)
+            except Exception:
+                try:
+                    self.load_video_files()
+                except Exception:
+                    pass
         # Show a short welcome/best-practices message once on startup
         try:
             QTimer.singleShot(0, self._show_welcome_dialog)
@@ -1112,6 +1204,13 @@ class VideoAnnotationApp(QMainWindow):
             QTimer.singleShot(0, self._preload_visible_images)
         except Exception:
             pass
+
+        # Collapse drawer on outside click
+        try:
+            central_widget.installEventFilter(self)
+            self._central_widget = central_widget
+        except Exception:
+            pass
     def change_language(self, selected_name):
         for key, labels in LABELS_ALL.items():
             if labels["language_name"] == selected_name:
@@ -1119,8 +1218,187 @@ class VideoAnnotationApp(QMainWindow):
                 self.LABELS = LABELS_ALL[self.language]
                 break
         self.setWindowTitle(self.LABELS["app_title"])
+        # Update tab titles
+        try:
+            if getattr(self, 'right_panel', None) is not None:
+                self.right_panel.setTabText(0, self.LABELS.get("videos_tab_title", "Videos"))
+                self.right_panel.setTabText(1, self.LABELS.get("images_tab_title", "Images"))
+                self.right_panel.setTabText(2, self.LABELS.get("review_tab_title", "Review"))
+        except Exception:
+            pass
+        # Retranslate Review tab
+        try:
+            if getattr(self, 'review_tab', None) is not None:
+                self.review_tab.retranslate(self.LABELS)
+        except Exception:
+            pass
+        # Refresh other UI texts
         self.refresh_ui_texts()
+        # Update dropdown/menu labels where created earlier
+        try:
+            if getattr(self, 'add_audio_button', None) is not None and self.add_audio_button.menu():
+                self.add_audio_button.setText(self.LABELS.get("add_existing_audio", "Add audio…"))
+                acts = self.add_audio_button.menu().actions()
+                if len(acts) >= 2:
+                    acts[0].setText(self.LABELS.get("add_audio_from_file", "From file…"))
+                    acts[1].setText(self.LABELS.get("add_audio_paste_clipboard", "Paste from clipboard"))
+        except Exception:
+            pass
         self.save_settings()
+
+    def _toggle_drawer(self):
+        """Toggle the left drawer overlay visibility."""
+        try:
+            if getattr(self, 'drawer_layer', None) is None:
+                return
+            vis = self.drawer_layer.isVisible()
+            if vis:
+                self.drawer_layer.hide()
+                try:
+                    if getattr(self, 'drawer_scrim', None) is not None:
+                        self.drawer_scrim.hide()
+                except Exception:
+                    pass
+                try:
+                    self.drawer_toggle_btn.setToolTip(self.LABELS.get("drawer_show", "Show drawer"))
+                except Exception:
+                    pass
+            else:
+                self._position_drawer()
+                # Show scrim behind drawer
+                try:
+                    if getattr(self, 'drawer_scrim', None) is not None:
+                        self.drawer_scrim.show()
+                        self.drawer_scrim.raise_()
+                except Exception:
+                    pass
+                self.drawer_layer.show()
+                self.drawer_layer.raise_()
+                try:
+                    self.drawer_toggle_btn.setToolTip(self.LABELS.get("drawer_hide", "Hide drawer"))
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def _hamburger_icon(self):
+        """Create a simple hamburger icon (three stacked lines)."""
+        try:
+            size = 24
+            pm = QPixmap(size, size)
+            pm.fill(Qt.transparent)
+            from PySide6.QtGui import QPainter
+            painter = QPainter(pm)
+            try:
+                painter.setRenderHint(QPainter.Antialiasing, True)
+                # Derive stroke color from current palette for good contrast
+                from PySide6.QtGui import QGuiApplication, QPalette
+                pal = QGuiApplication.palette()
+                stroke = pal.color(QPalette.ButtonText)
+                pen = QPen(stroke)
+                pen.setWidth(2)
+                painter.setPen(pen)
+                # Draw three lines
+                y_positions = [6, 12, 18]
+                for y in y_positions:
+                    painter.drawLine(5, y, size - 5, y)
+            finally:
+                painter.end()
+            return QIcon(pm)
+        except Exception:
+            return QIcon()
+
+    def _position_drawer(self):
+        """Position the drawer overlay anchored to the left inside the central widget."""
+        try:
+            if getattr(self, 'drawer_layer', None) is None:
+                return
+            cw = getattr(self, '_central_widget', None)
+            if cw is None:
+                return
+            # Default drawer width: proportional to window, with sensible bounds
+            dw = min(max(400, int(cw.width() * 0.40)), 600)
+            # Compute top offset based on header row metrics
+            try:
+                # Use the lower edge of the highest header element
+                lbl = getattr(self, 'folder_display_label', None)
+                dd = getattr(self, 'language_dropdown', None)
+                btn = getattr(self, 'drawer_toggle_btn', None)
+                candidates = []
+                for w in (lbl, dd, btn):
+                    if w is not None:
+                        p = w.mapTo(cw, QPoint(0, 0))
+                        candidates.append(p.y() + w.height())
+                header_bottom = max(candidates) if candidates else 50
+                top_margin = header_bottom + 6
+            except Exception:
+                top_margin = 50
+            h = cw.height() - top_margin
+            h = max(200, h)
+            self.drawer_layer.setGeometry(8, top_margin, dw, h)
+            # Keep scrim covering the central widget
+            try:
+                if getattr(self, 'drawer_scrim', None) is not None:
+                    # Leave header/hamburger clickable: scrim starts below header
+                    self.drawer_scrim.setGeometry(0, top_margin, cw.width(), cw.height() - top_margin)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def _on_images_thumb_scale_changed(self, value: int):
+        try:
+            self.images_thumb_scale = max(0.5, min(1.8, value / 100.0))
+            self._recompute_image_grid_sizes()
+            self.save_settings()
+        except Exception:
+            pass
+
+    def eventFilter(self, obj, event):
+        # Collapse drawer when clicking outside the drawer overlay
+        try:
+            target_central = getattr(self, '_central_widget', None)
+            target_scrim = getattr(self, 'drawer_scrim', None)
+            if obj is target_central or obj is target_scrim:
+                if event.type() == QEvent.MouseButtonPress:
+                    dl = getattr(self, 'drawer_layer', None)
+                    if dl is not None and dl.isVisible():
+                        # Map drawer geometry to the coordinate space of the clicked widget
+                        top_left_in_obj = dl.mapTo(obj, QPoint(0, 0))
+                        rect = QRect(top_left_in_obj, dl.size())
+                        pos = event.position() if hasattr(event, 'position') else event.pos()
+                        p = QPoint(int(pos.x()), int(pos.y()))
+                        if not rect.contains(p):
+                            dl.hide()
+                            try:
+                                if target_scrim is not None:
+                                    target_scrim.hide()
+                            except Exception:
+                                pass
+                            try:
+                                self.drawer_toggle_btn.setToolTip("Show drawer")
+                            except Exception:
+                                pass
+                            return True
+        except Exception:
+            pass
+        # Keep video badges anchored on video label show/resize
+        try:
+            if obj is getattr(self, 'video_label', None):
+                et = event.type()
+                if et in (QEvent.Show, QEvent.Resize, QEvent.Paint, QEvent.LayoutRequest):
+                    # Reposition synchronously during paint/resize/show to avoid visible drift
+                    try:
+                        self._position_badge()
+                    except Exception:
+                        pass
+                    # Format badge removed; no additional positioning needed
+        except Exception:
+            pass
+        try:
+            return super().eventFilter(obj, event)
+        except Exception:
+            return False
     def refresh_ui_texts(self):
         self.select_button.setText(self.LABELS["select_folder"])
         self.open_ocenaudio_button.setText(self.LABELS["open_ocenaudio"])
@@ -1206,6 +1484,24 @@ class VideoAnnotationApp(QMainWindow):
                 zoom = settings.get('fullscreen_zoom')
                 if isinstance(zoom, (int, float)) and zoom > 0:
                     self.fullscreen_zoom = float(zoom)
+                
+                # Load review settings if review tab exists
+                if hasattr(self, 'review_tab') and settings:
+                    try:
+                        self.review_tab.state.load_from_json(settings)
+                        self.review_tab._sync_ui_from_state()
+                    except Exception:
+                        pass
+                # Images thumbnail scale (persisted)
+                try:
+                    img_scale = settings.get('images_thumb_scale')
+                    if isinstance(img_scale, (int, float)):
+                        self.images_thumb_scale = max(0.5, min(1.8, float(img_scale)))
+                        if hasattr(self, 'images_thumb_slider'):
+                            self.images_thumb_slider.setValue(int(self.images_thumb_scale * 100))
+                        self._recompute_image_grid_sizes()
+                except Exception:
+                    pass
             else:
                 # No saved language preference: try to match system UI language
                 try:
@@ -1255,15 +1551,27 @@ class VideoAnnotationApp(QMainWindow):
     def save_settings(self):
         try:
             os.makedirs(os.path.dirname(self.settings_file), exist_ok=True)
+            
+            settings = {
+                'ocenaudio_path': self.ocenaudio_path,
+                'language': self.language,
+                'last_folder': self.fs.current_folder,
+                'last_video': self.current_video,
+                # Persist the last used fullscreen zoom if set
+                'fullscreen_zoom': self.fullscreen_zoom if isinstance(self.fullscreen_zoom, (int, float)) else None,
+                'images_thumb_scale': getattr(self, 'images_thumb_scale', 1.0),
+            }
+            
+            # Save review settings if review tab exists
+            if hasattr(self, 'review_tab'):
+                try:
+                    self.review_tab._sync_state_from_ui()
+                    settings = self.review_tab.state.save_to_json(settings)
+                except Exception:
+                    pass
+            
             with open(self.settings_file, 'w') as f:
-                json.dump({
-                    'ocenaudio_path': self.ocenaudio_path,
-                    'language': self.language,
-                    'last_folder': self.fs.current_folder,
-                    'last_video': self.current_video,
-                    # Persist the last used fullscreen zoom if set
-                    'fullscreen_zoom': self.fullscreen_zoom if isinstance(self.fullscreen_zoom, (int, float)) else None,
-                }, f)
+                json.dump(settings, f, indent=2, sort_keys=True)
         except Exception as e:
             logging.warning(f"Failed to save settings: {e}")
     def select_folder(self):
@@ -1456,12 +1764,24 @@ class VideoAnnotationApp(QMainWindow):
                 self.video_label.setText("Loading preview…")
                 return
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame = cv2.resize(frame, (640, 480))
             h, w, ch = frame.shape
             bytes_per_line = ch * w
             qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
             pixmap = QPixmap.fromImage(qt_image)
+            # Scale pixmap to fit the label while preserving aspect ratio
+            try:
+                target = self.video_label.contentsRect().size()
+                if target.width() > 0 and target.height() > 0:
+                    pixmap = pixmap.scaled(target, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            except Exception:
+                pass
             self.video_label.setPixmap(pixmap)
+            try:
+                self._position_badge()
+            except Exception:
+                pass
+            # Ensure format badge is shown/hidden correctly after geometry is ready
+            # Format badge removed
         except Exception as e:
             logging.error(f"Failed to load first frame for {video_path}: {e}")
             # Silent UI update; avoid popup on auto-selection
@@ -1473,15 +1793,28 @@ class VideoAnnotationApp(QMainWindow):
         if self.current_video:
             self.play_video_button.setEnabled(True)
             self.stop_video_button.setEnabled(True)
+            # Enable Convert to MP4 only when current selection is not already MP4
+            if getattr(self, 'convert_mp4_button', None):
+                vp_for_convert = self._resolve_current_video_path()
+                ext_for_convert = os.path.splitext(vp_for_convert)[1].lower() if vp_for_convert else ""
+                self.convert_mp4_button.setEnabled(bool(vp_for_convert) and ext_for_convert != ".mp4")
             self.record_button.setEnabled(True)
             self.record_button.setText(self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
             self.update_recording_indicator()
+            # Enable import button when a video is selected and not recording
+            if getattr(self, 'add_audio_button', None):
+                self.add_audio_button.setEnabled(not self.is_recording)
             wav_path = self.fs.wav_path_for(self.current_video)
             if os.path.exists(wav_path):
-                self.play_audio_button.setEnabled(True)
+                # Disable Play while audio is actively playing
+                self.play_audio_button.setEnabled(not self.is_playing_audio)
                 self.stop_audio_button.setEnabled(True)
                 self.video_label.setStyleSheet("background-color: black; color: white; border: 3px solid #2ecc71;")
                 if getattr(self, 'badge_label', None):
+                    try:
+                        self._position_badge()
+                    except Exception:
+                        pass
                     self.badge_label.setVisible(True)
             else:
                 self.play_audio_button.setEnabled(False)
@@ -1489,18 +1822,24 @@ class VideoAnnotationApp(QMainWindow):
                 self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
                 if getattr(self, 'badge_label', None):
                     self.badge_label.setVisible(False)
+            # Format badge removed
         else:
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
             self.play_video_button.setEnabled(False)
             self.stop_video_button.setEnabled(False)
+            if getattr(self, 'convert_mp4_button', None):
+                self.convert_mp4_button.setEnabled(False)
             self.play_audio_button.setEnabled(False)
             self.stop_audio_button.setEnabled(False)
             self.record_button.setEnabled(False)
             self.record_button.setText(self.LABELS["record_audio"])
+            if getattr(self, 'add_audio_button', None):
+                self.add_audio_button.setEnabled(False)
             self.update_recording_indicator()
             self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
             if getattr(self, 'badge_label', None):
                 self.badge_label.setVisible(False)
+            # Format badge removed
         self.update_video_file_checks()
     def update_recording_indicator(self):
         if getattr(self, 'recording_status_label', None) is None:
@@ -1576,16 +1915,23 @@ class VideoAnnotationApp(QMainWindow):
                     self.video_label.setText(self.LABELS.get("cannot_open_video", "Cannot open video file."))
                     return
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frame = cv2.resize(frame, (640, 480))
                 h, w, ch = frame.shape
                 bytes_per_line = ch * w
                 qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
                 pixmap = QPixmap.fromImage(qt_image)
+                # Scale pixmap to fit the label while preserving aspect ratio
+                try:
+                    target = self.video_label.contentsRect().size()
+                    if target.width() > 0 and target.height() > 0:
+                        pixmap = pixmap.scaled(target, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                except Exception:
+                    pass
                 self.video_label.setPixmap(pixmap)
         except Exception as e:
             logging.error(f"Video frame update failed: {e}")
             self.stop_video()
             self.video_label.setText(self.LABELS.get("cannot_open_video", "Cannot open video file."))
+        # Format badge removed
     def stop_video(self):
         self.playing_video = False
         self.video_timer.stop()
@@ -1597,45 +1943,108 @@ class VideoAnnotationApp(QMainWindow):
             self._position_badge()
         except Exception:
             pass
+    def _release_video_handle(self):
+        """Release any active video capture without refreshing preview."""
+        try:
+            self.playing_video = False
+        except Exception:
+            pass
+        try:
+            self.video_timer.stop()
+        except Exception:
+            pass
+        if getattr(self, 'cap', None):
+            try:
+                self.cap.release()
+            except Exception:
+                pass
+            self.cap = None
     def play_audio(self):
         if not self.current_video:
             return
-        self.stop_audio()
+        # Debounce rapid clicks
+        now = time.time()
+        if (now - self._last_play_request_ts) < 0.2:
+            return
+        self._last_play_request_ts = now
+        # Re-entrancy guard: ignore if already playing
+        if self.is_playing_audio:
+            return
         wav_path = self.fs.wav_path_for(self.current_video)
         if not os.path.exists(wav_path):
             return
         if not PYAUDIO_AVAILABLE:
             QMessageBox.warning(self, "Error", "PyAudio is not available. Cannot play audio.")
             return
-        self.audio_thread = QThread()
-        self.audio_worker = AudioPlaybackWorker(wav_path)
-        self.audio_worker.moveToThread(self.audio_thread)
-        self.audio_thread.started.connect(self.audio_worker.run)
-        self.audio_worker.finished.connect(self.audio_thread.quit)
-        self.audio_worker.finished.connect(self.audio_worker.deleteLater)
-        self.audio_thread.finished.connect(self.audio_thread.deleteLater)
-        self.audio_thread.finished.connect(self._on_audio_thread_finished)
-        self.audio_worker.error.connect(self._show_worker_error)
-        self.audio_thread.start()
+        # Mark playing and update UI (busy indicator)
+        try:
+            self.is_playing_audio = True
+            self.play_audio_button.setText("Playing…")
+            self.play_audio_button.setEnabled(False)
+            logging.info(f"UI.audio: start video audio path={os.path.basename(wav_path)}")
+        except Exception:
+            pass
+        # Use persistent audio thread
+        try:
+            self.audio_worker = AudioPlaybackWorker(wav_path)
+            self.audio_worker.moveToThread(self.audio_thread)
+            QMetaObject.invokeMethod(self.audio_worker, "run", Qt.QueuedConnection)
+            # Re-enable controls when playback finishes
+            self.audio_worker.finished.connect(self._on_any_audio_finished)
+            self.audio_worker.error.connect(self._show_worker_error)
+        except Exception:
+            # Fallback: start thread if not running
+            try:
+                if self.audio_thread and not self.audio_thread.isRunning():
+                    self.audio_thread.start()
+                self.audio_thread.started.connect(self.audio_worker.run)
+            except Exception:
+                pass
     def stop_audio(self):
+        logging.info("UI.audio: stop requested")
         if self.audio_worker:
             try:
                 self.audio_worker.stop()
             except RuntimeError:
                 pass
-        if self.audio_thread:
-            try:
-                if self.audio_thread.isRunning():
-                    self.audio_thread.quit()
-                    self.audio_thread.wait()
-            except RuntimeError:
-                pass
-            finally:
-                self.audio_thread = None
-                self.audio_worker = None
+        # Do not quit persistent thread here; just clear UI state
+        self.is_playing_audio = False
+        try:
+            # Restore button text
+            self.play_audio_button.setText(self.LABELS.get("play_audio", "Play Audio"))
+        except Exception:
+            pass
+        try:
+            self.update_media_controls()
+        except Exception:
+            pass
+        try:
+            self._update_image_record_controls()
+        except Exception:
+            pass
+        # Clear playing state and re-enable Play buttons
+        self.is_playing_audio = False
+        try:
+            self.update_media_controls()
+        except Exception:
+            pass
+        try:
+            self._update_image_record_controls()
+        except Exception:
+            pass
     def _on_audio_thread_finished(self):
         self.audio_thread = None
         self.audio_worker = None
+        # Ensure UI reflects that playback has ended
+        self.is_playing_audio = False
+        try:
+            self.update_media_controls()
+        except Exception:
+            pass
+        try:
+            self._update_image_record_controls()
+        except Exception:
+            pass
     def _handle_play_image_audio(self):
         try:
             return self.play_image_audio()
@@ -1644,6 +2053,1002 @@ class VideoAnnotationApp(QMainWindow):
     def _handle_stop_image_audio(self):
         try:
             return self.stop_image_audio()
+        except Exception:
+            pass
+    def _on_images_context_menu(self, pos: QPoint):
+        try:
+            # Select the item under the cursor if present
+            item = self.images_list.itemAt(pos)
+            if item is not None:
+                self.images_list.setCurrentItem(item)
+            menu = QMenu(self)
+            copy_act = QAction(self.LABELS.get("copy_image", "Copy Image"), self)
+            copy_act.triggered.connect(self._copy_current_image_to_clipboard)
+            menu.addAction(copy_act)
+            save_act = QAction(self.LABELS.get("save_image_as", "Save Image as…"), self)
+            save_act.triggered.connect(self._save_current_image_as)
+            menu.addAction(save_act)
+            # Add Reveal action (third), with platform-specific label
+            try:
+                label = self._platform_reveal_label()
+            except Exception:
+                label = "Reveal in File Manager"
+            reveal_act = QAction(label, self)
+            reveal_act.triggered.connect(lambda: self._reveal_in_file_manager(self._current_image_path()))
+            menu.addAction(reveal_act)
+            try:
+                global_pos = self.images_list.mapToGlobal(pos)
+            except Exception:
+                global_pos = None
+            if global_pos:
+                menu.exec(global_pos)
+            else:
+                menu.exec(QCursor.pos())
+        except Exception:
+            pass
+    def _current_image_path(self) -> str:
+        """Resolve full path of the currently selected image thumbnail."""
+        try:
+            sel = getattr(self, 'images_list', None).currentItem() if getattr(self, 'images_list', None) else None
+            if sel is None:
+                return ""
+            path = None
+            try:
+                path = sel.data(Qt.UserRole)
+            except Exception:
+                path = None
+            if not path:
+                name = sel.text()
+                path = os.path.join(self.fs.current_folder or "", name)
+            if path and os.path.exists(path):
+                return path
+        except Exception:
+            pass
+        return ""
+    def _copy_current_image_to_clipboard(self):
+        try:
+            sel = self.images_list.currentItem()
+            if sel is None:
+                return
+            path = None
+            try:
+                path = sel.data(Qt.UserRole)
+            except Exception:
+                path = None
+            if not path:
+                name = sel.text()
+                path = os.path.join(self.fs.current_folder or "", name)
+            if not path or not os.path.exists(path):
+                return
+            reader = QImageReader(path)
+            img = reader.read()
+            if img.isNull():
+                # Fallback: try via QPixmap
+                try:
+                    pix = QPixmap(path)
+                    if not pix.isNull():
+                        QGuiApplication.clipboard().setPixmap(pix)
+                        return
+                except Exception:
+                    pass
+                return
+            QGuiApplication.clipboard().setImage(img)
+            try:
+                self.statusBar().showMessage(self.LABELS.get("copied_image", "Image copied to clipboard"), 2000)
+            except Exception:
+                pass
+        except Exception:
+            pass
+    def _on_videos_context_menu(self, pos: QPoint):
+        try:
+            item = self.video_listbox.itemAt(pos)
+            if item is not None:
+                self.video_listbox.setCurrentItem(item)
+            menu = QMenu(self)
+            copy_act = QAction(self.LABELS.get("copy_video", "Copy Video"), self)
+            copy_act.triggered.connect(self._copy_current_video_to_clipboard)
+            menu.addAction(copy_act)
+            save_act = QAction(self.LABELS.get("save_video_as", "Save Video as…"), self)
+            save_act.triggered.connect(self._save_current_video_as)
+            menu.addAction(save_act)
+            try:
+                global_pos = self.video_listbox.mapToGlobal(pos)
+            except Exception:
+                global_pos = None
+            if global_pos:
+                menu.exec(global_pos)
+            else:
+                menu.exec(QCursor.pos())
+        except Exception:
+            pass
+    def _copy_current_video_to_clipboard(self):
+        try:
+            if not self.current_video:
+                return
+            video_path = self._resolve_current_video_path()
+            if not (video_path and os.path.exists(video_path)):
+                return
+            # Convert if needed (extension/codec/pix_fmt/audio) for WhatsApp compatibility
+            if needs_reencode_to_mp4(video_path):
+                self._convert_video_to_mp4_and_copy(video_path)
+                return
+            # Already MP4: copy the file URL directly
+            mime = QMimeData()
+            try:
+                mime.setUrls([QUrl.fromLocalFile(video_path)])
+            except Exception:
+                pass
+            try:
+                mime.setText(video_path)
+            except Exception:
+                pass
+            QGuiApplication.clipboard().setMimeData(mime)
+            try:
+                self.statusBar().showMessage(self.LABELS.get("copied_video", "Video copied to clipboard"), 2000)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def _convert_video_to_mp4_and_copy(self, src_path: str):
+        """Convert the given video to MP4 using worker+progress, then copy the result."""
+        try:
+            if not (src_path and os.path.exists(src_path)):
+                return
+            base = os.path.splitext(os.path.basename(src_path))[0]
+            tmp_dir = tempfile.mkdtemp(prefix="vat_convert_")
+            dst_path = os.path.join(tmp_dir, base + ".mp4")
+            try:
+                logging.info(f"UI.copy_convert: starting worker: src={src_path}, dst={dst_path}")
+            except Exception:
+                pass
+            worker = VideoConvertWorker(ConvertSpec(src_path, dst_path))
+            self._convert_worker = worker
+            dlg = QProgressDialog(self.LABELS.get("converting_video", "Converting…"), self.LABELS.get("cancel", "Cancel"), 0, 100, self)
+            dlg.setWindowTitle(self.LABELS.get("converting_title", "Converting"))
+            dlg.setWindowModality(Qt.WindowModal)
+            dlg.setAutoClose(True)
+            dlg.setAutoReset(True)
+            # Guard so closing dialog after success doesn't trigger cancel
+            done = {"value": False}
+            def _mark_done():
+                done["value"] = True
+            def do_cancel():
+                if not done["value"]:
+                    worker.cancel()
+            dlg.canceled.connect(do_cancel)
+            worker.progress.connect(dlg.setValue)
+            def on_finished(out_path: str):
+                try:
+                    logging.info(f"UI.copy_convert: finished: out={out_path}")
+                except Exception:
+                    pass
+                try:
+                    mime = QMimeData()
+                    mime.setUrls([QUrl.fromLocalFile(out_path)])
+                    mime.setText(out_path)
+                    QGuiApplication.clipboard().setMimeData(mime)
+                    self.statusBar().showMessage(self.LABELS.get("copied_video", "Video copied to clipboard"), 2000)
+                except Exception:
+                    pass
+                try:
+                    # prevent canceled signal from firing a cancel after success
+                    try:
+                        dlg.canceled.disconnect(do_cancel)
+                    except Exception:
+                        pass
+                    _mark_done()
+                    dlg.close()
+                except Exception:
+                    pass
+            def on_error(msg: str):
+                try:
+                    logging.error(f"UI.copy_convert: error: {msg}")
+                except Exception:
+                    pass
+                try:
+                    dlg.close()
+                except Exception:
+                    pass
+                QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"{self.LABELS.get('conversion_failed', 'Conversion failed')}: {msg}")
+            def on_canceled():
+                try:
+                    logging.info("UI.copy_convert: canceled")
+                except Exception:
+                    pass
+                try:
+                    dlg.close()
+                except Exception:
+                    pass
+                # Cleanup temp dir on cancel/error
+                try:
+                    if os.path.isdir(tmp_dir):
+                        shutil.rmtree(tmp_dir, ignore_errors=True)
+                except Exception:
+                    pass
+            def _cleanup_refs(*args, **kwargs):
+                try:
+                    self._convert_worker = None
+                except Exception:
+                    pass
+            worker.finished.connect(_cleanup_refs)
+            worker.error.connect(_cleanup_refs)
+            worker.canceled.connect(_cleanup_refs)
+            worker.finished.connect(on_finished)
+            worker.error.connect(on_error)
+            worker.canceled.connect(on_canceled)
+            # Fallback: also handle base QThread finished() if custom signal is not delivered
+            def _fallback_on_thread_finished():
+                try:
+                    if done["value"]:
+                        return
+                    # Use worker state to decide
+                    out = getattr(worker, "output_path", None)
+                    if getattr(worker, "succeeded", False) and out and os.path.exists(out):
+                        logging.info("UI.copy_convert: fallback via QThread.finished; invoking on_finished")
+                        on_finished(out)
+                        # on_finished marks done
+                except Exception:
+                    pass
+            try:
+                worker.finished.connect(lambda *_: _mark_done())
+            except Exception:
+                pass
+            try:
+                super(VideoConvertWorker, worker).finished.connect(_fallback_on_thread_finished)  # type: ignore
+            except Exception:
+                # PySide may not allow super() signal access; try attribute on instance
+                try:
+                    worker.finished.connect(_fallback_on_thread_finished)  # best-effort
+                except Exception:
+                    pass
+            # Timer-based fallback: poll for output existence briefly
+            attempts = {"n": 25}  # ~5s @200ms
+            def _poll_fallback():
+                try:
+                    if done["value"]:
+                        return
+                    # Only consider fallback when the worker reports success or the thread finished
+                    out = getattr(worker, "output_path", None) or dst_path
+                    if (getattr(worker, "succeeded", False) or worker.isFinished()) and out and os.path.exists(out):
+                        logging.info("UI.copy_convert: timer fallback detected completion; invoking on_finished")
+                        on_finished(out)
+                        return
+                    if attempts["n"] > 0:
+                        attempts["n"] -= 1
+                        QTimer.singleShot(200, _poll_fallback)
+                except Exception:
+                    pass
+            QTimer.singleShot(300, _poll_fallback)
+            # Extra debug hooks
+            try:
+                worker.finished.connect(lambda *_: logging.info("UI.copy_convert: finished signal received"))
+                worker.canceled.connect(lambda *_: logging.info("UI.copy_convert: canceled signal received"))
+            except Exception:
+                pass
+            worker.start()
+            dlg.show()
+        except Exception:
+            pass
+    def _save_current_video_as(self):
+        try:
+            if not self.current_video:
+                return
+            src = self._resolve_current_video_path()
+            if not (src and os.path.exists(src)):
+                return
+            name = os.path.basename(src)
+            dst, _ = QFileDialog.getSaveFileName(
+                self,
+                self.LABELS.get("save_video_as_dialog_title", "Save Video as…"),
+                name,
+                "Video files (*.mpg *.mpeg *.mp4 *.avi *.mkv *.mov);;All files (*)",
+            )
+            if not dst:
+                return
+            try:
+                shutil.copyfile(src, dst)
+            except Exception as e:
+                QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"Failed to save video: {e}")
+                return
+        except Exception:
+            pass
+
+    def _convert_current_video_in_place(self):
+        """Convert the current video to MP4 next to original, delete original on success, update UI."""
+        try:
+            if not self.current_video:
+                return
+            src_path = self._resolve_current_video_path()
+            if not (src_path and os.path.exists(src_path)):
+                return
+            folder = os.path.dirname(src_path)
+            base = os.path.splitext(os.path.basename(src_path))[0]
+            dst_path = os.path.join(folder, base + ".mp4")
+            try:
+                logging.info(f"UI.convert_in_place: begin: src={src_path}, dst={dst_path}")
+                self.statusBar().showMessage(self.LABELS.get("converting_video", "Converting…"), 2000)
+            except Exception:
+                pass
+            if os.path.exists(dst_path):
+                resp = QMessageBox.question(
+                    self,
+                    self.LABELS.get("overwrite_title", "Overwrite?"),
+                    self.LABELS.get("mp4_exists_overwrite", "MP4 already exists. Overwrite?"),
+                )
+                if resp != QMessageBox.Yes:
+                    return
+                try:
+                    os.remove(dst_path)
+                except Exception:
+                    pass
+            worker = VideoConvertWorker(ConvertSpec(src_path, dst_path))
+            self._convert_worker = worker
+            dlg = QProgressDialog(self.LABELS.get("converting_video", "Converting…"), self.LABELS.get("cancel", "Cancel"), 0, 100, self)
+            dlg.setWindowTitle(self.LABELS.get("converting_title", "Converting"))
+            dlg.setWindowModality(Qt.WindowModal)
+            dlg.setAutoClose(True)
+            dlg.setAutoReset(True)
+            done2 = {"value": False}
+            def _mark_done2():
+                done2["value"] = True
+            def _cancel2():
+                if not done2["value"]:
+                    worker.cancel()
+            dlg.canceled.connect(_cancel2)
+            worker.progress.connect(dlg.setValue)
+            def on_finished(out_path: str):
+                try:
+                    logging.info(f"UI.convert_in_place: finished ffmpeg: src={src_path}, out={out_path}")
+                except Exception:
+                    pass
+                # 1) Release any active handle on the original without reloading preview
+                try:
+                    logging.info("UI.convert_in_place: releasing video handle")
+                except Exception:
+                    pass
+                self._release_video_handle()
+                new_name = os.path.basename(out_path)
+                # 2) Zip the original file into filename.ext.bak.zip (with original filename inside) and delete original
+                try:
+                    logging.info("UI.convert_in_place: creating zip backup of original")
+                    if os.path.exists(src_path):
+                        zip_path = src_path + ".bak.zip"
+                        # Ensure unique zip name if exists
+                        if os.path.exists(zip_path):
+                            i = 2
+                            while True:
+                                alt = f"{src_path}.bak{i}.zip"
+                                if not os.path.exists(alt):
+                                    zip_path = alt
+                                    break
+                                i += 1
+                        with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+                            zf.write(src_path, arcname=os.path.basename(src_path))
+                        try:
+                            os.remove(src_path)
+                        except Exception:
+                            pass
+                        try:
+                            logging.info(f"UI.convert_in_place: backup created at {zip_path} and original removed")
+                        except Exception:
+                            pass
+                except Exception as e:
+                    try:
+                        QMessageBox.warning(self, self.LABELS.get("error_title", "Error"), f"{self.LABELS.get('backup_failed', 'Backup failed')}: {e}")
+                    except Exception:
+                        pass
+                # 3) Reload the current folder and reselect the new MP4 after refresh (pending selection with retry)
+                try:
+                    logging.info("UI.convert_in_place: reloading folder and selecting new mp4 (extended retries)")
+                    self._reload_folder_and_select(new_name, retries=6, delay_ms=250)
+                except Exception:
+                    pass
+                try:
+                    self.statusBar().showMessage(self.LABELS.get("conversion_done", "Conversion complete"), 2000)
+                    try:
+                        dlg.canceled.disconnect(_cancel2)
+                    except Exception:
+                        pass
+                    _mark_done2()
+                    dlg.close()
+                except Exception:
+                    pass
+            def on_error(msg: str):
+                try:
+                    logging.error(f"UI.convert_in_place: error: {msg}")
+                except Exception:
+                    pass
+                try:
+                    dlg.close()
+                except Exception:
+                    pass
+                QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"{self.LABELS.get('conversion_failed', 'Conversion failed')}: {msg}")
+            def on_canceled():
+                try:
+                    logging.info("UI.convert_in_place: canceled")
+                except Exception:
+                    pass
+                try:
+                    dlg.close()
+                except Exception:
+                    pass
+            def _cleanup_refs2(*args, **kwargs):
+                try:
+                    self._convert_worker = None
+                except Exception:
+                    pass
+            worker.finished.connect(_cleanup_refs2)
+            worker.error.connect(_cleanup_refs2)
+            worker.canceled.connect(_cleanup_refs2)
+            worker.finished.connect(on_finished)
+            worker.error.connect(on_error)
+            worker.canceled.connect(on_canceled)
+            # Fallback: handle base QThread finished() in case custom signal is not delivered
+            def _fallback_on_thread_finished2():
+                try:
+                    if done2["value"]:
+                        return
+                    out = getattr(worker, "output_path", None)
+                    if getattr(worker, "succeeded", False) and out and os.path.exists(out):
+                        logging.info("UI.convert_in_place: fallback via QThread.finished; invoking on_finished")
+                        on_finished(out)
+                        # on_finished marks done
+                except Exception:
+                    pass
+            try:
+                worker.finished.connect(lambda *_: _mark_done2())
+            except Exception:
+                pass
+            try:
+                super(VideoConvertWorker, worker).finished.connect(_fallback_on_thread_finished2)  # type: ignore
+            except Exception:
+                try:
+                    worker.finished.connect(_fallback_on_thread_finished2)  # best-effort
+                except Exception:
+                    pass
+            # Timer-based fallback: poll for output existence briefly
+            attempts2 = {"n": 25}  # ~5s @200ms
+            def _poll_fallback2():
+                try:
+                    if done2["value"]:
+                        return
+                    out = getattr(worker, "output_path", None) or dst_path
+                    if (getattr(worker, "succeeded", False) or worker.isFinished()) and out and os.path.exists(out):
+                        logging.info("UI.convert_in_place: timer fallback detected completion; invoking on_finished")
+                        on_finished(out)
+                        return
+                    if attempts2["n"] > 0:
+                        attempts2["n"] -= 1
+                        QTimer.singleShot(200, _poll_fallback2)
+                except Exception:
+                    pass
+            QTimer.singleShot(300, _poll_fallback2)
+            # Extra debug hooks
+            try:
+                worker.finished.connect(lambda *_: logging.info("UI.convert_in_place: finished signal received"))
+                worker.canceled.connect(lambda *_: logging.info("UI.convert_in_place: canceled signal received"))
+            except Exception:
+                pass
+            worker.start()
+            dlg.show()
+        except Exception:
+            pass
+    def _save_current_image_as(self):
+        try:
+            sel = self.images_list.currentItem()
+            if sel is None:
+                return
+            path = None
+            try:
+                path = sel.data(Qt.UserRole)
+            except Exception:
+                path = None
+            if not path:
+                name = sel.text()
+                path = os.path.join(self.fs.current_folder or "", name)
+            if not path or not os.path.exists(path):
+                return
+            name = os.path.basename(path)
+            dst, _ = QFileDialog.getSaveFileName(
+                self,
+                self.LABELS.get("save_image_as_dialog_title", "Save Image as…"),
+                name,
+                "Image files (*.jpg *.jpeg *.png *.bmp *.tiff *.tif *.gif);;All files (*)",
+            )
+            if not dst:
+                return
+            try:
+                shutil.copyfile(path, dst)
+            except Exception as e:
+                QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"Failed to save image: {e}")
+                return
+        except Exception:
+            pass
+    def _handle_add_existing_audio_video(self):
+        """Import an existing audio file for the currently selected video and convert to 16-bit WAV."""
+        try:
+            if not self.current_video or not self.fs.current_folder:
+                return
+            target_wav = self.fs.wav_path_for(self.current_video)
+            if os.path.exists(target_wav):
+                reply = QMessageBox.question(
+                    self,
+                    self.LABELS.get("overwrite", "Overwrite?"),
+                    self.LABELS.get("overwrite_audio", "Audio file already exists. Overwrite?"),
+                    QMessageBox.Yes | QMessageBox.No,
+                )
+                if reply == QMessageBox.No:
+                    return
+            # Choose source audio file
+            src_path, _ = QFileDialog.getOpenFileName(
+                self,
+                self.LABELS.get("import_select_file_dialog", "Select Audio File"),
+                self.fs.current_folder or "",
+                "Audio files (*.wav *.mp3 *.ogg *.m4a *.aac *.flac *.opus *.aif *.aiff);;All files (*)",
+            )
+            if not src_path:
+                return
+            try:
+                seg = AudioSegment.from_file(src_path)
+                seg = seg.set_channels(1).set_frame_rate(44100).set_sample_width(2)
+                seg.export(target_wav, format="wav")
+            except Exception as e:
+                QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"Failed to import audio: {e}")
+                return
+            try:
+                self.statusBar().showMessage(self.LABELS.get("metadata_saved", "Metadata saved!"))
+            except Exception:
+                pass
+            # Refresh controls and badges
+            self.update_media_controls()
+        except Exception:
+            pass
+    def _convert_audio_to_wav(self, src_path: str, target_wav: str) -> None:
+        seg = AudioSegment.from_file(src_path)
+        seg = seg.set_channels(1).set_frame_rate(44100).set_sample_width(2)
+        seg.export(target_wav, format="wav")
+    def _clipboard_audio_to_tempfile(self, mime) -> str | None:
+        try:
+            # Prefer file URLs on the clipboard
+            if mime.hasUrls():
+                for url in mime.urls():
+                    try:
+                        if isinstance(url, QUrl) and url.isLocalFile():
+                            p = url.toLocalFile()
+                            if p and os.path.exists(p):
+                                return p
+                    except Exception:
+                        continue
+            # Next, check for plain-text paths or file:// URLs
+            if mime.hasText():
+                txt = (mime.text() or "").strip()
+                if txt:
+                    if os.path.exists(txt):
+                        return txt
+                    try:
+                        u = QUrl(txt)
+                        if u.isLocalFile():
+                            p = u.toLocalFile()
+                            if p and os.path.exists(p):
+                                return p
+                    except Exception:
+                        pass
+            # Finally, handle raw audio bytes for known MIME types
+            format_map = {
+                "audio/wav": ".wav",
+                "audio/x-wav": ".wav",
+                "audio/mpeg": ".mp3",
+                "audio/mp3": ".mp3",
+                "audio/ogg": ".ogg",
+                "application/ogg": ".ogg",
+                "audio/aac": ".aac",
+                "audio/flac": ".flac",
+                "audio/opus": ".opus",
+                "audio/webm": ".webm",
+                "audio/aiff": ".aiff",
+                "audio/x-aiff": ".aif",
+            }
+            for fmt, ext in format_map.items():
+                try:
+                    if fmt in mime.formats():
+                        data = mime.data(fmt)
+                        if data and len(data) > 0:
+                            import tempfile
+                            fd, tmp = tempfile.mkstemp(suffix=ext)
+                            os.write(fd, bytes(data))
+                            os.close(fd)
+                            return tmp
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return None
+    def _clipboard_image_to_tempfile(self, mime) -> str | None:
+        """Extract an image from the system clipboard into a temporary file, safely.
+        Order of attempts (safer first): URLs -> raw image bytes -> HTML data URLs -> text paths -> direct image() last.
+        """
+        # 1) File URLs on the clipboard
+        try:
+            if mime and mime.hasUrls():
+                for url in mime.urls():
+                    try:
+                        if isinstance(url, QUrl) and url.isLocalFile():
+                            p = url.toLocalFile()
+                            if p and os.path.exists(p):
+                                return p
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+        # 2) Raw image bytes in known formats
+        try:
+            if mime:
+                fmt_map = {
+                    "image/png": ".png",
+                    "image/jpeg": ".jpg",
+                    "image/jpg": ".jpg",
+                    "image/gif": ".gif",
+                    "image/bmp": ".bmp",
+                    "image/tiff": ".tiff",
+                }
+                available = set(mime.formats() or [])
+                for fmt, ext in fmt_map.items():
+                    if fmt in available:
+                        data = mime.data(fmt)
+                        if data and len(data) > 0:
+                            import tempfile
+                            fd, tmp_path = tempfile.mkstemp(suffix=ext)
+                            try:
+                                os.write(fd, bytes(data))
+                            finally:
+                                os.close(fd)
+                            if os.path.exists(tmp_path):
+                                return tmp_path
+        except Exception:
+            pass
+        # 3) HTML with data URL image
+        try:
+            if mime and mime.hasHtml():
+                html = mime.html() or ""
+                import re, base64, tempfile
+                m = re.search(r"data:(image/[^;]+);base64,([A-Za-z0-9+/=]+)", html)
+                if m:
+                    mime_type = m.group(1)
+                    b64 = m.group(2)
+                    ext = ".png" if mime_type == "image/png" else ".jpg"
+                    raw = base64.b64decode(b64)
+                    fd, tmp_path = tempfile.mkstemp(suffix=ext)
+                    try:
+                        os.write(fd, raw)
+                    finally:
+                        os.close(fd)
+                    if os.path.exists(tmp_path):
+                        return tmp_path
+        except Exception:
+            pass
+        # 4) Plain text path or file:// URL
+        try:
+            if mime and mime.hasText():
+                txt = (mime.text() or "").strip()
+                if txt:
+                    if txt.startswith("file://"):
+                        try:
+                            from urllib.parse import urlparse
+                            p = urlparse(txt)
+                            if p.scheme == "file":
+                                loc = p.path
+                                if loc and os.path.exists(loc):
+                                    return loc
+                        except Exception:
+                            pass
+                    if os.path.exists(txt):
+                        return txt
+        except Exception:
+            pass
+        # 5) Do not call QClipboard.image() (can be unstable on some macOS setups)
+        return None
+
+    def _handle_paste_image(self):
+        try:
+            if not self.fs.current_folder:
+                QMessageBox.information(self, self.LABELS.get("no_folder_selected", "No folder selected"), self.LABELS.get("no_folder_selected", "No folder selected"))
+                return
+            try:
+                mime = QGuiApplication.clipboard().mimeData()
+            except Exception as e:
+                QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("clipboard_access_failed", "Failed to access clipboard."))
+                return
+            src = None
+            try:
+                src = self._clipboard_image_to_tempfile(mime)
+            except Exception as e:
+                QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("clipboard_parse_failed", "Clipboard content could not be parsed as an image."))
+                return
+            if not src:
+                QMessageBox.warning(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("clipboard_no_image", "No image found on clipboard"))
+                return
+            self._import_image_with_prompt(src)
+        except Exception as e:
+            QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("paste_failed_generic", "Paste failed unexpectedly."))
+
+    def _import_image_with_prompt(self, src_path: str):
+        try:
+            from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QRadioButton, QLineEdit, QCheckBox, QPushButton
+        except Exception:
+            QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), "Unable to open import options dialog.")
+            return
+        try:
+            folder = self.fs.current_folder or ""
+            base_name = os.path.basename(src_path)
+            src_ext = os.path.splitext(base_name)[1].lower()
+            dlg = QDialog(self)
+            dlg.setWindowTitle(self.LABELS.get("add_image_options", "Import Image"))
+            layout = QVBoxLayout(dlg)
+            tip = QLabel(self.LABELS.get("add_image_tip", "Images are shown in filename order. Consider putting numbers first (e.g., 001_name.jpg) to control sort order."))
+            tip.setWordWrap(True)
+            layout.addWidget(tip)
+            rb_auto = QRadioButton(self.LABELS.get("name_auto_number", "Autonumber: vat_0000"))
+            rb_orig = QRadioButton(self.LABELS.get("name_original", "Original filename & format"))
+            rb_custom = QRadioButton(self.LABELS.get("name_custom", "Custom filename"))
+            rb_auto.setChecked(True)
+            layout.addWidget(rb_auto)
+            layout.addWidget(rb_orig)
+            layout.addWidget(rb_custom)
+            custom_row = QHBoxLayout()
+            custom_row.addWidget(QLabel(self.LABELS.get("custom_filename_label", "Filename:")))
+            le_custom = QLineEdit()
+            le_custom.setPlaceholderText(self.LABELS.get("custom_filename_placeholder", "e.g., 001_scene.jpg"))
+            le_custom.setEnabled(False)
+            custom_row.addWidget(le_custom)
+            layout.addLayout(custom_row)
+            def _toggle_custom():
+                le_custom.setEnabled(rb_custom.isChecked())
+            rb_custom.toggled.connect(_toggle_custom)
+            cb_jpg = QCheckBox(self.LABELS.get("convert_to_jpg", "Convert to JPG"))
+            cb_jpg.setChecked(True)
+            layout.addWidget(cb_jpg)
+            btns = QHBoxLayout()
+            ok_btn = QPushButton(self.LABELS.get("ok", "OK"))
+            cancel_btn = QPushButton(self.LABELS.get("cancel", "Cancel"))
+            btns.addWidget(ok_btn)
+            btns.addWidget(cancel_btn)
+            layout.addLayout(btns)
+            cancel_btn.clicked.connect(dlg.reject)
+            ok_btn.clicked.connect(dlg.accept)
+            dlg.resize(520, 240)
+            if dlg.exec() != QDialog.Accepted:
+                return
+            to_jpg = cb_jpg.isChecked()
+            ext_out = ".jpg" if to_jpg else (src_ext or ".jpg")
+            def _next_vat_name():
+                i = 0
+                while True:
+                    name = f"vat_{i:04d}{ext_out}"
+                    cand = os.path.join(folder, name)
+                    if not os.path.exists(cand):
+                        return cand
+                    i += 1
+            if rb_auto.isChecked():
+                dst_path = _next_vat_name()
+            elif rb_orig.isChecked():
+                base_no_ext = os.path.splitext(base_name)[0]
+                dst_path = os.path.join(folder, base_no_ext + ext_out)
+                if os.path.exists(dst_path):
+                    reply = QMessageBox.question(self, self.LABELS.get("overwrite_title", "Overwrite?"), self.LABELS.get("file_exists_overwrite", "File already exists. Overwrite?"))
+                    if reply != QMessageBox.Yes:
+                        return
+            else:
+                name_in = (le_custom.text() or "").strip()
+                if not name_in:
+                    QMessageBox.warning(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("custom_name_required", "Please enter a filename."))
+                    return
+                root, ext_in = os.path.splitext(name_in)
+                if not ext_in:
+                    name_in = root + ext_out
+                elif to_jpg and ext_in.lower() != ".jpg":
+                    name_in = root + ext_out
+                dst_path = os.path.join(folder, name_in)
+                if os.path.exists(dst_path):
+                    reply = QMessageBox.question(self, self.LABELS.get("overwrite_title", "Overwrite?"), self.LABELS.get("file_exists_overwrite", "File already exists. Overwrite?"))
+                    if reply != QMessageBox.Yes:
+                        return
+            try:
+                if to_jpg:
+                    # Prefer Qt path to avoid native codec crashes
+                    try:
+                        from PySide6.QtGui import QImage
+                        qimg = QImage(src_path)
+                        if not qimg.isNull():
+                            # Ensure no alpha for JPEG
+                            if qimg.hasAlphaChannel():
+                                qimg = qimg.convertToFormat(QImage.Format_RGB888)
+                            if qimg.save(dst_path, "JPG"):
+                                pass
+                            else:
+                                raise RuntimeError("QImage save to JPG failed")
+                        else:
+                            raise RuntimeError("QImage failed to load")
+                    except Exception:
+                        # Fallback to OpenCV conversion
+                        import cv2
+                        img = cv2.imread(src_path, cv2.IMREAD_UNCHANGED)
+                        if img is None:
+                            QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("import_failed", "Failed to read image for conversion."))
+                            return
+                        if len(img.shape) == 3 and img.shape[2] == 4:
+                            img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+                        quality = 92
+                        ok = cv2.imwrite(dst_path, img, [int(cv2.IMWRITE_JPEG_QUALITY), quality])
+                        if not ok:
+                            QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("import_failed", "Failed to write JPG."))
+                            return
+                else:
+                    shutil.copyfile(src_path, dst_path)
+            except Exception as e:
+                QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"Failed to import image: {e}")
+                return
+            imgs = self.fs.list_images()
+            self._on_images_updated(self.fs.current_folder, imgs)
+            basename = os.path.basename(dst_path)
+            for i in range(self.images_list.count()):
+                it = self.images_list.item(i)
+                if it and it.text() == basename:
+                    self.images_list.setCurrentRow(i)
+                    break
+            self.statusBar().showMessage(self.LABELS.get("image_imported", "Image imported"), 2000)
+        except Exception:
+            pass
+
+    def _handle_add_existing_image(self):
+        try:
+            if not self.fs.current_folder:
+                QMessageBox.information(self, self.LABELS.get("no_folder_selected", "No folder selected"), self.LABELS.get("no_folder_selected", "No folder selected"))
+                return
+            src_path, _ = QFileDialog.getOpenFileName(
+                self,
+                self.LABELS.get("select_image_file_dialog", "Select Image File"),
+                self.fs.current_folder or "",
+                "Image files (*.jpg *.jpeg *.png *.bmp *.tiff *.tif *.gif);;All files (*)",
+            )
+            if not src_path:
+                return
+            self._import_image_with_prompt(src_path)
+        except Exception:
+            pass
+
+    def _handle_paste_audio_video(self):
+        try:
+            if not self.current_video or not self.fs.current_folder:
+                return
+            target_wav = self.fs.wav_path_for(self.current_video)
+            if os.path.exists(target_wav):
+                reply = QMessageBox.question(
+                    self,
+                    self.LABELS.get("overwrite", "Overwrite?"),
+                    self.LABELS.get("overwrite_audio", "Audio file already exists. Overwrite?"),
+                    QMessageBox.Yes | QMessageBox.No,
+                )
+                if reply == QMessageBox.No:
+                    return
+            cb = QGuiApplication.clipboard()
+            mime = cb.mimeData()
+            src = self._clipboard_audio_to_tempfile(mime)
+            if not src:
+                QMessageBox.warning(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("paste_audio_failed", "Clipboard does not contain audio or an audio file path."))
+                return
+            try:
+                self._convert_audio_to_wav(src, target_wav)
+            finally:
+                # Clean temp file if we created one
+                try:
+                    if src and os.path.basename(src).startswith("tmp") and not os.path.isdir(src):
+                        pass
+                except Exception:
+                    pass
+            self.update_media_controls()
+        except Exception:
+            pass
+    def _handle_paste_audio_image(self):
+        try:
+            sel = self.images_list.currentItem()
+            if sel is None:
+                return
+            path = None
+            try:
+                path = sel.data(Qt.UserRole)
+            except Exception:
+                path = None
+            if not path:
+                name = sel.text()
+                path = os.path.join(self.fs.current_folder or "", name)
+            if not path:
+                return
+            existing = self.fs.find_existing_image_audio(path)
+            target_wav = self.fs.wav_path_for_image(path)
+            if existing and os.path.exists(existing):
+                reply = QMessageBox.question(
+                    self,
+                    self.LABELS.get("overwrite", "Overwrite?"),
+                    self.LABELS.get("overwrite_audio", "Audio file already exists. Overwrite?"),
+                    QMessageBox.Yes | QMessageBox.No,
+                )
+                if reply == QMessageBox.No:
+                    return
+            cb = QGuiApplication.clipboard()
+            mime = cb.mimeData()
+            src = self._clipboard_audio_to_tempfile(mime)
+            if not src:
+                QMessageBox.warning(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("paste_audio_failed", "Clipboard does not contain audio or an audio file path."))
+                return
+            try:
+                self._convert_audio_to_wav(src, target_wav)
+            finally:
+                try:
+                    if src and os.path.basename(src).startswith("tmp") and not os.path.isdir(src):
+                        pass
+                except Exception:
+                    pass
+            try:
+                self._update_image_record_controls(path)
+            except Exception:
+                pass
+            self.update_video_file_checks()
+        except Exception:
+            pass
+    def _handle_add_existing_audio_image(self):
+        """Import an existing audio file for the selected image and convert to 16-bit WAV."""
+        try:
+            sel = self.images_list.currentItem()
+            if sel is None:
+                return
+            path = None
+            try:
+                path = sel.data(Qt.UserRole)
+            except Exception:
+                path = None
+            if not path:
+                name = sel.text()
+                path = os.path.join(self.fs.current_folder or "", name)
+            if not path:
+                return
+            existing = self.fs.find_existing_image_audio(path)
+            target_wav = self.fs.wav_path_for_image(path)
+            if existing and os.path.exists(existing):
+                reply = QMessageBox.question(
+                    self,
+                    self.LABELS.get("overwrite", "Overwrite?"),
+                    self.LABELS.get("overwrite_audio", "Audio file already exists. Overwrite?"),
+                    QMessageBox.Yes | QMessageBox.No,
+                )
+                if reply == QMessageBox.No:
+                    return
+            # Choose source audio file
+            src_path, _ = QFileDialog.getOpenFileName(
+                self,
+                self.LABELS.get("import_select_file_dialog", "Select Audio File"),
+                os.path.dirname(path) or (self.fs.current_folder or ""),
+                "Audio files (*.wav *.mp3 *.ogg *.m4a *.aac *.flac *.opus *.aif *.aiff);;All files (*)",
+            )
+            if not src_path:
+                return
+            try:
+                seg = AudioSegment.from_file(src_path)
+                seg = seg.set_channels(1).set_frame_rate(44100).set_sample_width(2)
+                seg.export(target_wav, format="wav")
+            except Exception as e:
+                QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"Failed to import audio: {e}")
+                return
+            try:
+                self.statusBar().showMessage(self.LABELS.get("metadata_saved", "Metadata saved!"))
+            except Exception:
+                pass
+            # Refresh controls and visuals
+            try:
+                self._update_image_record_controls(path)
+            except Exception:
+                pass
+            self.update_video_file_checks()
         except Exception:
             pass
     def _handle_record_image(self):
@@ -1746,6 +3151,13 @@ class VideoAnnotationApp(QMainWindow):
             pass
     def closeEvent(self, event):
         try:
+            # Ensure Review tab threads stop before main window closes
+            try:
+                review_tab = getattr(self, 'review_tab', None)
+                if review_tab and hasattr(review_tab, 'cleanup'):
+                    review_tab.cleanup()
+            except Exception:
+                pass
             try:
                 self.stop_audio()
             except Exception:
@@ -1776,6 +3188,14 @@ class VideoAnnotationApp(QMainWindow):
                     self.update_recording_indicator()
             except Exception:
                 pass
+            # Ensure persistent audio thread stops on app close
+            try:
+                if self.audio_thread and self.audio_thread.isRunning():
+                    self.audio_thread.quit()
+                    self.audio_thread.wait()
+                    logging.info("UI.audio: persistent audio thread stopped on close")
+            except Exception:
+                pass
             try:
                 if hasattr(self, 'join_thread') and self.join_thread and self.join_thread.isRunning():
                     self.join_thread.wait()
@@ -1792,10 +3212,24 @@ class VideoAnnotationApp(QMainWindow):
             active_index = self.right_panel.currentIndex() if getattr(self, 'right_panel', None) else 0
         except Exception:
             active_index = 0
-        if active_index == 1:
+        
+        # Determine which recordings to open based on active tab
+        if active_index == 1:  # Images tab
             file_paths = self.fs.image_recordings_in()
-        else:
+        elif active_index == 2:  # Review tab
+            # Get recordings from Review tab's filtered scope
+            try:
+                review_tab = getattr(self, 'review_tab', None)
+                if review_tab:
+                    items = review_tab._get_recorded_items()
+                    file_paths = [wav_path for _, _, wav_path in items]
+                else:
+                    file_paths = self.fs.recordings_in()
+            except Exception:
+                file_paths = self.fs.recordings_in()
+        else:  # Videos tab (default)
             file_paths = self.fs.video_recordings_in()
+        
         if not file_paths:
             QMessageBox.information(self, self.LABELS["no_files"], self.LABELS["no_wavs_found"]) 
             return
@@ -2036,7 +3470,23 @@ class VideoAnnotationApp(QMainWindow):
             active_index = self.right_panel.currentIndex() if getattr(self, 'right_panel', None) else 0
         except Exception:
             active_index = 0
-        wav_paths = self.fs.image_recordings_in() if active_index == 1 else self.fs.video_recordings_in()
+        
+        # Determine which recordings to join based on active tab
+        if active_index == 1:  # Images tab
+            wav_paths = self.fs.image_recordings_in()
+        elif active_index == 2:  # Review tab
+            # Get recordings from Review tab's filtered scope
+            try:
+                review_tab = getattr(self, 'review_tab', None)
+                if review_tab:
+                    items = review_tab._get_recorded_items()
+                    wav_paths = [wav_path for _, _, wav_path in items]
+                else:
+                    wav_paths = self.fs.recordings_in()
+            except Exception:
+                wav_paths = self.fs.recordings_in()
+        else:  # Videos tab (default)
+            wav_paths = self.fs.video_recordings_in()
         if not wav_paths:
             QMessageBox.information(self, self.LABELS["no_files"], self.LABELS["no_wavs_found"]) 
             return
@@ -2204,6 +3654,26 @@ class VideoAnnotationApp(QMainWindow):
                 if event.type() == QEvent.MouseButtonDblClick and self.current_video and self.fs.current_folder:
                     self._open_fullscreen_video()
                     return True
+                # Right-click context menu on video frame
+                if event.type() == QEvent.MouseButtonPress:
+                    try:
+                        from PySide6.QtGui import QMouseEvent
+                    except Exception:
+                        QMouseEvent = None
+                    try:
+                        btn = event.button() if hasattr(event, 'button') else None
+                    except Exception:
+                        btn = None
+                    if btn == Qt.RightButton:
+                        try:
+                            global_pos = event.globalPos() if hasattr(event, 'globalPos') else None
+                        except Exception:
+                            global_pos = None
+                        try:
+                            self._on_video_frame_context_menu(global_pos)
+                        except Exception:
+                            pass
+                        return True
             except Exception:
                 pass
             try:
@@ -2219,6 +3689,116 @@ class VideoAnnotationApp(QMainWindow):
             pass
         return super().eventFilter(obj, event)
 
+    def _on_video_frame_context_menu(self, global_pos: QPoint | None):
+        """Show Copy/Save As/Reveal menu for the current video on the frame."""
+        try:
+            # Build menu with required ordering
+            menu = QMenu(self)
+            copy_act = QAction(self.LABELS.get("copy_video", "Copy Video"), self)
+            copy_act.triggered.connect(self._copy_current_video_to_clipboard)
+            menu.addAction(copy_act)
+            save_act = QAction(self.LABELS.get("save_video_as", "Save Video as…"), self)
+            save_act.triggered.connect(self._save_current_video_as)
+            menu.addAction(save_act)
+            # Platform-specific label for Reveal
+            label = self._platform_reveal_label()
+            reveal_act = QAction(label, self)
+            reveal_act.triggered.connect(self._reveal_current_video_with_warning)
+            menu.addAction(reveal_act)
+            # Position
+            if global_pos:
+                menu.exec(global_pos)
+            else:
+                try:
+                    menu.exec(QCursor.pos())
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def _platform_reveal_label(self) -> str:
+        """Return OS-appropriate label for reveal action."""
+        try:
+            import sys
+            if sys.platform.startswith("darwin"):
+                return self.LABELS.get("reveal_in_finder", "Reveal in Finder")
+            if sys.platform.startswith("win"):
+                return self.LABELS.get("reveal_in_explorer", "Reveal in Explorer")
+            return self.LABELS.get("reveal_in_file_manager", "Reveal in File Manager")
+        except Exception:
+            return "Reveal in File Manager"
+
+    def _reveal_current_video_with_warning(self):
+        """Warn if the current video is not MP4, then reveal if confirmed."""
+        try:
+            path = self._resolve_current_video_path()
+            if not (path and os.path.exists(path)):
+                return
+            ext = os.path.splitext(path)[1].lower()
+            if ext and ext != ".mp4":
+                title = self.LABELS.get("non_mp4_reveal_warn_title", "Not an MP4")
+                reveal_lbl = self._platform_reveal_label()
+                msg = (
+                    self.LABELS.get(
+                        "non_mp4_reveal_warn_msg_simple",
+                        "This video is not in MP4 format.\n\nWhatsApp and many other common apps can only play MP4 videos. Please Cancel now, click 'Convert to MP4', then try again.\n\n{action} anyway?",
+                    )
+                )
+                try:
+                    msg_fmt = msg.format(action=reveal_lbl)
+                except Exception:
+                    msg_fmt = msg
+                resp = QMessageBox.question(
+                    self,
+                    title,
+                    msg_fmt,
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No,
+                )
+                if resp != QMessageBox.Yes:
+                    return
+            self._reveal_in_file_manager(path)
+        except Exception:
+            pass
+
+    def _reveal_in_file_manager(self, path: str | None):
+        """Reveal the given file in the OS file manager (select/highlight if supported)."""
+        try:
+            if not path:
+                return
+            if not os.path.exists(path):
+                return
+            import sys
+            if sys.platform.startswith("darwin"):
+                try:
+                    subprocess.run(["open", "-R", path], check=False)
+                    return
+                except Exception:
+                    pass
+            elif sys.platform.startswith("win"):
+                try:
+                    subprocess.run(["explorer", f"/select,", path], check=False)
+                    return
+                except Exception:
+                    pass
+            else:
+                try:
+                    # Reveal containing folder; selection not universally supported
+                    folder = os.path.dirname(path)
+                    if folder:
+                        subprocess.run(["xdg-open", folder], check=False)
+                        return
+                except Exception:
+                    pass
+            # Fallback: try opening the folder via desktop services if available
+            try:
+                from PySide6.QtGui import QDesktopServices
+                QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.dirname(path)))
+            except Exception:
+                pass
+        except Exception:
+            pass
+
     def _show_welcome_dialog(self):
         """Display a brief purpose + best-practices message on startup."""
         try:
@@ -2230,9 +3810,83 @@ class VideoAnnotationApp(QMainWindow):
                 "welcome_dialog_body_html",
                 LABELS_ALL["English"]["welcome_dialog_body_html"],
             )
-            QMessageBox.information(self, title, body)
+            try:
+                from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
+                from PySide6.QtCore import Qt
+            except Exception:
+                # Fallback if widgets cannot be imported for some reason
+                QMessageBox.information(self, title, body)
+                return
+
+            dlg = QDialog(self)
+            dlg.setWindowTitle(title)
+            layout = QVBoxLayout(dlg)
+            try:
+                layout.setContentsMargins(16, 10, 16, 10)
+                layout.setSpacing(8)
+            except Exception:
+                pass
+
+            label = QLabel(dlg)
+            label.setTextFormat(Qt.RichText)
+            label.setWordWrap(True)
+            try:
+                label.setOpenExternalLinks(True)
+            except Exception:
+                pass
+            label.setText(body)
+            layout.addWidget(label)
+
+            btn_row = QHBoxLayout()
+            btn_row.addStretch(1)
+            ok_btn = QPushButton("OK", dlg)
+            ok_btn.clicked.connect(dlg.accept)
+            btn_row.addWidget(ok_btn)
+            layout.addLayout(btn_row)
+
+            # Make the dialog wider but slightly shorter to reduce empty space
+            try:
+                current_size = dlg.sizeHint()
+                # Target ~1.25x typical width, with a reasonable minimum
+                new_w = max(720, int(current_size.width() * 1.25))
+                # Reduce minimum height to trim top/bottom whitespace
+                new_h = max(440, current_size.height())
+                dlg.resize(new_w, new_h)
+            except Exception:
+                dlg.resize(720, 460)
+
+            dlg.exec()
         except Exception:
             pass
+
+    def _open_docs_site(self, _link: str = "internal:docs#default"):
+        """Open the bundled documentation site in a pywebview window."""
+        try:
+            import subprocess, sys
+            from vat.utils.resources import resource_path
+            # Resolve bundled docs path (PyInstaller-aware)
+            index_path = resource_path(os.path.join("docs", "gpa", "index.html"), check_system=False)
+            # Support internal anchors like internal:docs#section
+            frag = None
+            try:
+                if isinstance(_link, str) and "#" in _link:
+                    frag = _link.split("#", 1)[1]
+            except Exception:
+                frag = None
+            if not os.path.exists(index_path):
+                # Fallback: bundled full docs
+                index_path = resource_path(os.path.join("docs", "index.html"), check_system=False)
+            # Launch a separate process to avoid interfering with the Qt event loop
+            if frag:
+                cmd = [sys.executable, "-m", "vat.ui.docs_webview", index_path, frag]
+            else:
+                cmd = [sys.executable, "-m", "vat.ui.docs_webview", index_path]
+            subprocess.Popen(cmd)
+        except Exception as e:
+            try:
+                QMessageBox.information(self, "Documentation", f"Unable to open documentation window: {e}")
+            except Exception:
+                pass
 
     # --- Images tab helpers (moved back into VideoAnnotationApp) ---
     def _open_fullscreen_video(self):
@@ -2479,11 +4133,13 @@ class VideoAnnotationApp(QMainWindow):
                 spacing = int(self.images_list.spacing())
             except Exception:
                 spacing = 8
-            cols = 2
+            # Auto-adjust columns based on available width and user scale
+            usable = max(120, vpw - spacing * 3)
+            min_col_w = int(160 * max(0.5, min(1.8, getattr(self, 'images_thumb_scale', 1.0))))
+            cols = max(1, usable // max(120, min_col_w))
             total_spacing = spacing * (cols + 1)
             usable = max(120, vpw - total_spacing)
-            min_col_w = 160
-            col_w = max(min_col_w, usable // cols)
+            col_w = max(min_col_w, usable // max(1, cols))
             icon_w = int(col_w * 0.90)
             icon_h = int(icon_w * 3 / 4)
             label_h = 18 if getattr(self, 'show_image_labels', False) else 0
@@ -2572,18 +4228,25 @@ class VideoAnnotationApp(QMainWindow):
                         path = sel.data(Qt.UserRole) or os.path.join(self.fs.current_folder or "", sel.text())
                     except Exception:
                         path = None
-            wav_path = self.fs.wav_path_for_image(path or "")
-            exists = os.path.exists(wav_path)
-            # Play/Stop audio reflect wav existence
-            self.play_image_audio_button.setEnabled(exists)
+            # Resolve existing audio with compatibility (legacy basename.wav, root folder)
+            resolved = self.fs.find_existing_image_audio(path or "")
+            wav_path = resolved or self.fs.wav_path_for_image(path or "")
+            exists = bool(resolved)
+            # Play/Stop audio reflect wav existence, but disable Play while actively playing
+            self.play_image_audio_button.setEnabled(exists and not self.is_playing_audio)
             self.stop_image_audio_button.setEnabled(exists)
             # Record/Stop-Record reflect recording state
             if self.is_recording:
                 self.record_image_button.setEnabled(False)
                 self.stop_image_record_button.setEnabled(True)
+                if getattr(self, 'add_image_audio_button', None):
+                    self.add_image_audio_button.setEnabled(False)
             else:
                 self.record_image_button.setEnabled(True)
                 self.stop_image_record_button.setEnabled(False)
+                if getattr(self, 'add_image_audio_button', None):
+                    # Enable import when an image is selected
+                    self.add_image_audio_button.setEnabled(bool(path))
             try:
                 logging.debug(f"UI._update_image_record_controls: wav_path={wav_path}, exists={exists}, is_recording={self.is_recording}")
             except Exception:
@@ -2609,23 +4272,73 @@ class VideoAnnotationApp(QMainWindow):
             if not path:
                 name = sel.text()
                 path = os.path.join(self.fs.current_folder or "", name)
-            wav_path = self.fs.wav_path_for_image(path)
-            if not os.path.exists(wav_path):
+            # Resolve existing audio; play if found
+            wav_path = self.fs.find_existing_image_audio(path) or self.fs.wav_path_for_image(path)
+            if not (wav_path and os.path.exists(wav_path)):
                 return
-            self.stop_audio()
+            # Re-entrancy guard: ignore if already playing
+            if self.is_playing_audio:
+                return
             if not PYAUDIO_AVAILABLE:
                 QMessageBox.warning(self, "Error", "PyAudio is not available. Cannot play audio.")
                 return
-            self.audio_thread = QThread()
+            # Mark playing and update UI (disable Play, enable Stop)
+            self.is_playing_audio = True
+            try:
+                self.play_image_audio_button.setEnabled(False)
+                self.stop_image_audio_button.setEnabled(True)
+            except Exception:
+                pass
+            try:
+                # Also disable videos tab Play if present
+                if getattr(self, 'play_audio_button', None):
+                    self.play_audio_button.setEnabled(False)
+            except Exception:
+                pass
+            # Use persistent audio thread (created in __init__) for playback
             self.audio_worker = AudioPlaybackWorker(wav_path)
             self.audio_worker.moveToThread(self.audio_thread)
-            self.audio_thread.started.connect(self.audio_worker.run)
-            self.audio_worker.finished.connect(self.audio_thread.quit)
-            self.audio_worker.finished.connect(self.audio_worker.deleteLater)
-            self.audio_thread.finished.connect(self.audio_thread.deleteLater)
-            self.audio_thread.finished.connect(self._on_audio_thread_finished)
+            try:
+                from PySide6.QtCore import QMetaObject
+                QMetaObject.invokeMethod(self.audio_worker, "run", Qt.QueuedConnection)
+            except Exception:
+                # Fallback: start thread if not already running and connect
+                try:
+                    if self.audio_thread and not self.audio_thread.isRunning():
+                        self.audio_thread.start()
+                    self.audio_thread.started.connect(self.audio_worker.run)
+                except Exception:
+                    pass
+            # Re-enable controls when playback finishes
+            self.audio_worker.finished.connect(self._on_any_audio_finished)
             self.audio_worker.error.connect(self._show_worker_error)
-            self.audio_thread.start()
+        except Exception:
+            pass
+
+    def _on_any_audio_finished(self):
+        """Shared handler to re-enable Play buttons after audio playback completes."""
+        try:
+            logging.info("UI.audio: finished")
+        except Exception:
+            pass
+        self.is_playing_audio = False
+        # Restore Play button texts
+        try:
+            if getattr(self, 'play_audio_button', None):
+                self.play_audio_button.setText(self.LABELS.get("play_audio", "Play Audio"))
+        except Exception:
+            pass
+        try:
+            if getattr(self, 'play_image_audio_button', None):
+                self.play_image_audio_button.setText(self.LABELS.get("play_audio", "Play Audio"))
+        except Exception:
+            pass
+        try:
+            self.update_media_controls()
+        except Exception:
+            pass
+        try:
+            self._update_image_record_controls()
         except Exception:
             pass
 
@@ -2645,8 +4358,10 @@ class VideoAnnotationApp(QMainWindow):
             if not path:
                 name = sel.text()
                 path = os.path.join(self.fs.current_folder or "", name)
+            # If any existing audio (including legacy paths) exists, confirm overwrite
+            existing = self.fs.find_existing_image_audio(path)
             wav_path = self.fs.wav_path_for_image(path)
-            if os.path.exists(wav_path):
+            if existing and os.path.exists(existing):
                 reply = QMessageBox.question(self, self.LABELS["overwrite"], 
                                             self.LABELS["overwrite_audio"],
                                             QMessageBox.Yes | QMessageBox.No)
@@ -2736,14 +4451,23 @@ class VideoAnnotationApp(QMainWindow):
     def _position_badge(self):
         if not getattr(self, 'badge_label', None):
             return
-        if not self.badge_label.isVisible():
-            return
         w = self.video_label.width()
+        if not w or w <= 0:
+            try:
+                w = max(0, int(self.video_label.minimumWidth()))
+            except Exception:
+                w = 480
         h = self.video_label.height()
         bw = self.badge_label.width()
         x = max(0, w - bw - 8)
         y = 8
         self.badge_label.move(x, y)
+        try:
+            self.badge_label.raise_()
+        except Exception:
+            pass
+
+    # _position_format_badge removed with format badge
 
 
 class ImageGridDelegate(QStyledItemDelegate):
