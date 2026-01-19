@@ -218,6 +218,9 @@ class VideoAnnotationApp(QMainWindow):
         # Persistent audio thread used for all playback
         self.audio_thread = QThread(self)
         self.audio_worker = None
+        # Track background workers/dialogs to avoid premature GC
+        self._active_workers = []
+        self._active_dialogs = []
         # Unified audio playback state + debounce
         self.is_playing_audio = False
         self._last_play_request_ts = 0.0
@@ -231,6 +234,8 @@ class VideoAnnotationApp(QMainWindow):
         self._pending_select_video_name = None
         # Cache for full-resolution image pixmaps (used by thumbnails and fullscreen)
         self._image_pixmap_cache = {}
+        # Track whether a video conversion is currently running; used to gate selection retry prompts
+        self._video_conversion_in_progress = False
         # Fullscreen viewer state
         self._fullscreen_viewer = None
         self.fullscreen_zoom = None
@@ -605,18 +610,25 @@ class VideoAnnotationApp(QMainWindow):
                         logging.warning("UI._reload_folder_and_select.verify: selection failed after retries")
                     except Exception:
                         pass
-                    try:
-                        resp = QMessageBox.question(
-                            self,
-                            self.LABELS.get("selection_failed_title", "Selection failed"),
-                            self.LABELS.get("selection_failed_msg", "Could not select the converted video yet. Retry?"),
-                            QMessageBox.Retry | QMessageBox.Cancel,
-                            QMessageBox.Retry,
-                        )
-                        if resp == QMessageBox.Retry:
-                            self._reload_folder_and_select(target_name, retries=6, delay_ms=250)
-                    except Exception:
-                        pass
+                    # Only prompt if a video conversion is actively in progress; otherwise fail quietly
+                    if getattr(self, "_video_conversion_in_progress", False):
+                        try:
+                            resp = QMessageBox.question(
+                                self,
+                                self.LABELS.get("selection_failed_title", "Selection failed"),
+                                self.LABELS.get("selection_failed_msg", "Could not select the converted video yet. Retry?"),
+                                QMessageBox.Retry | QMessageBox.Cancel,
+                                QMessageBox.Retry,
+                            )
+                            if resp == QMessageBox.Retry:
+                                self._reload_folder_and_select(target_name, retries=6, delay_ms=250)
+                        except Exception:
+                            pass
+                    else:
+                        try:
+                            self.statusBar().showMessage(self.LABELS.get("selection_failed_title", "Selection failed"), 2000)
+                        except Exception:
+                            pass
             QTimer.singleShot(delay_ms, _verify_or_retry)
         except Exception:
             pass
@@ -910,6 +922,14 @@ class VideoAnnotationApp(QMainWindow):
         self.convert_mp4_button.clicked.connect(self._convert_current_video_in_place)
         self.convert_mp4_button.setEnabled(False)
         video_controls_layout.addWidget(self.convert_mp4_button)
+        # Add Video from file with default convert-to-mp4 checkbox
+        self.add_video_button = QPushButton(self.LABELS.get("add_video", "Add video…"))
+        self.add_video_button.setEnabled(True)
+        self.add_video_button.clicked.connect(self._handle_add_video)
+        video_controls_layout.addWidget(self.add_video_button)
+        self.convert_video_to_mp4_cb = QCheckBox(self.LABELS.get("convert_to_mp4", "Convert to MP4"))
+        self.convert_video_to_mp4_cb.setChecked(True)
+        video_controls_layout.addWidget(self.convert_video_to_mp4_cb)
         self.next_button = QToolButton()
         try:
             self.next_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipForward))
@@ -1015,23 +1035,14 @@ class VideoAnnotationApp(QMainWindow):
         self.record_image_button.clicked.connect(self._handle_record_image)
         self.record_image_button.setEnabled(False)
         controls_row.addWidget(self.record_image_button)
-        # Add Image dropdown (From file / Paste from clipboard)
-        self.add_image_button = QToolButton()
-        self.add_image_button.setText(self.LABELS.get("add_image", "Add image…"))
-        try:
-            self.add_image_button.setPopupMode(QToolButton.InstantPopup)
-        except Exception:
-            pass
+        # Add Image from file only with default convert-to-jpg checkbox
+        self.add_image_button = QPushButton(self.LABELS.get("add_image", "Add image…"))
         self.add_image_button.setEnabled(True)
-        add_img_src_menu = QMenu(self)
-        act_img_src_file = QAction(self.LABELS.get("add_image_from_file", "From file…"), self)
-        act_img_src_file.triggered.connect(self._handle_add_existing_image)
-        add_img_src_menu.addAction(act_img_src_file)
-        act_img_src_clip = QAction(self.LABELS.get("add_image_paste_clipboard", "Paste from clipboard"), self)
-        act_img_src_clip.triggered.connect(self._handle_paste_image)
-        add_img_src_menu.addAction(act_img_src_clip)
-        self.add_image_button.setMenu(add_img_src_menu)
+        self.add_image_button.clicked.connect(self._handle_add_existing_image)
         controls_row.addWidget(self.add_image_button)
+        self.convert_image_to_jpg_cb = QCheckBox(self.LABELS.get("convert_to_jpg", "Convert to JPG"))
+        self.convert_image_to_jpg_cb.setChecked(True)
+        controls_row.addWidget(self.convert_image_to_jpg_cb)
         # Add audio dropdown (From file / Paste from clipboard)
         self.add_image_audio_button = QToolButton()
         self.add_image_audio_button.setText(self.LABELS.get("add_existing_audio", "Add audio…"))
@@ -2209,6 +2220,14 @@ class VideoAnnotationApp(QMainWindow):
             dlg.setWindowModality(Qt.WindowModal)
             dlg.setAutoClose(True)
             dlg.setAutoReset(True)
+            try:
+                self._video_conversion_in_progress = True
+            except Exception:
+                pass
+            try:
+                self._video_conversion_in_progress = True
+            except Exception:
+                pass
             # Guard so closing dialog after success doesn't trigger cancel
             done = {"value": False}
             def _mark_done():
@@ -2221,6 +2240,10 @@ class VideoAnnotationApp(QMainWindow):
             def on_finished(out_path: str):
                 try:
                     logging.info(f"UI.copy_convert: finished: out={out_path}")
+                except Exception:
+                    pass
+                try:
+                    self._video_conversion_in_progress = False
                 except Exception:
                     pass
                 try:
@@ -2250,6 +2273,10 @@ class VideoAnnotationApp(QMainWindow):
                     dlg.close()
                 except Exception:
                     pass
+                try:
+                    self._video_conversion_in_progress = False
+                except Exception:
+                    pass
                 QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"{self.LABELS.get('conversion_failed', 'Conversion failed')}: {msg}")
             def on_canceled():
                 try:
@@ -2258,6 +2285,10 @@ class VideoAnnotationApp(QMainWindow):
                     pass
                 try:
                     dlg.close()
+                except Exception:
+                    pass
+                try:
+                    self._video_conversion_in_progress = False
                 except Exception:
                     pass
                 # Cleanup temp dir on cancel/error
@@ -2451,6 +2482,10 @@ class VideoAnnotationApp(QMainWindow):
                     except Exception:
                         pass
                     _mark_done2()
+                    try:
+                        self._video_conversion_in_progress = False
+                    except Exception:
+                        pass
                     dlg.close()
                 except Exception:
                     pass
@@ -2463,6 +2498,10 @@ class VideoAnnotationApp(QMainWindow):
                     dlg.close()
                 except Exception:
                     pass
+                try:
+                    self._video_conversion_in_progress = False
+                except Exception:
+                    pass
                 QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"{self.LABELS.get('conversion_failed', 'Conversion failed')}: {msg}")
             def on_canceled():
                 try:
@@ -2471,6 +2510,10 @@ class VideoAnnotationApp(QMainWindow):
                     pass
                 try:
                     dlg.close()
+                except Exception:
+                    pass
+                try:
+                    self._video_conversion_in_progress = False
                 except Exception:
                     pass
             def _cleanup_refs2(*args, **kwargs):
@@ -2772,7 +2815,7 @@ class VideoAnnotationApp(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("paste_failed_generic", "Paste failed unexpectedly."))
 
-    def _import_image_with_prompt(self, src_path: str):
+    def _import_image_with_prompt(self, src_path: str, default_to_jpg: bool = True):
         try:
             from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QRadioButton, QLineEdit, QCheckBox, QPushButton
         except Exception:
@@ -2806,7 +2849,7 @@ class VideoAnnotationApp(QMainWindow):
                 le_custom.setEnabled(rb_custom.isChecked())
             rb_custom.toggled.connect(_toggle_custom)
             cb_jpg = QCheckBox(self.LABELS.get("convert_to_jpg", "Convert to JPG"))
-            cb_jpg.setChecked(True)
+            cb_jpg.setChecked(bool(default_to_jpg))
             layout.addWidget(cb_jpg)
             btns = QHBoxLayout()
             ok_btn = QPushButton(self.LABELS.get("ok", "OK"))
@@ -2819,6 +2862,7 @@ class VideoAnnotationApp(QMainWindow):
             dlg.resize(520, 240)
             if dlg.exec() != QDialog.Accepted:
                 return
+            # Single source of truth: dialog checkbox determines conversion
             to_jpg = cb_jpg.isChecked()
             ext_out = ".jpg" if to_jpg else (src_ext or ".jpg")
             def _next_vat_name():
@@ -2855,48 +2899,104 @@ class VideoAnnotationApp(QMainWindow):
                         return
             try:
                 if to_jpg:
-                    # Prefer Qt path to avoid native codec crashes
-                    try:
-                        from PySide6.QtGui import QImage
-                        qimg = QImage(src_path)
-                        if not qimg.isNull():
-                            # Ensure no alpha for JPEG
-                            if qimg.hasAlphaChannel():
-                                qimg = qimg.convertToFormat(QImage.Format_RGB888)
-                            if qimg.save(dst_path, "JPG"):
+                    # Run conversion in background to avoid UI races
+                    from vat.utils.image_convert import ImageConvertWorker
+                    worker = ImageConvertWorker(src_path, dst_path)
+                    worker.setParent(self)
+                    self._active_workers.append(worker)
+                    from PySide6.QtWidgets import QProgressDialog
+                    dlgp = QProgressDialog(self.LABELS.get("converting_image", "Converting…"), self.LABELS.get("cancel", "Cancel"), 0, 0, self)
+                    dlgp.setWindowTitle(self.LABELS.get("convert_to_jpg", "Convert to JPG"))
+                    dlgp.setAutoClose(True)
+                    dlgp.setAutoReset(True)
+                    dlgp.setMinimumDuration(0)
+                    dlgp.setModal(True)
+                    self._active_dialogs.append(dlgp)
+                    done = {"value": False}
+                    def _mark_done():
+                        done["value"] = True
+                    def _cleanup_worker():
+                        try:
+                            if worker in self._active_workers:
+                                self._active_workers.remove(worker)
+                        except Exception:
+                            pass
+                        try:
+                            if dlgp in self._active_dialogs:
+                                self._active_dialogs.remove(dlgp)
+                        except Exception:
+                            pass
+                    def _close_dialog_safe():
+                        try:
+                            # prevent canceled->cancel invoking after success
+                            try:
+                                dlgp.canceled.disconnect()
+                            except Exception:
                                 pass
-                            else:
-                                raise RuntimeError("QImage save to JPG failed")
-                        else:
-                            raise RuntimeError("QImage failed to load")
-                    except Exception:
-                        # Fallback to OpenCV conversion
-                        import cv2
-                        img = cv2.imread(src_path, cv2.IMREAD_UNCHANGED)
-                        if img is None:
-                            QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("import_failed", "Failed to read image for conversion."))
-                            return
-                        if len(img.shape) == 3 and img.shape[2] == 4:
-                            img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
-                        quality = 92
-                        ok = cv2.imwrite(dst_path, img, [int(cv2.IMWRITE_JPEG_QUALITY), quality])
-                        if not ok:
-                            QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("import_failed", "Failed to write JPG."))
-                            return
+                            dlgp.close()
+                        except Exception:
+                            pass
+                    def _done_ok(out_path: str):
+                        _cleanup_worker()
+                        try:
+                            # Refresh images and select the new file
+                            imgs = self.fs.list_images()
+                            self._on_images_updated(self.fs.current_folder, imgs)
+                            basename = os.path.basename(out_path)
+                            for i in range(self.images_list.count()):
+                                it = self.images_list.item(i)
+                                if it and (it.text() == basename or it.data(Qt.UserRole) == out_path):
+                                    self.images_list.setCurrentRow(i)
+                                    break
+                            self.statusBar().showMessage(self.LABELS.get("image_imported", "Image imported"), 2000)
+                        except Exception:
+                            pass
+                        _mark_done()
+                        _close_dialog_safe()
+                    def _done_err(msg: str):
+                        _cleanup_worker()
+                        _mark_done()
+                        _close_dialog_safe()
+                        QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), msg or self.LABELS.get("conversion_failed", "Conversion failed"))
+                    # Cancel closes the dialog immediately; worker continues best-effort
+                    def _on_cancel():
+                        try:
+                            if not done["value"]:
+                                try:
+                                    worker.cancel()
+                                except Exception:
+                                    pass
+                        finally:
+                            _close_dialog_safe()
+                    dlgp.canceled.connect(_on_cancel)
+                    worker.finished.connect(_done_ok)
+                    worker.error.connect(_done_err)
+                    try:
+                        worker.start()
+                        dlgp.show()
+                    except Exception as e:
+                        _done_err(str(e))
                 else:
                     shutil.copyfile(src_path, dst_path)
+                    try:
+                        name = os.path.basename(dst_path)
+                        self._reload_folder_and_select(name)
+                    except Exception:
+                        pass
             except Exception as e:
                 QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"Failed to import image: {e}")
                 return
-            imgs = self.fs.list_images()
-            self._on_images_updated(self.fs.current_folder, imgs)
-            basename = os.path.basename(dst_path)
-            for i in range(self.images_list.count()):
-                it = self.images_list.item(i)
-                if it and it.text() == basename:
-                    self.images_list.setCurrentRow(i)
-                    break
-            self.statusBar().showMessage(self.LABELS.get("image_imported", "Image imported"), 2000)
+            # Immediate copy path handled above; conversion path selects after worker completes
+            if not to_jpg:
+                imgs = self.fs.list_images()
+                self._on_images_updated(self.fs.current_folder, imgs)
+                basename = os.path.basename(dst_path)
+                for i in range(self.images_list.count()):
+                    it = self.images_list.item(i)
+                    if it and it.text() == basename:
+                        self.images_list.setCurrentRow(i)
+                        break
+                self.statusBar().showMessage(self.LABELS.get("image_imported", "Image imported"), 2000)
         except Exception:
             pass
 
@@ -2909,14 +3009,19 @@ class VideoAnnotationApp(QMainWindow):
                 self,
                 self.LABELS.get("select_image_file_dialog", "Select Image File"),
                 self.fs.current_folder or "",
-                "Image files (*.jpg *.jpeg *.png *.bmp *.tiff *.tif *.gif);;All files (*)",
+                "Image files (*.jpg *.jpeg *.png *.bmp *.tiff *.tif *.gif *.heic *.heif *.webp);;All files (*)",
             )
             if not src_path:
                 return
-            self._import_image_with_prompt(src_path)
+            # Respect inline checkbox for default conversion choice
+            use_jpg_default = True
+            try:
+                use_jpg_default = bool(self.convert_image_to_jpg_cb.isChecked())
+            except Exception:
+                pass
+            self._import_image_with_prompt(src_path, default_to_jpg=use_jpg_default)
         except Exception:
             pass
-
     def _handle_paste_audio_video(self):
         try:
             if not self.current_video or not self.fs.current_folder:
@@ -2947,6 +3052,210 @@ class VideoAnnotationApp(QMainWindow):
                 except Exception:
                     pass
             self.update_media_controls()
+        except Exception:
+            pass
+    def _handle_add_video(self):
+        """Add a video by selecting a file; optionally convert to MP4."""
+        try:
+            if not self.fs.current_folder:
+                QMessageBox.information(self, self.LABELS.get("no_folder_selected", "No folder selected"), self.LABELS.get("no_folder_selected", "No folder selected"))
+                return
+            src_path, _ = QFileDialog.getOpenFileName(
+                self,
+                self.LABELS.get("select_video_file_dialog", "Select Video File"),
+                self.fs.current_folder or "",
+                "Video files (*.mp4 *.mov *.m4v *.avi *.mkv *.webm *.mpeg *.mpg);;All files (*)",
+            )
+            if not src_path:
+                return
+            # Show import options similar to image import
+            self._import_video_with_prompt(src_path)
+        except Exception:
+            pass
+
+    def _import_video_with_prompt(self, src_path: str):
+        try:
+            from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QRadioButton, QLineEdit, QCheckBox, QPushButton
+        except Exception:
+            QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), "Unable to open import options dialog.")
+            return
+        try:
+            folder = self.fs.current_folder or ""
+            base_name = os.path.basename(src_path)
+            src_ext = os.path.splitext(base_name)[1].lower()
+            dlg = QDialog(self)
+            dlg.setWindowTitle(self.LABELS.get("add_video_options", "Import Video"))
+            layout = QVBoxLayout(dlg)
+            tip = QLabel(self.LABELS.get("add_video_tip", "Videos are shown in filename order. Consider putting numbers first (e.g., 001_name.mp4) to control sort order."))
+            tip.setWordWrap(True)
+            layout.addWidget(tip)
+            rb_auto = QRadioButton(self.LABELS.get("name_auto_number", "Autonumber: vat_0000"))
+            rb_orig = QRadioButton(self.LABELS.get("name_original", "Original filename & format"))
+            rb_custom = QRadioButton(self.LABELS.get("name_custom", "Custom filename"))
+            rb_auto.setChecked(True)
+            layout.addWidget(rb_auto)
+            layout.addWidget(rb_orig)
+            layout.addWidget(rb_custom)
+            custom_row = QHBoxLayout()
+            custom_row.addWidget(QLabel(self.LABELS.get("custom_filename_label", "Filename:")))
+            le_custom = QLineEdit()
+            le_custom.setPlaceholderText(self.LABELS.get("custom_filename_placeholder", "e.g., 001_scene.mp4"))
+            le_custom.setEnabled(False)
+            custom_row.addWidget(le_custom)
+            layout.addLayout(custom_row)
+            def _toggle_custom():
+                le_custom.setEnabled(rb_custom.isChecked())
+            rb_custom.toggled.connect(_toggle_custom)
+            # Default from inline checkbox
+            cb_mp4 = QCheckBox(self.LABELS.get("convert_to_mp4", "Convert to MP4"))
+            try:
+                cb_mp4.setChecked(bool(self.convert_video_to_mp4_cb.isChecked()))
+            except Exception:
+                cb_mp4.setChecked(True)
+            layout.addWidget(cb_mp4)
+            btns = QHBoxLayout()
+            ok_btn = QPushButton(self.LABELS.get("ok", "OK"))
+            cancel_btn = QPushButton(self.LABELS.get("cancel", "Cancel"))
+            btns.addWidget(ok_btn)
+            btns.addWidget(cancel_btn)
+            layout.addLayout(btns)
+            cancel_btn.clicked.connect(dlg.reject)
+            ok_btn.clicked.connect(dlg.accept)
+            dlg.resize(520, 240)
+            if dlg.exec() != QDialog.Accepted:
+                return
+            to_mp4 = cb_mp4.isChecked()
+            # If converting and video is long, warn but proceed
+            if to_mp4:
+                try:
+                    from vat.utils.video_convert import probe_duration
+                    dur = probe_duration(src_path)
+                except Exception:
+                    dur = None
+                MAX_SECS = 10 * 60
+                if dur is not None and dur > MAX_SECS:
+                    try:
+                        mins = int(dur // 60)
+                        QMessageBox.information(
+                            self,
+                            self.LABELS.get("long_conversion_title", "This may take a while"),
+                            self.LABELS.get("long_conversion_msg", "Converting longer videos can take time. A progress bar will show updates.") + f"\n\nLength: ~{mins} min"
+                        )
+                    except Exception:
+                        pass
+            ext_out = ".mp4" if to_mp4 else (src_ext or ".mp4")
+            def _next_vat_name():
+                i = 0
+                while True:
+                    name = f"vat_{i:04d}{ext_out}"
+                    cand = os.path.join(folder, name)
+                    if not os.path.exists(cand):
+                        return cand
+                    i += 1
+            if rb_auto.isChecked():
+                dst_path = _next_vat_name()
+            elif rb_orig.isChecked():
+                base_no_ext = os.path.splitext(base_name)[0]
+                dst_path = os.path.join(folder, base_no_ext + ext_out)
+                if os.path.exists(dst_path):
+                    reply = QMessageBox.question(self, self.LABELS.get("overwrite_title", "Overwrite?"), self.LABELS.get("file_exists_overwrite", "File already exists. Overwrite?"))
+                    if reply != QMessageBox.Yes:
+                        return
+            else:
+                name_in = (le_custom.text() or "").strip()
+                if not name_in:
+                    QMessageBox.warning(self, self.LABELS.get("error_title", "Error"), self.LABELS.get("custom_name_required", "Please enter a filename."))
+                    return
+                root, ext_in = os.path.splitext(name_in)
+                if not ext_in:
+                    name_in = root + ext_out
+                elif to_mp4 and ext_in.lower() != ".mp4":
+                    name_in = root + ext_out
+                dst_path = os.path.join(folder, name_in)
+                if os.path.exists(dst_path):
+                    reply = QMessageBox.question(self, self.LABELS.get("overwrite_title", "Overwrite?"), self.LABELS.get("file_exists_overwrite", "File already exists. Overwrite?"))
+                    if reply != QMessageBox.Yes:
+                        return
+            if to_mp4:
+                spec = ConvertSpec(src_path=src_path, dst_path=dst_path)
+                worker = VideoConvertWorker(spec)
+                worker.setParent(self)
+                self._active_workers.append(worker)
+                try:
+                    self._video_conversion_in_progress = True
+                except Exception:
+                    pass
+                dlgp = QProgressDialog(self.LABELS.get("converting_video", "Converting…"), self.LABELS.get("cancel", "Cancel"), 0, 100, self)
+                dlgp.setWindowTitle(self.LABELS.get("convert_to_mp4", "Convert to MP4"))
+                dlgp.setAutoClose(True)
+                dlgp.setAutoReset(True)
+                dlgp.setMinimumDuration(0)
+                dlgp.setModal(True)
+                self._active_dialogs.append(dlgp)
+                worker.progress.connect(lambda p: dlgp.setValue(int(p)))
+                def _cleanup_worker():
+                    try:
+                        if worker in self._active_workers:
+                            self._active_workers.remove(worker)
+                    except Exception:
+                        pass
+                    try:
+                        if dlgp in self._active_dialogs:
+                            self._active_dialogs.remove(dlgp)
+                    except Exception:
+                        pass
+                def _done_ok(out_path: str):
+                    _cleanup_worker()
+                    try:
+                        self._video_conversion_in_progress = False
+                    except Exception:
+                        pass
+                    try:
+                        self.statusBar().showMessage(self.LABELS.get("video_imported", "Video imported"), 2000)
+                    except Exception:
+                        pass
+                    try:
+                        name = os.path.basename(out_path)
+                        self._reload_folder_and_select(name)
+                    except Exception:
+                        pass
+                def _done_err(msg: str):
+                    _cleanup_worker()
+                    try:
+                        self._video_conversion_in_progress = False
+                    except Exception:
+                        pass
+                    QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), msg or self.LABELS.get("conversion_failed", "Conversion failed"))
+                def _canceled():
+                    _cleanup_worker()
+                    try:
+                        self._video_conversion_in_progress = False
+                    except Exception:
+                        pass
+                    try:
+                        self.statusBar().showMessage(self.LABELS.get("canceled", "Canceled"), 1500)
+                    except Exception:
+                        pass
+                worker.finished.connect(_done_ok)
+                worker.error.connect(_done_err)
+                worker.canceled.connect(_canceled)
+                dlgp.canceled.connect(worker.cancel)
+                try:
+                    worker.start()
+                    dlgp.show()
+                except Exception as e:
+                    _done_err(str(e))
+            else:
+                try:
+                    shutil.copyfile(src_path, dst_path)
+                except Exception as e:
+                    QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"Failed to import video: {e}")
+                    return
+                try:
+                    name = os.path.basename(dst_path)
+                    self._reload_folder_and_select(name)
+                except Exception:
+                    pass
         except Exception:
             pass
     def _handle_paste_audio_image(self):
@@ -4020,13 +4329,38 @@ class VideoAnnotationApp(QMainWindow):
         try:
             pix = QPixmap(path)
             if pix.isNull():
+                # Try robust QImageReader first
                 try:
                     reader = QImageReader(path)
+                    try:
+                        reader.setAutoTransform(True)
+                    except Exception:
+                        pass
                     img = reader.read()
                     if img and not img.isNull():
                         pix = QPixmap.fromImage(img)
                 except Exception:
-                    pass
+                    img = None
+                # Fallback via Pillow (supports HEIC/HEIF with pillow-heif)
+                if (pix is None or pix.isNull()):
+                    try:
+                        from PIL import Image
+                        try:
+                            import pillow_heif
+                            try:
+                                pillow_heif.register_heif_opener()
+                            except Exception:
+                                pass
+                        except Exception:
+                            pass
+                        im = Image.open(path)
+                        if im.mode not in ("RGB", "RGBA"):
+                            im = im.convert("RGB")
+                        from PIL.ImageQt import ImageQt
+                        qim = ImageQt(im)
+                        pix = QPixmap.fromImage(qim)
+                    except Exception:
+                        pass
             if pix is None or pix.isNull():
                 return None
             cache[path] = pix

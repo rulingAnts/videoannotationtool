@@ -308,8 +308,8 @@ class FolderAccessManager(QObject):
             errors.append(str(e))
         return errors
 
-    # Include common image extensions, notably both TIFF variants
-    IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".gif")
+    # Include common image extensions, notably both TIFF variants, plus HEIC/HEIF/WebP
+    IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".gif", ".heic", ".heif", ".webp")
 
     def list_images(self, path: Optional[str] = None) -> List[str]:
         folder = path or self.current_folder

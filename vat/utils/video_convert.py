@@ -28,6 +28,20 @@ def _probe_duration(ffprobe_path: str, src_path: str) -> Optional[float]:
     except Exception:
         return None
 
+def probe_duration(src_path: str) -> Optional[float]:
+    """Public helper to get media duration in seconds using ffprobe.
+
+    Returns None if ffprobe is unavailable or probing fails.
+    """
+    try:
+        tools = resolve_ff_tools()
+        ffprobe = tools.get("ffprobe")
+        if not ffprobe or not src_path or not os.path.exists(src_path):
+            return None
+        return _probe_duration(ffprobe, src_path)
+    except Exception:
+        return None
+
 
 def _probe_stream_info(ffprobe_path: str, src_path: str):
     info = {
