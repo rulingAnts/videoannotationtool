@@ -159,6 +159,7 @@ def main():
     parser.add_argument('--ffprobe-bin', help='Override path to ffprobe.exe or containing directory (optional)')
     # NSIS
     parser.add_argument('--nsis', action='store_true', help='Validate NSIS script presence')
+    parser.add_argument('--make-installer', action='store_true', help='Build NSIS installer after PyInstaller build')
     args = parser.parse_args()
 
     if args.icon:
@@ -193,12 +194,47 @@ def main():
             extra_args=extra_args,
         )
 
-    if args.nsis:
+    # Optionally build the NSIS installer
+    if args.make-installer or args.nsis:
         nsis = os.path.join(ROOT, 'installer', 'videoannotation_installer.nsi')
-        if os.path.exists(nsis):
-            print('[build_windows] NSIS script ready:', nsis)
-        else:
+        if not os.path.exists(nsis):
             print('[build_windows] No NSIS script found at', nsis)
+        else:
+            print('[build_windows] NSIS script ready:', nsis)
+            if args.make-installer:
+                # Determine version from VERSION file (fallback to latest git tag if needed)
+                version = None
+                version_file = os.path.join(ROOT, 'VERSION')
+                try:
+                    if os.path.exists(version_file):
+                        with open(version_file, 'r', encoding='utf-8') as f:
+                            version = f.read().strip()
+                except Exception:
+                    version = None
+                if not version:
+                    try:
+                        version = subprocess.check_output(['git', 'describe', '--tags', '--abbrev=0'], cwd=ROOT, text=True).strip()
+                        if version.lower().startswith('v'):
+                            version = version[1:]
+                    except Exception:
+                        version = '0.0.0'
+                # Find makensis
+                candidates = [
+                    os.path.join(os.environ.get('ProgramFiles(x86)', r'C:\Program Files (x86)'), 'NSIS', 'makensis.exe'),
+                    os.path.join(os.environ.get('ProgramFiles', r'C:\Program Files'), 'NSIS', 'makensis.exe'),
+                    shutil.which('makensis.exe') or shutil.which('makensis'),
+                ]
+                makensis_path = next((c for c in candidates if c and os.path.isfile(c)), None)
+                if not makensis_path:
+                    print('[build_windows] ERROR: NSIS makensis.exe not found. Install NSIS or add it to PATH.')
+                else:
+                    # Run makensis with VERSION define
+                    cmd = [makensis_path, f"/DVERSION={version}", nsis]
+                    run(cmd, cwd=ROOT)
+
+    if args.nsis:
+        # Already printed readiness above; nothing more to do here when not building
+        pass
 
 
 if __name__ == '__main__':
