@@ -5,9 +5,9 @@ This release introduces the Review experience and streamlines remote workflows f
 
 ## Highlights
 - Review tab: quiz-based review with fairness, timing, grading, and export
-- WhatsApp-friendly media imports: MOV/MPG/AVI → MP4; HEIC/HEIF → JPG
+- WhatsApp-friendly media imports and exports: MOV/MPG/AVI → MP4; HEIC/HEIF → JPG
 - Robust conversions with progress UI and background workers
-- Clipboard audio workflows: paste audio for videos/images and auto-convert to WAV
+- Clipboard audio workflows: paste audio (from WhatsApp, for example) for videos/images and auto-convert to WAV
 - Stability hardening: thread lifecycle fixes, atomic file writes, long-video warnings
 
 ## Changes
