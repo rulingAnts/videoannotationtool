@@ -57,6 +57,7 @@ def resolve_ff_tools():
     ffprobe_exe = ffprobe_path + ".exe"
     chosen_ffmpeg = None
     chosen_ffprobe = None
+    # First, check the standard bundled locations (PyInstaller MEIPASS/onedir)
     if os.path.exists(ffmpeg_path):
         chosen_ffmpeg = ffmpeg_path
     elif os.path.exists(ffmpeg_exe):
@@ -65,6 +66,23 @@ def resolve_ff_tools():
         chosen_ffprobe = ffprobe_path
     elif os.path.exists(ffprobe_exe):
         chosen_ffprobe = ffprobe_exe
+    # Development fallback: look in assets/ffmpeg-bin for platform-specific binaries
+    if not chosen_ffmpeg or not chosen_ffprobe:
+        assets_base = os.path.join("assets", "ffmpeg-bin")
+        if os.name == "nt":
+            ffmpeg_dev = resource_path(os.path.join(assets_base, "windows", "ffmpeg.exe"), check_system=False)
+            ffprobe_dev = resource_path(os.path.join(assets_base, "windows", "ffprobe.exe"), check_system=False)
+        elif sys.platform == "darwin":
+            ffmpeg_dev = resource_path(os.path.join(assets_base, "macos", "ffmpeg"), check_system=False)
+            ffprobe_dev = resource_path(os.path.join(assets_base, "macos", "ffprobe"), check_system=False)
+        else:
+            # Linux or other Unix-like
+            ffmpeg_dev = resource_path(os.path.join(assets_base, "linux", "ffmpeg"), check_system=False)
+            ffprobe_dev = resource_path(os.path.join(assets_base, "linux", "ffprobe"), check_system=False)
+        if not chosen_ffmpeg and os.path.exists(ffmpeg_dev):
+            chosen_ffmpeg = ffmpeg_dev
+        if not chosen_ffprobe and os.path.exists(ffprobe_dev):
+            chosen_ffprobe = ffprobe_dev
     # If bundled not found, fall back to system PATH
     if not chosen_ffmpeg:
         sys_ffmpeg = shutil.which("ffmpeg")

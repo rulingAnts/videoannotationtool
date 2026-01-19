@@ -8,14 +8,12 @@ from PySide6.QtWidgets import QApplication
 # Allow running this file directly (e.g., `python /path/to/vat/main.py`) by
 # ensuring the repository root is on sys.path so `import vat...` works.
 try:
-    from vat.ui.app import VideoAnnotationApp
     from vat.utils.resources import configure_opencv_ffmpeg, configure_pydub_ffmpeg
 except ModuleNotFoundError as e:
     if e.name == 'vat':
         repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         if repo_root not in sys.path:
             sys.path.insert(0, repo_root)
-        from vat.ui.app import VideoAnnotationApp
         from vat.utils.resources import configure_opencv_ffmpeg, configure_pydub_ffmpeg
     else:
         raise
@@ -67,6 +65,18 @@ def main():
     logging.info("Starting Visual Stimulus Kit Tool (PySide6 version)")
     configure_opencv_ffmpeg()
     configure_pydub_ffmpeg()
+    # Import the app only after ffmpeg environment is configured to avoid
+    # pydub warnings at import time.
+    try:
+        from vat.ui.app import VideoAnnotationApp
+    except ModuleNotFoundError as e:
+        if e.name == 'vat':
+            repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            if repo_root not in sys.path:
+                sys.path.insert(0, repo_root)
+            from vat.ui.app import VideoAnnotationApp
+        else:
+            raise
     app = QApplication(sys.argv)
     app.setApplicationName("Visual Stimulus Kit Tool")
     window = VideoAnnotationApp()
