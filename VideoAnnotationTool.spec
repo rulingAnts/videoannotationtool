@@ -3,11 +3,14 @@
 
 from PyInstaller.utils.hooks import collect_data_files
 
+ # Include i18n YAML overlay
+extra_datas = [('vat/i18n/labels.yaml', 'vat/i18n')]
+
 a = Analysis(
     ['videoannotation.py'],
     pathex=[],
     binaries=[('/opt/homebrew/bin/ffmpeg', 'ffmpeg/bin'), ('/opt/homebrew/bin/ffprobe', 'ffmpeg/bin')],
-    datas=collect_data_files('PySide6', include_py_files=False),
+    datas=collect_data_files('PySide6', include_py_files=False) + extra_datas,
     hiddenimports=['PySide6.QtCore', 'PySide6.QtGui', 'PySide6.QtWidgets'],
     hookspath=[],
     hooksconfig={},

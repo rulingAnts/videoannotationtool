@@ -1,0 +1,25 @@
+{
+    "todo-tree.tree.showBadges": false,
+    "todo-tree.tree.hideIconsWhenGroupedByTag": false,
+    "todo-tree.general.tags": [
+        "TODO",
+        "FIXME",
+        "BUG",
+        "[ ]",
+        "[x]"
+    ],
+    "todo-tree.regex.regex": "(//|#|<!--|;|/\\*|^|^[ \\t]*(-|\\d+.))\\s*($TAGS)\\s*(.*)",
+    "todo-tree.regex.regexCaseSensitive": false,
+    "todo-tree.highlights.customHighlight": {
+        "[ ]": {
+            "background": "#444644",
+            "foreground": "#FFFFFF",
+            "icon": "$(circle-large)"
+            },
+        "[x]": {
+            "textDecoration": "line-through",
+            "background": "#00000000",
+            "icon": "$(check)"
+        }
+    }
+}
