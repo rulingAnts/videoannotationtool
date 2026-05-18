@@ -15,6 +15,10 @@
         <h1 id="i18n-brand-title">Visual Stimulus Kit Tool</h1>
       </div>
       <div class="header-right">
+        <nav style="display:flex;gap:12px;align-items:center;margin-right:12px;font-size:14px;">
+          <a href="./faq/index.html" style="color:var(--muted);text-decoration:none;">FAQ</a>
+          <a href="./gpa/index.html" style="color:var(--muted);text-decoration:none;">GPA Guide</a>
+        </nav>
         <div class="badge" id="i18n-badge">Free • Open Source</div>
         <div class="lang-switcher">
           <label for="langSelect" class="visually-hidden">Language</label>
@@ -173,12 +177,12 @@
           <li id="i18n-install-win-li3">No separate install is required.</li>
         </ul>
       </div>
-          <h2 id="i18n-install-mac-heading">macOS and other platforms</h2>
-        <h2 id="i18n-install-mac-heading">Install on macOS</h2>
-            <li id="i18n-install-mac-li1">There is currently no official installer for macOS.</li>
-            <li id="i18n-install-mac-li2">Advanced users can run the tool from source with Python 3.11+; see the README on GitHub for setup steps.</li>
-            <li id="i18n-install-mac-li3">If you need macOS support, please open an issue on GitHub so we can track demand.</li>
-          <li id="i18n-install-mac-li3">On first launch, you may need to allow it in System Settings → Privacy & Security.</li>
+      <div>
+        <h2 id="i18n-install-mac-heading">macOS (interpreted mode only)</h2>
+        <ul>
+          <li id="i18n-install-mac-li1">There is currently no official installer for macOS.</li>
+          <li id="i18n-install-mac-li2">Advanced users can run the tool from source with Python 3.11+; see the README on GitHub for setup steps.</li>
+          <li id="i18n-install-mac-li3">If you need macOS support, please open an issue on GitHub so we can track demand.</li>
         </ul>
       </div>
     </section>
@@ -188,9 +192,9 @@
       <ul>
         <li id="i18n-working-li1"><strong>Folder display:</strong> The app shows the current project folder at the top; hover to see the full path.</li>
         <li id="i18n-working-li2"><strong>Video preview & playback:</strong> Pick a video to preview the first frame and play/stop as needed.</li>
-        <li id="i18n-working-li3"><strong>Audio notes:</strong> Record a short WAV per video. If a file exists, the app will ask before overwriting.</li>
+        <li id="i18n-working-li3"><strong>Audio notes:</strong> Record a short WAV per video. Recordings save automatically the moment they are captured — there is no separate save step. Recording again immediately overwrites any existing file. Use the delete button to remove a recording, or the edit button to open it in Ocenaudio.</li>
         <li id="i18n-working-li4"><strong>Metadata:</strong> Edit project info in the side panel; it’s saved to <code>metadata.txt</code> in your folder.</li>
-        <li id="i18n-working-li5"><strong>Open in Ocenaudio:</strong> Launch all WAVs in Ocenaudio for further editing.</li>
+        <li id="i18n-working-li5"><strong>Open in Ocenaudio:</strong> Bulk-open all WAVs from the current set in Ocenaudio for trimming, normalization, and volume adjustment. A separate bulk normalizer utility is also available (ask the developer) that raises all files to maximum volume without clipping.</li>
         <li id="i18n-working-li6"><strong>Export / Import:</strong> Export all WAVs + metadata, or import WAVs that match your video names.</li>
         <li id="i18n-working-li7"><strong>Join WAVs:</strong> Make a single WAV of all items, with subtle click separators between each clip.</li>
         <li id="i18n-working-li8"><strong>Languages:</strong> Use the top dropdown to switch the interface language.</li>
@@ -267,11 +271,12 @@
 
     <section class="card">
       <h2 id="i18n-troubleshooting-heading">Troubleshooting</h2>
+      <p style="margin-bottom: 8px;">For questions about recording, file naming, export, microphone setup, and remote workflows, see the <a href="./faq/index.html">FAQ page</a>.</p>
       <ul>
-        <li id="i18n-trouble-li1"><strong>Microphone access:</strong> If recording is silent or fails, check your OS microphone permissions for the app.</li>
-        <li id="i18n-trouble-li2"><strong>macOS cannot open the app:</strong> Right‑click the app → Open, or allow it in Privacy & Security and try again.</li>
+        <li id="i18n-trouble-li1"><strong>Microphone not working (Windows):</strong> If recording is silent or fails, check that your microphone is set as the default recording device in Windows Sound settings, and that the app has microphone access in Windows Settings → Privacy &amp; Security → Microphone. Then relaunch the app.</li>
+        <li id="i18n-trouble-li2"><strong>macOS (interpreted mode):</strong> If running from source and macOS blocks the terminal, allow it in System Settings → Privacy &amp; Security.</li>
         <li id="i18n-trouble-li3"><strong>No videos listed:</strong> Confirm the folder contains supported video files (e.g., .mp4, .mov).</li>
-        <li id="i18n-trouble-li4"><strong>Need help?</strong> Visit the <a href="https://github.com/rulingAnts/videoannotationtool/issues" target="_blank" rel="noopener">issue tracker</a>.</li>
+        <li id="i18n-trouble-li4"><strong>Need help?</strong> Visit the <a href="https://github.com/rulingAnts/videoannotationtool/issues" target="_blank" rel="noopener">issue tracker</a>. If the developer is unavailable, other experienced users of the app may also be able to help — ask around.</li>
       </ul>
     </section>
 

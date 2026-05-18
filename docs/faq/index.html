@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FAQ — Visual Stimulus Kit Tool</title>
+  <link rel="stylesheet" href="../styles.css" />
+  <meta name="description" content="Frequently asked questions about the Visual Stimulus Kit Tool — recording, file naming, export, microphone setup, and remote workflows." />
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="brand">
+        <h1>FAQ</h1>
+      </div>
+      <div class="header-right">
+        <a href="../index.html" style="color: var(--muted); font-size: 14px; text-decoration: none;">← Back to main page</a>
+      </div>
+    </header>
+
+    <section class="card" id="recording">
+      <h2>Recording &amp; Saving</h2>
+
+      <h3>Can I delete a recording if I made a mistake?</h3>
+      <p>Yes — each recording has a delete button directly in the app. You can also simply record again, which overwrites the existing file automatically.</p>
+
+      <h3>Can I edit a recording after I've made it?</h3>
+      <p>Yes — each recording has an edit button that opens that recording in Ocenaudio, where you can trim, adjust volume, or make other edits.</p>
+
+      <h3>Does recording again overwrite the previous take?</h3>
+      <p>Yes. Recording again immediately replaces the existing file for that stimulus item. There is no way to keep multiple takes — the new recording overwrites the old one the moment it is captured.</p>
+
+      <h3>Does the app save automatically?</h3>
+      <p>Yes. The app saves every recording the moment it is captured. There is no File → Save step.</p>
+
+      <h3>How does the app know which recording belongs to which video or image?</h3>
+      <p>Recordings are matched to stimulus files by filename. When you record a response to a video or image, the app saves a <code>.wav</code> file with the same name as the stimulus file — in the same folder. For example, a response to <code>clip01.mp4</code> is saved as <code>clip01.wav</code>, and a response to <code>photo03.jpg</code> is saved as <code>photo03.jpg.wav</code>.</p>
+      <p><strong>Important:</strong> If you rename a stimulus file after recording a response, the app will no longer be able to find that recording.</p>
+    </section>
+
+    <section class="card" id="organization">
+      <h2>File Organization</h2>
+
+      <h3>What order does the app display stimulus files in?</h3>
+      <p>Files are sorted by filename, which automatically matches the order in your stimulus set's file list. If you need to change the display order, rename the files with leading-zero numbers at the front of the filename (e.g., <code>01_clip.mp4</code>, <code>02_clip.mp4</code>).</p>
+      <p><strong>Important:</strong> Do this <em>before</em> making any recordings. If you rename a file after recording a response to it, the recording will no longer be matched to that file.</p>
+
+      <h3>Should I work through one stimulus set at a time?</h3>
+      <p>Yes — always open and work through one folder/set at a time. Do not merge multiple sets into a single folder. Sets may contain files with identical filenames, which would cause recordings to overwrite each other.</p>
+    </section>
+
+    <section class="card" id="images">
+      <h2>Still Images</h2>
+
+      <h3>How do the still images work? Is that a separate window?</h3>
+      <p>Images are in a separate <strong>tab</strong>, not a separate window. The workflow is the same as for videos: click a stimulus item and record. You can double-click any stimulus to view it fullscreen. Image response files follow the same naming convention as video responses, with the full image filename preserved: e.g., <code>photo03.jpg.wav</code>. Switch between the video and image tabs as your stimulus set instructions indicate — typically every 7–8 items.</p>
+    </section>
+
+    <section class="card" id="export">
+      <h2>Export</h2>
+
+      <h3>Does the "Export as single WAV" button export everything?</h3>
+      <p>It exports only the recordings in the <strong>currently active tab</strong> — either all video responses or all image responses, depending on which tab you have open. Switch tabs and export again to get the other set.</p>
+    </section>
+
+    <section class="card" id="audio-input">
+      <h2>Microphone &amp; Audio Input</h2>
+
+      <h3>What if I plug in a new microphone and it isn't being picked up?</h3>
+      <p>The app uses your system-wide audio input settings — there is no in-app device selector. If you switch to a new recording device, change the input in your <strong>Windows Sound settings</strong> and then <strong>relaunch the app</strong> to pick up the change.</p>
+    </section>
+
+    <section class="card" id="workflow">
+      <h2>Session Workflow</h2>
+
+      <h3>Should I rotate native speakers between stimulus items?</h3>
+      <p>No — don't rotate speakers mid-session. One speaker should work through all video stimuli before the images phase begins, so they've seen everything in context.</p>
+
+      <h3>Can I work remotely with a consultant who isn't physically present?</h3>
+      <p>Yes. The app supports a remote workflow using WhatsApp Desktop:</p>
+      <ol>
+        <li><strong>Send the stimulus to your consultant:</strong> Right-click a video or image in the app and choose Copy. Paste it into a WhatsApp chat and send it to your consultant.</li>
+        <li><strong>Receive their voice response:</strong> Your consultant records a voice message in WhatsApp and sends it to you.</li>
+        <li>
+          <strong>Copy the voice message to your computer (WhatsApp Desktop on Windows):</strong>
+          <ul>
+            <li>Hover over the voice message in WhatsApp Desktop until a small chevron (▾) appears on the right side of the message.</li>
+            <li>Click the chevron to open the message menu.</li>
+            <li>Select <strong>Forward</strong>.</li>
+            <li>In the forwarding panel that appears, look at the bottom action bar and choose <strong>Copy</strong> to copy the audio file to your clipboard. (On some versions of WhatsApp Desktop, you may see a <strong>Download</strong> option directly in the chevron menu instead, which saves the file to your Downloads folder.)</li>
+            <li>If you used Copy: paste the file into File Explorer (any folder) to save it.</li>
+          </ul>
+        </li>
+        <li><strong>Import into the app:</strong> Use the <strong>Add Audio</strong> button in the app to load the saved audio file and attach it to the corresponding stimulus item.</li>
+      </ol>
+      <p><strong>Note:</strong> Audio captured this way is lower quality than a direct recording, and you have less control over the consultant's recording conditions. Direct in-person recording is preferred when possible.</p>
+    </section>
+
+    <!--
+      LOCALIZATION TODO (added 2026-05-18):
+      All content on this FAQ page is English-only and has NOT yet been translated.
+      In the next localization pass, translate all sections into the 6 supported
+      non-English languages: Bahasa Indonesia (id), 한국어 (ko), Nederlands (nl),
+      Português Brasil (pt-BR), Español Latinoamérica (es), Afrikaans (af).
+      Follow the TRANSLATIONS object pattern in docs/index.html.
+    -->
+
+    <p class="footer">
+      <a href="../index.html">← Back to main page</a> ·
+      Latest release: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → Releases</a>
+    </p>
+  </div>
+</body>
+</html>
