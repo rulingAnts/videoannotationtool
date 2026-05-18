@@ -974,6 +974,14 @@ class VideoAnnotationApp(QMainWindow):
         add_menu.addAction(act_clip)
         self.add_audio_button.setMenu(add_menu)
         audio_controls_layout.addWidget(self.add_audio_button)
+        self.delete_recording_button = QPushButton(self.LABELS.get("delete_recording", "Delete Recording"))
+        self.delete_recording_button.clicked.connect(self._handle_delete_recording_video)
+        self.delete_recording_button.setEnabled(False)
+        audio_controls_layout.addWidget(self.delete_recording_button)
+        self.edit_recording_button = QPushButton(self.LABELS.get("edit_recording_ocenaudio", "Edit in Ocenaudio"))
+        self.edit_recording_button.clicked.connect(self._handle_edit_recording_ocenaudio_video)
+        self.edit_recording_button.setEnabled(False)
+        audio_controls_layout.addWidget(self.edit_recording_button)
         self.recording_status_label = QLabel("")
         self.recording_status_label.setStyleSheet("color: red; font-weight: bold;")
         audio_controls_layout.addWidget(self.recording_status_label)
@@ -1010,7 +1018,6 @@ class VideoAnnotationApp(QMainWindow):
         # Right cell: controls and tip stacked vertically
         # (QVBoxLayout, QHBoxLayout, QCheckBox are already imported at the top)
         controls_and_tip = QVBoxLayout()
-        controls_row = QHBoxLayout()
         # Always show Show filenames toggle above controls
         self.show_image_labels = False
         self.image_labels_toggle = QCheckBox(
@@ -1022,7 +1029,8 @@ class VideoAnnotationApp(QMainWindow):
         self.image_labels_toggle.setChecked(self.show_image_labels)
         self.image_labels_toggle.toggled.connect(self._toggle_image_labels)
         controls_and_tip.addWidget(self.image_labels_toggle)
-        # Controls row (audio/record buttons)
+        # Row 1: playback and recording controls
+        controls_row = QHBoxLayout()
         self.play_image_audio_button = QPushButton(self.LABELS.get("play_audio", "Play Audio"))
         self.play_image_audio_button.clicked.connect(self._handle_play_image_audio)
         self.play_image_audio_button.setEnabled(False)
@@ -1035,14 +1043,10 @@ class VideoAnnotationApp(QMainWindow):
         self.record_image_button.clicked.connect(self._handle_record_image)
         self.record_image_button.setEnabled(False)
         controls_row.addWidget(self.record_image_button)
-        # Add Image from file only with default convert-to-jpg checkbox
-        self.add_image_button = QPushButton(self.LABELS.get("add_image", "Add image…"))
-        self.add_image_button.setEnabled(True)
-        self.add_image_button.clicked.connect(self._handle_add_existing_image)
-        controls_row.addWidget(self.add_image_button)
-        self.convert_image_to_jpg_cb = QCheckBox(self.LABELS.get("convert_to_jpg", "Convert to JPG"))
-        self.convert_image_to_jpg_cb.setChecked(True)
-        controls_row.addWidget(self.convert_image_to_jpg_cb)
+        self.stop_image_record_button = QPushButton(self.LABELS.get("stop_recording", "Stop Recording"))
+        self.stop_image_record_button.clicked.connect(self._handle_stop_image_record)
+        self.stop_image_record_button.setEnabled(False)
+        controls_row.addWidget(self.stop_image_record_button)
         # Add audio dropdown (From file / Paste from clipboard)
         self.add_image_audio_button = QToolButton()
         self.add_image_audio_button.setText(self.LABELS.get("add_existing_audio", "Add audio…"))
@@ -1060,12 +1064,27 @@ class VideoAnnotationApp(QMainWindow):
         add_img_menu.addAction(act_img_clip)
         self.add_image_audio_button.setMenu(add_img_menu)
         controls_row.addWidget(self.add_image_audio_button)
-        self.stop_image_record_button = QPushButton(self.LABELS.get("stop_recording", "Stop Recording"))
-        self.stop_image_record_button.clicked.connect(self._handle_stop_image_record)
-        self.stop_image_record_button.setEnabled(False)
-        controls_row.addWidget(self.stop_image_record_button)
         controls_row.addStretch(1)
         controls_and_tip.addLayout(controls_row)
+        # Row 2: file management controls
+        controls_row2 = QHBoxLayout()
+        self.add_image_button = QPushButton(self.LABELS.get("add_image", "Add image…"))
+        self.add_image_button.setEnabled(True)
+        self.add_image_button.clicked.connect(self._handle_add_existing_image)
+        controls_row2.addWidget(self.add_image_button)
+        self.convert_image_to_jpg_cb = QCheckBox(self.LABELS.get("convert_to_jpg", "Convert to JPG"))
+        self.convert_image_to_jpg_cb.setChecked(True)
+        controls_row2.addWidget(self.convert_image_to_jpg_cb)
+        self.delete_image_recording_button = QPushButton(self.LABELS.get("delete_recording", "Delete Recording"))
+        self.delete_image_recording_button.clicked.connect(self._handle_delete_recording_image)
+        self.delete_image_recording_button.setEnabled(False)
+        controls_row2.addWidget(self.delete_image_recording_button)
+        self.edit_image_recording_button = QPushButton(self.LABELS.get("edit_recording_ocenaudio", "Edit in Ocenaudio"))
+        self.edit_image_recording_button.clicked.connect(self._handle_edit_recording_ocenaudio_image)
+        self.edit_image_recording_button.setEnabled(False)
+        controls_row2.addWidget(self.edit_image_recording_button)
+        controls_row2.addStretch(1)
+        controls_and_tip.addLayout(controls_row2)
         # Tip below controls
         self.image_fullscreen_tip = QLabel(
             self.LABELS.get(
@@ -1255,6 +1274,15 @@ class VideoAnnotationApp(QMainWindow):
                     acts[1].setText(self.LABELS.get("add_audio_paste_clipboard", "Paste from clipboard"))
         except Exception:
             pass
+        try:
+            if getattr(self, 'add_image_audio_button', None) is not None and self.add_image_audio_button.menu():
+                self.add_image_audio_button.setText(self.LABELS.get("add_existing_audio", "Add audio…"))
+                acts = self.add_image_audio_button.menu().actions()
+                if len(acts) >= 2:
+                    acts[0].setText(self.LABELS.get("add_audio_from_file", "From file…"))
+                    acts[1].setText(self.LABELS.get("add_audio_paste_clipboard", "Paste from clipboard"))
+        except Exception:
+            pass
         self.save_settings()
 
     def _toggle_drawer(self):
@@ -1422,6 +1450,32 @@ class VideoAnnotationApp(QMainWindow):
         self.play_audio_button.setText(self.LABELS["play_audio"])
         self.stop_audio_button.setText(self.LABELS["stop_audio"])
         self.record_button.setText(self.LABELS["record_audio"] if not self.is_recording else self.LABELS["stop_recording"])
+        if getattr(self, 'delete_recording_button', None):
+            self.delete_recording_button.setText(self.LABELS.get("delete_recording", "Delete Recording"))
+        if getattr(self, 'edit_recording_button', None):
+            self.edit_recording_button.setText(self.LABELS.get("edit_recording_ocenaudio", "Edit in Ocenaudio"))
+        if getattr(self, 'delete_image_recording_button', None):
+            self.delete_image_recording_button.setText(self.LABELS.get("delete_recording", "Delete Recording"))
+        if getattr(self, 'edit_image_recording_button', None):
+            self.edit_image_recording_button.setText(self.LABELS.get("edit_recording_ocenaudio", "Edit in Ocenaudio"))
+        if getattr(self, 'add_video_button', None):
+            self.add_video_button.setText(self.LABELS.get("add_video", "Add video…"))
+        if getattr(self, 'convert_mp4_button', None):
+            self.convert_mp4_button.setText(self.LABELS.get("convert_to_mp4", "Convert to MP4"))
+        if getattr(self, 'convert_video_to_mp4_cb', None):
+            self.convert_video_to_mp4_cb.setText(self.LABELS.get("convert_to_mp4", "Convert to MP4"))
+        if getattr(self, 'play_image_audio_button', None):
+            self.play_image_audio_button.setText(self.LABELS.get("play_audio", "Play Audio"))
+        if getattr(self, 'stop_image_audio_button', None):
+            self.stop_image_audio_button.setText(self.LABELS.get("stop_audio", "Stop Audio"))
+        if getattr(self, 'record_image_button', None):
+            self.record_image_button.setText(self.LABELS.get("record_audio", "Record Audio"))
+        if getattr(self, 'stop_image_record_button', None):
+            self.stop_image_record_button.setText(self.LABELS.get("stop_recording", "Stop Recording"))
+        if getattr(self, 'add_image_button', None):
+            self.add_image_button.setText(self.LABELS.get("add_image", "Add image…"))
+        if getattr(self, 'convert_image_to_jpg_cb', None):
+            self.convert_image_to_jpg_cb.setText(self.LABELS.get("convert_to_jpg", "Convert to JPG"))
         if getattr(self, 'edit_metadata_btn', None):
             self.edit_metadata_btn.setText(self.LABELS["edit_metadata"])
         if not self.current_video:
@@ -1816,7 +1870,8 @@ class VideoAnnotationApp(QMainWindow):
             if getattr(self, 'add_audio_button', None):
                 self.add_audio_button.setEnabled(not self.is_recording)
             wav_path = self.fs.wav_path_for(self.current_video)
-            if os.path.exists(wav_path):
+            wav_exists = os.path.exists(wav_path)
+            if wav_exists:
                 # Disable Play while audio is actively playing
                 self.play_audio_button.setEnabled(not self.is_playing_audio)
                 self.stop_audio_button.setEnabled(True)
@@ -1833,6 +1888,10 @@ class VideoAnnotationApp(QMainWindow):
                 self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
                 if getattr(self, 'badge_label', None):
                     self.badge_label.setVisible(False)
+            if getattr(self, 'delete_recording_button', None):
+                self.delete_recording_button.setEnabled(wav_exists and not self.is_recording)
+            if getattr(self, 'edit_recording_button', None):
+                self.edit_recording_button.setEnabled(wav_exists and not self.is_recording)
             # Format badge removed
         else:
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
@@ -1846,6 +1905,10 @@ class VideoAnnotationApp(QMainWindow):
             self.record_button.setText(self.LABELS["record_audio"])
             if getattr(self, 'add_audio_button', None):
                 self.add_audio_button.setEnabled(False)
+            if getattr(self, 'delete_recording_button', None):
+                self.delete_recording_button.setEnabled(False)
+            if getattr(self, 'edit_recording_button', None):
+                self.edit_recording_button.setEnabled(False)
             self.update_recording_indicator()
             self.video_label.setStyleSheet("background-color: black; color: white; border: 1px solid #333;")
             if getattr(self, 'badge_label', None):
@@ -3512,39 +3575,10 @@ class VideoAnnotationApp(QMainWindow):
                 pass
         finally:
             super().closeEvent(event)
-    def open_in_ocenaudio(self):
-        if not self.fs.current_folder:
-            QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["no_folder_selected"]) 
-            return
-        # Tab-aware: open recordings for the active tab
-        try:
-            active_index = self.right_panel.currentIndex() if getattr(self, 'right_panel', None) else 0
-        except Exception:
-            active_index = 0
-        
-        # Determine which recordings to open based on active tab
-        if active_index == 1:  # Images tab
-            file_paths = self.fs.image_recordings_in()
-        elif active_index == 2:  # Review tab
-            # Get recordings from Review tab's filtered scope
-            try:
-                review_tab = getattr(self, 'review_tab', None)
-                if review_tab:
-                    items = review_tab._get_recorded_items()
-                    file_paths = [wav_path for _, _, wav_path in items]
-                else:
-                    file_paths = self.fs.recordings_in()
-            except Exception:
-                file_paths = self.fs.recordings_in()
-        else:  # Videos tab (default)
-            file_paths = self.fs.video_recordings_in()
-        
-        if not file_paths:
-            QMessageBox.information(self, self.LABELS["no_files"], self.LABELS["no_wavs_found"]) 
-            return
-        file_paths.sort()
+    def _launch_ocenaudio(self, file_paths: list) -> None:
+        """Resolve the Ocenaudio executable and open the given file paths in it."""
         if self.ocenaudio_path and os.path.exists(self.ocenaudio_path):
-            command = [self.ocenaudio_path] + file_paths
+            resolved = self.ocenaudio_path
         else:
             possible_paths = []
             if sys.platform == "darwin":
@@ -3559,35 +3593,135 @@ class VideoAnnotationApp(QMainWindow):
                 ]
             else:
                 possible_paths = [shutil.which("ocenaudio")]
-            ocenaudio_path = None
+            resolved = None
             for path in possible_paths:
                 if path and os.path.exists(path):
-                    ocenaudio_path = path
+                    resolved = path
                     break
-            if not ocenaudio_path:
-                ocenaudio_path, _ = QFileDialog.getOpenFileName(
+            if not resolved:
+                resolved, _ = QFileDialog.getOpenFileName(
                     self,
                     self.LABELS["ocenaudio_locate_title"],
                     "",
                     "Executable Files (*.exe);;All Files (*)" if sys.platform == "win32" else "All Files (*)"
                 )
-                if not ocenaudio_path:
-                    QMessageBox.warning(
-                        self,
-                        self.LABELS["ocenaudio_not_found_title"],
-                        self.LABELS.get(
-                            "ocenaudio_not_found_body",
-                            LABELS_ALL["English"]["ocenaudio_not_found_body"],
-                        ),
-                    )
+                if not resolved:
+                    from PySide6.QtGui import QDesktopServices
+                    msg = QMessageBox(self)
+                    msg.setWindowTitle(self.LABELS["ocenaudio_not_found_title"])
+                    msg.setText(self.LABELS.get(
+                        "ocenaudio_not_found_body",
+                        LABELS_ALL["English"]["ocenaudio_not_found_body"],
+                    ))
+                    download_btn = msg.addButton("Download Ocenaudio", QMessageBox.ActionRole)
+                    msg.addButton(QMessageBox.Ok)
+                    msg.exec()
+                    if msg.clickedButton() == download_btn:
+                        QDesktopServices.openUrl(QUrl("https://www.ocenaudio.com"))
                     return
-            self.ocenaudio_path = ocenaudio_path
+            self.ocenaudio_path = resolved
             self.save_settings()
-            command = [self.ocenaudio_path] + file_paths
         try:
-            subprocess.Popen(command)
+            subprocess.Popen([resolved] + file_paths)
         except Exception as e:
             QMessageBox.critical(self, self.LABELS["error_title"], f"{self.LABELS['ocenaudio_open_fail_prefix']}{e}")
+
+    def open_in_ocenaudio(self):
+        if not self.fs.current_folder:
+            QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["no_folder_selected"])
+            return
+        try:
+            active_index = self.right_panel.currentIndex() if getattr(self, 'right_panel', None) else 0
+        except Exception:
+            active_index = 0
+        if active_index == 1:  # Images tab
+            file_paths = self.fs.image_recordings_in()
+        elif active_index == 2:  # Review tab
+            try:
+                review_tab = getattr(self, 'review_tab', None)
+                if review_tab:
+                    items = review_tab._get_recorded_items()
+                    file_paths = [wav_path for _, _, wav_path in items]
+                else:
+                    file_paths = self.fs.recordings_in()
+            except Exception:
+                file_paths = self.fs.recordings_in()
+        else:  # Videos tab (default)
+            file_paths = self.fs.video_recordings_in()
+        if not file_paths:
+            QMessageBox.information(self, self.LABELS["no_files"], self.LABELS["no_wavs_found"])
+            return
+        file_paths.sort()
+        self._launch_ocenaudio(file_paths)
+
+    def _handle_edit_recording_ocenaudio_video(self):
+        wav_path = self.fs.wav_path_for(self.current_video)
+        if not os.path.exists(wav_path):
+            return
+        self._launch_ocenaudio([wav_path])
+
+    def _handle_delete_recording_video(self):
+        wav_path = self.fs.wav_path_for(self.current_video)
+        if not os.path.exists(wav_path):
+            return
+        filename = os.path.basename(wav_path)
+        confirm_body = self.LABELS.get(
+            "delete_recording_confirm_body",
+            LABELS_ALL["English"]["delete_recording_confirm_body"],
+        ).format(filename=filename)
+        reply = QMessageBox.question(
+            self,
+            self.LABELS.get("delete_recording_confirm_title", LABELS_ALL["English"]["delete_recording_confirm_title"]),
+            confirm_body,
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if reply == QMessageBox.Yes:
+            try:
+                os.remove(wav_path)
+            except Exception as e:
+                QMessageBox.critical(self, self.LABELS["error_title"], str(e))
+                return
+            self.update_media_controls()
+
+    def _handle_edit_recording_ocenaudio_image(self):
+        sel = self.images_list.currentItem()
+        if sel is None:
+            return
+        path = sel.data(Qt.UserRole) or os.path.join(self.fs.current_folder or "", sel.text())
+        wav_path = self.fs.find_existing_image_audio(path)
+        if not wav_path:
+            return
+        self._launch_ocenaudio([wav_path])
+
+    def _handle_delete_recording_image(self):
+        sel = self.images_list.currentItem()
+        if sel is None:
+            return
+        path = sel.data(Qt.UserRole) or os.path.join(self.fs.current_folder or "", sel.text())
+        wav_path = self.fs.find_existing_image_audio(path)
+        if not wav_path:
+            return
+        filename = os.path.basename(wav_path)
+        confirm_body = self.LABELS.get(
+            "delete_recording_confirm_body",
+            LABELS_ALL["English"]["delete_recording_confirm_body"],
+        ).format(filename=filename)
+        reply = QMessageBox.question(
+            self,
+            self.LABELS.get("delete_recording_confirm_title", LABELS_ALL["English"]["delete_recording_confirm_title"]),
+            confirm_body,
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if reply == QMessageBox.Yes:
+            try:
+                os.remove(wav_path)
+            except Exception as e:
+                QMessageBox.critical(self, self.LABELS["error_title"], str(e))
+                return
+            self._update_image_record_controls(path)
+
     def export_wavs(self):
         if not self.fs.current_folder:
             QMessageBox.critical(self, "Error", "No folder selected.")
@@ -4575,12 +4709,20 @@ class VideoAnnotationApp(QMainWindow):
                 self.stop_image_record_button.setEnabled(True)
                 if getattr(self, 'add_image_audio_button', None):
                     self.add_image_audio_button.setEnabled(False)
+                if getattr(self, 'delete_image_recording_button', None):
+                    self.delete_image_recording_button.setEnabled(False)
+                if getattr(self, 'edit_image_recording_button', None):
+                    self.edit_image_recording_button.setEnabled(False)
             else:
                 self.record_image_button.setEnabled(True)
                 self.stop_image_record_button.setEnabled(False)
                 if getattr(self, 'add_image_audio_button', None):
                     # Enable import when an image is selected
                     self.add_image_audio_button.setEnabled(bool(path))
+                if getattr(self, 'delete_image_recording_button', None):
+                    self.delete_image_recording_button.setEnabled(exists)
+                if getattr(self, 'edit_image_recording_button', None):
+                    self.edit_image_recording_button.setEnabled(exists)
             try:
                 logging.debug(f"UI._update_image_record_controls: wav_path={wav_path}, exists={exists}, is_recording={self.is_recording}")
             except Exception:

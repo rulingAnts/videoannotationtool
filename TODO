@@ -15,12 +15,13 @@
 # For a later release:
 [ ] Add backward compatible convention of including video filenames in matching wav filenames.
 [ ] Add a "matching" tab that lets you match audio files of any format with pictures and videos (need a visual media pane and an audio pane). And then when a match is made, the audio file is converted to 16-bit wav and named to match the image/video file (including extension at least if it's an image).
+  NOTE: May be superseded by the "Add audio" button already on Videos/Images tabs (accepts any format, converts to 16-bit WAV, renames to match). Revisit whether this tab adds anything new.
 
 # FS Manager Integration Follow-ups
 
  [x] Replace remaining `self.folder_path` references with `self.fs.current_folder` in `show_first_frame()`, `play_video()`, and any guards.
  [x] Standardize `JoinWavsWorker` to rely on `FolderAccessManager` (remove legacy `folder_path`).
- [] Wire `imagesUpdated` signal to any still-image views when implemented.
+ [x] Wire `imagesUpdated` signal to any still-image views when implemented.
  [x] Migrate any direct `os.listdir` usage in UI to `FolderAccessManager` helpers where applicable.
  [x] Centralize Windows dotfile cleanup in `FolderAccessManager.cleanup_hidden_files()` and use it in UI.
  [] Investigate occasional playback segfault; gather logs and reproduce cases.
@@ -31,4 +32,4 @@
  [x] Switch to structured YAML logging with rotation (1MB, 3 backups).
  [] Add additional structured entries around OpenCV open/read failures to aid reproduction.
 
- [] Add a tab for a grid-view interface of still images (and the ability to click each and have a play/record modal/menu come up. For record, confirm overwrite. Recorded audio for images should include the file extension of the image file before .wav so that they don't overwrite the video recording.)
+ [x] Add a tab for a grid-view interface of still images (and the ability to click each and have a play/record modal/menu come up. For record, confirm overwrite. Recorded audio for images should include the file extension of the image file before .wav so that they don't overwrite the video recording.)

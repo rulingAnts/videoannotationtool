@@ -90,14 +90,14 @@ class ReviewTab(QWidget):
         layout.addWidget(header)
         
         # Tip
-        tip = QLabel(self.LABELS.get(
+        self._tip_label = QLabel(self.LABELS.get(
             "review_tip_html",
             "<b>Tip:</b> Single-click selects. Right-click, Ctrl/Cmd+Click, or Enter confirms. "
             "Double-click opens preview/fullscreen. Press Space to replay prompt."
         ))
-        tip.setWordWrap(True)
-        tip.setStyleSheet("color: #555; font-size: 12px; padding: 4px;")
-        layout.addWidget(tip)
+        self._tip_label.setWordWrap(True)
+        self._tip_label.setStyleSheet("color: #555; font-size: 12px; padding: 4px;")
+        layout.addWidget(self._tip_label)
         
         # Progress bar and timer
         progress_layout = QHBoxLayout()
@@ -472,14 +472,11 @@ class ReviewTab(QWidget):
             self.LABELS = {}
         # Tip
         try:
-            for i in range(self.layout().count()):
-                w = self.layout().itemAt(i).widget()
-                if isinstance(w, QLabel) and "Tip:" in (w.text() or ""):
-                    w.setText(self.LABELS.get(
-                        "review_tip_html",
-                        "<b>Tip:</b> Single-click selects. Right-click, Ctrl/Cmd+Click, or Enter confirms. Double-click opens preview/fullscreen. Press Space to replay prompt."
-                    ))
-                    break
+            if getattr(self, '_tip_label', None) is not None:
+                self._tip_label.setText(self.LABELS.get(
+                    "review_tip_html",
+                    "<b>Tip:</b> Single-click selects. Right-click, Ctrl/Cmd+Click, or Enter confirms. Double-click opens preview/fullscreen. Press Space to replay prompt."
+                ))
         except Exception:
             pass
         # Header controls
