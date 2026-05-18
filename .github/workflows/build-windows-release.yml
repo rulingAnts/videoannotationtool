@@ -1,6 +1,6 @@
 name: Build Windows Pre-release
 
-on:
+"on":
   workflow_dispatch:
   push:
     branches:
