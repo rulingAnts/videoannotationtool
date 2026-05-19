@@ -11,56 +11,331 @@
   <div class="container">
     <header class="header">
       <div class="brand">
-        <h1>GPA Review Guide</h1>
+        <h1 id="i18n-gpa-title">GPA Review Guide</h1>
       </div>
       <div class="header-right">
-        <div class="badge">Offline Guide</div>
+        <div class="badge" id="i18n-gpa-badge">Offline Guide</div>
+        <div class="lang-switcher">
+          <label for="langSelect" class="visually-hidden">Language</label>
+          <select id="langSelect"></select>
+        </div>
       </div>
     </header>
 
     <section class="card" id="intro">
-      <h2>Overview</h2>
-      <p>The Review tab runs quiz‑style sessions with fairness rules, per‑item timing, repetitions, grading, and YAML/grouped exports. It only quizzes items that have recordings.</p>
-      <p>Below are three practical ways to use the app with GPA “Dirty Dozen” activities.</p>
+      <h2 id="i18n-gpa-overview-heading">Overview</h2>
+      <p id="i18n-gpa-overview-p1">The Review tab runs quiz‑style sessions with fairness rules, per‑item timing, repetitions, grading, and YAML/grouped exports. It only quizzes items that have recordings.</p>
+      <p id="i18n-gpa-overview-p2">Below are three practical ways to use the app with GPA "Dirty Dozen" activities.</p>
     </section>
 
     <section class="card" id="default">
-      <h2>Default: record after the session for independent review</h2>
+      <h2 id="i18n-gpa-default-heading">Default: record after the session for independent review</h2>
       <ol>
-        <li><strong>Prepare your folders</strong> (images/videos) in advance and open them in the app.</li>
-        <li>Meet with a native speaker and <strong>collect a small set of words/phrases</strong> using props, real‑world context, or paper notes.</li>
-        <li>After the session, use the <em>Videos</em> and <em>Images</em> tabs to <strong>record a clean prompt/definition</strong> for each item. Each WAV will share the media filename.</li>
-        <li>Open the <em>Review</em> tab and set <strong>repetitions to 3–5</strong>. Quiz yourself on the recorded items (the Review tab only shows items with recordings).</li>
-        <li>Repeat until comfortable; add new items to your folder and record prompts, then review again.</li>
+        <li id="i18n-gpa-default-li1"><strong>Prepare your folders</strong> (images/videos) in advance and open them in the app.</li>
+        <li id="i18n-gpa-default-li2">Meet with a native speaker and <strong>collect a small set of words/phrases</strong> using props, real‑world context, or paper notes.</li>
+        <li id="i18n-gpa-default-li3">After the session, use the <em>Videos</em> and <em>Images</em> tabs to <strong>record a clean prompt/definition</strong> for each item. Each WAV will share the media filename.</li>
+        <li id="i18n-gpa-default-li4">Open the <em>Review</em> tab and set <strong>repetitions to 3–5</strong>. Quiz yourself on the recorded items (the Review tab only shows items with recordings).</li>
+        <li id="i18n-gpa-default-li5">Repeat until comfortable; add new items to your folder and record prompts, then review again.</li>
       </ol>
-      <p><strong>Tip:</strong> Configure fairness rules, timing, and sounds in the Review header. Export session stats as YAML and use grouped export when needed.</p>
+      <p id="i18n-gpa-default-tip"><strong>Tip:</strong> Configure fairness rules, timing, and sounds in the Review header. Export session stats as YAML and use grouped export when needed.</p>
     </section>
 
     <section class="card" id="live">
-      <h2>Alternate: train a partner during the session</h2>
+      <h2 id="i18n-gpa-live-heading">Alternate: train a partner during the session</h2>
       <ol>
-        <li>Prepare and open your folders in the app.</li>
-        <li><strong>Record one word</strong> (Videos or Images tab), then switch to <em>Review</em> and quiz it (set reps to 3–5).</li>
-        <li><strong>Add one new word</strong>, record it, then quiz the growing set in <em>Review</em>.</li>
-        <li>Repeat until you reach <strong>twelve</strong> items (“Dirty Dozen”).</li>
-        <li>Use this flow to help a native speaker partner <strong>see and practice</strong> the add‑one‑quiz process.</li>
+        <li id="i18n-gpa-live-li1">Prepare and open your folders in the app.</li>
+        <li id="i18n-gpa-live-li2"><strong>Record one word</strong> (Videos or Images tab), then switch to <em>Review</em> and quiz it (set reps to 3–5).</li>
+        <li id="i18n-gpa-live-li3"><strong>Add one new word</strong>, record it, then quiz the growing set in <em>Review</em>.</li>
+        <li id="i18n-gpa-live-li4">Repeat until you reach <strong>twelve</strong> items ("Dirty Dozen").</li>
+        <li id="i18n-gpa-live-li5">Use this flow to help a native speaker partner <strong>see and practice</strong> the add‑one‑quiz process.</li>
       </ol>
     </section>
 
     <section class="card" id="limited">
-      <h2>Alternate: maximize limited face‑time</h2>
+      <h2 id="i18n-gpa-limited-heading">Alternate: maximize limited face‑time</h2>
       <ol>
-        <li><strong>Prepare a picture dictionary</strong> of the words you need to learn and open the folder in the app.</li>
-        <li>When you have limited time with a native speaker, <strong>record prompts quickly</strong> for as many items as possible.</li>
-        <li>Later, in the <em>Review</em> tab, use <strong>Items per Session</strong> to simulate Dirty Dozen: start with 2, quiz; then 3, quiz; then 4, etc.</li>
+        <li id="i18n-gpa-limited-li1"><strong>Prepare a picture dictionary</strong> of the words you need to learn and open the folder in the app.</li>
+        <li id="i18n-gpa-limited-li2">When you have limited time with a native speaker, <strong>record prompts quickly</strong> for as many items as possible.</li>
+        <li id="i18n-gpa-limited-li3">Later, in the <em>Review</em> tab, use <strong>Items per Session</strong> to simulate Dirty Dozen: start with 2, quiz; then 3, quiz; then 4, etc.</li>
       </ol>
-      <p><strong>Note:</strong> Live, interactive activities with real‑world context are ideal. If that’s not feasible, this app helps you learn efficiently with limited access.</p>
+      <p id="i18n-gpa-limited-note"><strong>Note:</strong> Live, interactive activities with real‑world context are ideal. If that's not feasible, this app helps you learn efficiently with limited access.</p>
     </section>
 
     <section class="card">
-      <h2>Background</h2>
-      <p>For background and broader instructions, see the <a href="https://growingparticipatorsapproach.org/" target="_blank" rel="noopener">Growing Participator Approach</a>.</p>
+      <h2 id="i18n-gpa-background-heading">Background</h2>
+      <p id="i18n-gpa-background-p">For background and broader instructions, see the <a href="https://growingparticipatorsapproach.org/" target="_blank" rel="noopener" id="i18n-gpa-background-link">Growing Participator Approach</a>.</p>
     </section>
   </div>
+  <script>
+    // Simple client-side localization with auto-detected browser language
+    (function() {
+      const LANGS = {
+        en: { label: 'English' },
+        id: { label: 'Bahasa Indonesia' },
+        ko: { label: '한국어' },
+        nl: { label: 'Nederlands' },
+        'pt-BR': { label: 'Português (Brasil)' },
+        es: { label: 'Español (Latinoamérica)' },
+        af: { label: 'Afrikaans' },
+      };
+
+      // Store original English HTML for all translatable elements so we can
+      // restore it when switching back to English after another language.
+      const ORIGINAL_HTML = {};
+
+      const TRANSLATIONS = {
+        id: {
+          'i18n-gpa-title': 'Panduan Tinjauan GPA',
+          'i18n-gpa-badge': 'Panduan Luring',
+          'i18n-gpa-overview-heading': 'Ikhtisar',
+          'i18n-gpa-overview-p1': 'Tab Tinjauan menjalankan sesi berbasis kuis dengan aturan keadilan, waktu per item, pengulangan, penilaian, dan ekspor YAML/terkelompok. Tab ini hanya mengujikan item yang memiliki rekaman.',
+          'i18n-gpa-overview-p2': 'Berikut adalah tiga cara praktis menggunakan aplikasi ini dengan aktivitas "Dirty Dozen" GPA.',
+          'i18n-gpa-default-heading': 'Bawaan: rekam setelah sesi untuk tinjauan mandiri',
+          'i18n-gpa-default-li1': '<strong>Siapkan folder Anda</strong> (gambar/video) terlebih dahulu dan buka di aplikasi.',
+          'i18n-gpa-default-li2': 'Bertemu dengan penutur asli dan <strong>kumpulkan sejumlah kecil kata/frasa</strong> menggunakan alat peraga, konteks nyata, atau catatan kertas.',
+          'i18n-gpa-default-li3': 'Setelah sesi, gunakan tab <em>Videos</em> dan <em>Images</em> untuk <strong>merekam prompt/definisi yang bersih</strong> untuk setiap item. Setiap WAV akan berbagi nama berkas media.',
+          'i18n-gpa-default-li4': 'Buka tab <em>Review</em> dan atur <strong>pengulangan ke 3–5</strong>. Uji diri Anda pada item yang direkam (tab Review hanya menampilkan item yang memiliki rekaman).',
+          'i18n-gpa-default-li5': 'Ulangi hingga nyaman; tambahkan item baru ke folder Anda, rekam prompt-nya, lalu tinjau kembali.',
+          'i18n-gpa-default-tip': '<strong>Tip:</strong> Atur aturan keadilan, waktu, dan suara di header Review. Ekspor statistik sesi sebagai YAML dan gunakan ekspor terkelompok bila diperlukan.',
+          'i18n-gpa-live-heading': 'Alternatif: latih mitra selama sesi',
+          'i18n-gpa-live-li1': 'Siapkan dan buka folder Anda di aplikasi.',
+          'i18n-gpa-live-li2': '<strong>Rekam satu kata</strong> (tab Videos atau Images), lalu beralih ke <em>Review</em> dan kuiskan (atur pengulangan ke 3–5).',
+          'i18n-gpa-live-li3': '<strong>Tambahkan satu kata baru</strong>, rekam, lalu kuiskan set yang semakin bertambah di <em>Review</em>.',
+          'i18n-gpa-live-li4': 'Ulangi hingga mencapai <strong>dua belas</strong> item ("Dirty Dozen").',
+          'i18n-gpa-live-li5': 'Gunakan alur ini untuk membantu mitra penutur asli <strong>melihat dan mempraktikkan</strong> proses tambah-satu-kuis.',
+          'i18n-gpa-limited-heading': 'Alternatif: maksimalkan waktu tatap muka yang terbatas',
+          'i18n-gpa-limited-li1': '<strong>Siapkan kamus bergambar</strong> kata-kata yang perlu dipelajari dan buka folder-nya di aplikasi.',
+          'i18n-gpa-limited-li2': 'Saat waktu bersama penutur asli terbatas, <strong>rekam prompt dengan cepat</strong> untuk sebanyak mungkin item.',
+          'i18n-gpa-limited-li3': 'Nanti, di tab <em>Review</em>, gunakan <strong>Items per Session</strong> untuk mensimulasikan Dirty Dozen: mulai dengan 2, kuis; lalu 3, kuis; lalu 4, dst.',
+          'i18n-gpa-limited-note': '<strong>Catatan:</strong> Aktivitas langsung dan interaktif dengan konteks nyata adalah yang terbaik. Jika itu tidak memungkinkan, aplikasi ini membantu Anda belajar secara efisien dengan akses terbatas.',
+          'i18n-gpa-background-heading': 'Latar Belakang',
+          'i18n-gpa-background-p': 'Untuk latar belakang dan instruksi lebih luas, lihat <a href="https://growingparticipatorsapproach.org/" target="_blank" rel="noopener" id="i18n-gpa-background-link">Growing Participator Approach</a>.',
+          'i18n-gpa-background-link': 'Growing Participator Approach',
+        },
+        ko: {
+          'i18n-gpa-title': 'GPA 복습 가이드',
+          'i18n-gpa-badge': '오프라인 가이드',
+          'i18n-gpa-overview-heading': '개요',
+          'i18n-gpa-overview-p1': '복습 탭은 공정성 규칙, 항목별 타이머, 반복 횟수, 채점, YAML/그룹 내보내기를 갖춘 퀴즈 방식의 세션을 진행합니다. 녹음이 있는 항목만 퀴즈에 출제됩니다.',
+          'i18n-gpa-overview-p2': '아래는 GPA "Dirty Dozen" 활동에 앱을 활용하는 세 가지 실용적인 방법입니다.',
+          'i18n-gpa-default-heading': '기본: 세션 후 녹음하여 독립적으로 복습하기',
+          'i18n-gpa-default-li1': '미리 폴더(이미지/동영상)를 <strong>준비하고</strong> 앱에서 엽니다.',
+          'i18n-gpa-default-li2': '원어민을 만나 소품, 실제 상황, 메모지를 활용하여 <strong>소량의 단어/구를 수집합니다</strong>.',
+          'i18n-gpa-default-li3': '세션이 끝난 후 <em>Videos</em>와 <em>Images</em> 탭을 사용하여 각 항목의 <strong>깔끔한 프롬프트/정의를 녹음합니다</strong>. 각 WAV는 미디어 파일명을 공유합니다.',
+          'i18n-gpa-default-li4': '<em>Review</em> 탭을 열고 <strong>반복 횟수를 3–5로</strong> 설정합니다. 녹음된 항목으로 스스로 테스트합니다 (복습 탭은 녹음이 있는 항목만 표시합니다).',
+          'i18n-gpa-default-li5': '익숙해질 때까지 반복하고, 폴더에 새 항목을 추가하여 녹음한 뒤 다시 복습합니다.',
+          'i18n-gpa-default-tip': '<strong>팁:</strong> 복습 헤더에서 공정성 규칙, 타이머, 소리를 설정하세요. 세션 통계를 YAML로 내보내고 필요할 때 그룹 내보내기를 활용하세요.',
+          'i18n-gpa-live-heading': '대안: 세션 중에 파트너 훈련시키기',
+          'i18n-gpa-live-li1': '폴더를 준비하고 앱에서 엽니다.',
+          'i18n-gpa-live-li2': '<strong>단어 하나를 녹음</strong>(Videos 또는 Images 탭)하고 <em>Review</em>로 전환하여 퀴즈를 풉니다 (반복 횟수 3–5로 설정).',
+          'i18n-gpa-live-li3': '<strong>새 단어를 하나 추가</strong>하고 녹음한 뒤, <em>Review</em>에서 늘어난 목록으로 퀴즈를 풉니다.',
+          'i18n-gpa-live-li4': '<strong>열두</strong> 개 항목 ("Dirty Dozen")에 도달할 때까지 반복합니다.',
+          'i18n-gpa-live-li5': '원어민 파트너가 하나씩 추가하고 퀴즈를 푸는 과정을 <strong>보고 연습</strong>하도록 이 흐름을 활용합니다.',
+          'i18n-gpa-limited-heading': '대안: 제한된 대면 시간 최대한 활용하기',
+          'i18n-gpa-limited-li1': '배워야 할 단어들의 <strong>그림 사전을 준비</strong>하고 폴더를 앱에서 엽니다.',
+          'i18n-gpa-limited-li2': '원어민과 시간이 제한적일 때, 가능한 한 많은 항목에 대해 <strong>빠르게 프롬프트를 녹음</strong>합니다.',
+          'i18n-gpa-limited-li3': '나중에 <em>Review</em> 탭에서 <strong>Items per Session</strong>을 사용하여 Dirty Dozen을 시뮬레이션합니다: 2로 시작하여 퀴즈, 그 다음 3, 퀴즈, 이후 4 등으로 진행합니다.',
+          'i18n-gpa-limited-note': '<strong>참고:</strong> 실제 상황을 활용한 생생하고 상호작용적인 활동이 이상적입니다. 그것이 여의치 않다면, 이 앱이 제한된 접근으로도 효율적으로 학습할 수 있도록 도와줍니다.',
+          'i18n-gpa-background-heading': '배경',
+          'i18n-gpa-background-p': '배경 및 보다 폭넓은 지침은 <a href="https://growingparticipatorsapproach.org/" target="_blank" rel="noopener" id="i18n-gpa-background-link">Growing Participator Approach</a>를 참조하세요.',
+          'i18n-gpa-background-link': 'Growing Participator Approach',
+        },
+        nl: {
+          'i18n-gpa-title': 'GPA-Herhalingsgids',
+          'i18n-gpa-badge': 'Offlinegids',
+          'i18n-gpa-overview-heading': 'Overzicht',
+          'i18n-gpa-overview-p1': 'Het tabblad Review voert quizsessies uit met eerlijkheidsregels, timing per item, herhalingen, beoordeling en YAML/gegroepeerde exports. Alleen items met opnames worden getoetst.',
+          'i18n-gpa-overview-p2': 'Hieronder staan drie praktische manieren om de app te gebruiken voor GPA-"Dirty Dozen"-activiteiten.',
+          'i18n-gpa-default-heading': 'Standaard: opnemen na de sessie voor zelfstandige herhaling',
+          'i18n-gpa-default-li1': '<strong>Bereid je mappen voor</strong> (afbeeldingen/video's) van tevoren en open ze in de app.',
+          'i18n-gpa-default-li2': 'Spreek een moedertaalspreker af en <strong>verzamel een kleine set woorden/zinnen</strong> met behulp van rekwisieten, echte context of papieren notities.',
+          'i18n-gpa-default-li3': 'Na de sessie gebruik je de tabbladen <em>Videos</em> en <em>Images</em> om voor elk item <strong>een nette prompt/definitie op te nemen</strong>. Elke WAV deelt de bestandsnaam van het medium.',
+          'i18n-gpa-default-li4': 'Open het tabblad <em>Review</em> en stel <strong>herhalingen in op 3–5</strong>. Toets jezelf op de opgenomen items (het tabblad Review toont alleen items met opnames).',
+          'i18n-gpa-default-li5': 'Herhaal totdat je je zeker voelt; voeg nieuwe items toe aan je map, neem de prompts op en herhaal daarna opnieuw.',
+          'i18n-gpa-default-tip': '<strong>Tip:</strong> Stel eerlijkheidsregels, timing en geluiden in via de Review-koptekst. Exporteer sessiestatistieken als YAML en gebruik de gegroepeerde export wanneer nodig.',
+          'i18n-gpa-live-heading': 'Alternatief: een partner trainen tijdens de sessie',
+          'i18n-gpa-live-li1': 'Bereid je mappen voor en open ze in de app.',
+          'i18n-gpa-live-li2': '<strong>Neem één woord op</strong> (tabblad Videos of Images), schakel dan naar <em>Review</em> en toets het (stel herhalingen in op 3–5).',
+          'i18n-gpa-live-li3': '<strong>Voeg één nieuw woord toe</strong>, neem het op en toets daarna de groeiende set in <em>Review</em>.',
+          'i18n-gpa-live-li4': 'Herhaal totdat je <strong>twaalf</strong> items hebt ("Dirty Dozen").',
+          'i18n-gpa-live-li5': 'Gebruik deze werkwijze om een moedertaalspreker te helpen het één-voor-één-toevoegen-en-toetsen <strong>te zien en te oefenen</strong>.',
+          'i18n-gpa-limited-heading': 'Alternatief: beperkte ontmoetingstijd maximaal benutten',
+          'i18n-gpa-limited-li1': '<strong>Stel een beeldenwoordenboek samen</strong> van de woorden die je wilt leren en open de map in de app.',
+          'i18n-gpa-limited-li2': 'Als je weinig tijd hebt met een moedertaalspreker, <strong>neem dan snel prompts op</strong> voor zo veel mogelijk items.',
+          'i18n-gpa-limited-li3': 'Later, op het tabblad <em>Review</em>, gebruik je <strong>Items per Session</strong> om de Dirty Dozen te simuleren: begin met 2, toets; dan 3, toets; dan 4, enzovoort.',
+          'i18n-gpa-limited-note': '<strong>Opmerking:</strong> Levende, interactieve activiteiten met echte context zijn ideaal. Als dat niet haalbaar is, helpt deze app je efficiënt te leren met beperkte toegang.',
+          'i18n-gpa-background-heading': 'Achtergrond',
+          'i18n-gpa-background-p': 'Voor achtergrond en bredere instructies, zie de <a href="https://growingparticipatorsapproach.org/" target="_blank" rel="noopener" id="i18n-gpa-background-link">Growing Participator Approach</a>.',
+          'i18n-gpa-background-link': 'Growing Participator Approach',
+        },
+        'pt-BR': {
+          'i18n-gpa-title': 'Guia de Revisão GPA',
+          'i18n-gpa-badge': 'Guia Offline',
+          'i18n-gpa-overview-heading': 'Visão Geral',
+          'i18n-gpa-overview-p1': 'A aba Revisão executa sessões no estilo de quiz com regras de equidade, tempo por item, repetições, avaliação e exportações em YAML/agrupadas. Ela só apresenta itens que têm gravações.',
+          'i18n-gpa-overview-p2': 'Abaixo estão três formas práticas de usar o aplicativo com as atividades "Dirty Dozen" do GPA.',
+          'i18n-gpa-default-heading': 'Padrão: gravar após a sessão para revisão independente',
+          'i18n-gpa-default-li1': '<strong>Prepare suas pastas</strong> (imagens/vídeos) com antecedência e abra-as no aplicativo.',
+          'i18n-gpa-default-li2': 'Encontre-se com um falante nativo e <strong>colete um pequeno conjunto de palavras/frases</strong> usando adereços, contexto real ou anotações em papel.',
+          'i18n-gpa-default-li3': 'Após a sessão, use as abas <em>Videos</em> e <em>Images</em> para <strong>gravar um prompt/definição limpo</strong> para cada item. Cada WAV compartilhará o nome do arquivo de mídia.',
+          'i18n-gpa-default-li4': 'Abra a aba <em>Review</em> e defina as <strong>repetições para 3–5</strong>. Faça quiz com os itens gravados (a aba Review só exibe itens com gravações).',
+          'i18n-gpa-default-li5': 'Repita até se sentir confortável; adicione novos itens à sua pasta, grave os prompts e revise novamente.',
+          'i18n-gpa-default-tip': '<strong>Dica:</strong> Configure regras de equidade, tempo e sons no cabeçalho da Revisão. Exporte as estatísticas da sessão como YAML e use a exportação agrupada quando necessário.',
+          'i18n-gpa-live-heading': 'Alternativa: treinar um parceiro durante a sessão',
+          'i18n-gpa-live-li1': 'Prepare e abra suas pastas no aplicativo.',
+          'i18n-gpa-live-li2': '<strong>Grave uma palavra</strong> (aba Videos ou Images), depois mude para <em>Review</em> e faça o quiz (defina as repetições para 3–5).',
+          'i18n-gpa-live-li3': '<strong>Adicione uma nova palavra</strong>, grave-a e faça o quiz do conjunto crescente em <em>Review</em>.',
+          'i18n-gpa-live-li4': 'Repita até chegar a <strong>doze</strong> itens ("Dirty Dozen").',
+          'i18n-gpa-live-li5': 'Use esse fluxo para ajudar um parceiro falante nativo a <strong>ver e praticar</strong> o processo de adicionar-um-e-revisar.',
+          'i18n-gpa-limited-heading': 'Alternativa: aproveitar ao máximo o tempo de contato limitado',
+          'i18n-gpa-limited-li1': '<strong>Prepare um dicionário ilustrado</strong> das palavras que precisa aprender e abra a pasta no aplicativo.',
+          'i18n-gpa-limited-li2': 'Quando tiver tempo limitado com um falante nativo, <strong>grave os prompts rapidamente</strong> para o maior número de itens possível.',
+          'i18n-gpa-limited-li3': 'Depois, na aba <em>Review</em>, use <strong>Items per Session</strong> para simular o Dirty Dozen: comece com 2, faça quiz; depois 3, quiz; depois 4, etc.',
+          'i18n-gpa-limited-note': '<strong>Observação:</strong> Atividades ao vivo e interativas com contexto real são ideais. Se isso não for viável, este aplicativo ajuda você a aprender de forma eficiente com acesso limitado.',
+          'i18n-gpa-background-heading': 'Contexto',
+          'i18n-gpa-background-p': 'Para contexto e instruções mais amplas, consulte o <a href="https://growingparticipatorsapproach.org/" target="_blank" rel="noopener" id="i18n-gpa-background-link">Growing Participator Approach</a>.',
+          'i18n-gpa-background-link': 'Growing Participator Approach',
+        },
+        es: {
+          'i18n-gpa-title': 'Guía de Repaso GPA',
+          'i18n-gpa-badge': 'Guía Sin Conexión',
+          'i18n-gpa-overview-heading': 'Descripción General',
+          'i18n-gpa-overview-p1': 'La pestaña Revisión ejecuta sesiones en formato de cuestionario con reglas de equidad, tiempo por ítem, repeticiones, calificación y exportaciones en YAML/agrupadas. Solo evalúa ítems que tienen grabaciones.',
+          'i18n-gpa-overview-p2': 'A continuación se presentan tres formas prácticas de usar la aplicación con las actividades "Dirty Dozen" del GPA.',
+          'i18n-gpa-default-heading': 'Predeterminado: grabar después de la sesión para repaso independiente',
+          'i18n-gpa-default-li1': '<strong>Prepara tus carpetas</strong> (imágenes/videos) con anticipación y ábrelas en la aplicación.',
+          'i18n-gpa-default-li2': 'Reúnete con un hablante nativo y <strong>recopila un pequeño conjunto de palabras/frases</strong> usando objetos, contexto real o apuntes en papel.',
+          'i18n-gpa-default-li3': 'Después de la sesión, usa las pestañas <em>Videos</em> e <em>Images</em> para <strong>grabar un prompt/definición limpio</strong> para cada ítem. Cada WAV compartirá el nombre del archivo multimedia.',
+          'i18n-gpa-default-li4': 'Abre la pestaña <em>Review</em> y establece las <strong>repeticiones en 3–5</strong>. Evalúate con los ítems grabados (la pestaña Review solo muestra ítems con grabaciones).',
+          'i18n-gpa-default-li5': 'Repite hasta sentirte cómodo; agrega nuevos ítems a tu carpeta, graba los prompts y repasa de nuevo.',
+          'i18n-gpa-default-tip': '<strong>Consejo:</strong> Configura las reglas de equidad, el tiempo y los sonidos en el encabezado de Revisión. Exporta las estadísticas de la sesión como YAML y usa la exportación agrupada cuando sea necesario.',
+          'i18n-gpa-live-heading': 'Alternativa: entrenar a un compañero durante la sesión',
+          'i18n-gpa-live-li1': 'Prepara y abre tus carpetas en la aplicación.',
+          'i18n-gpa-live-li2': '<strong>Graba una palabra</strong> (pestaña Videos o Images), luego cambia a <em>Review</em> y evalúala (establece repeticiones en 3–5).',
+          'i18n-gpa-live-li3': '<strong>Agrega una nueva palabra</strong>, grábala y luego evalúa el conjunto creciente en <em>Review</em>.',
+          'i18n-gpa-live-li4': 'Repite hasta alcanzar <strong>doce</strong> ítems ("Dirty Dozen").',
+          'i18n-gpa-live-li5': 'Usa este flujo para ayudar a un hablante nativo compañero a <strong>ver y practicar</strong> el proceso de agregar-uno-y-evaluar.',
+          'i18n-gpa-limited-heading': 'Alternativa: maximizar el tiempo de contacto limitado',
+          'i18n-gpa-limited-li1': '<strong>Prepara un diccionario ilustrado</strong> de las palabras que necesitas aprender y abre la carpeta en la aplicación.',
+          'i18n-gpa-limited-li2': 'Cuando tengas poco tiempo con un hablante nativo, <strong>graba los prompts rápidamente</strong> para tantos ítems como sea posible.',
+          'i18n-gpa-limited-li3': 'Más tarde, en la pestaña <em>Review</em>, usa <strong>Items per Session</strong> para simular el Dirty Dozen: empieza con 2, evalúa; luego 3, evalúa; luego 4, etc.',
+          'i18n-gpa-limited-note': '<strong>Nota:</strong> Las actividades presenciales e interactivas con contexto real son lo ideal. Si no es posible, esta aplicación te ayuda a aprender de forma eficiente con acceso limitado.',
+          'i18n-gpa-background-heading': 'Antecedentes',
+          'i18n-gpa-background-p': 'Para antecedentes e instrucciones más amplias, consulta el <a href="https://growingparticipatorsapproach.org/" target="_blank" rel="noopener" id="i18n-gpa-background-link">Growing Participator Approach</a>.',
+          'i18n-gpa-background-link': 'Growing Participator Approach',
+        },
+        af: {
+          'i18n-gpa-title': 'GPA-Hersienigsgids',
+          'i18n-gpa-badge': 'Vanlyn-gids',
+          'i18n-gpa-overview-heading': 'Oorsig',
+          'i18n-gpa-overview-p1': 'Die Hersiening-oortjie voer vasvra-sessies uit met regverdigheidsreëls, tydsberekening per item, herhalings, gradering en YAML/gegroepeerde uitvoere. Dit toets slegs items wat opnames het.',
+          'i18n-gpa-overview-p2': 'Hieronder is drie praktiese maniere om die toepassing te gebruik met GPA "Dirty Dozen"-aktiwiteite.',
+          'i18n-gpa-default-heading': 'Verstek: neem op ná die sessie vir selfstandige hersiening',
+          'i18n-gpa-default-li1': '<strong>Berei jou gidse voor</strong> (beelde/video's) van tevore en maak dit in die toepassing oop.',
+          'i18n-gpa-default-li2': 'Ontmoet 'n moedertaalspreker en <strong>versamel 'n klein stel woorde/frases</strong> met behulp van rekwisiete, werklike konteks of papiernotas.',
+          'i18n-gpa-default-li3': 'Ná die sessie, gebruik die <em>Videos</em>- en <em>Images</em>-oortjies om vir elke item <strong>'n skoon prompt/definisie op te neem</strong>. Elke WAV sal die medianlêernaam deel.',
+          'i18n-gpa-default-li4': 'Maak die <em>Review</em>-oortjie oop en stel <strong>herhalings op 3–5</strong>. Toets jouself op die opgenome items (die Hersiening-oortjie wys slegs items met opnames).',
+          'i18n-gpa-default-li5': 'Herhaal totdat jy gemaklik is; voeg nuwe items by jou gids en neem prompts op, dan hersien weer.',
+          'i18n-gpa-default-tip': '<strong>Wenk:</strong> Stel regverdigheidsreëls, tydsberekening en klanke in die Hersiening-koptekst. Voer sessiestatistieke as YAML uit en gebruik gegroepeerde uitvoer wanneer nodig.',
+          'i18n-gpa-live-heading': ''n Alternatief: lei 'n maat op tydens die sessie',
+          'i18n-gpa-live-li1': 'Berei jou gidse voor en maak dit in die toepassing oop.',
+          'i18n-gpa-live-li2': '<strong>Neem een woord op</strong> (Videos- of Images-oortjie), skakel dan na <em>Review</em> en toets dit (stel herhalings op 3–5).',
+          'i18n-gpa-live-li3': '<strong>Voeg een nuwe woord by</strong>, neem dit op, toets dan die groeiende stel in <em>Review</em>.',
+          'i18n-gpa-live-li4': 'Herhaal totdat jy <strong>twaalf</strong> items bereik ("Dirty Dozen").',
+          'i18n-gpa-live-li5': 'Gebruik hierdie vloei om 'n moedertaalspreker-maat te help om die voeg-een-toets-proses te <strong>sien en te oefen</strong>.',
+          'i18n-gpa-limited-heading': ''n Alternatief: beperk aangesig-tot-aangesig-tyd maksimaal benut',
+          'i18n-gpa-limited-li1': '<strong>Berei 'n prentewoordeboek voor</strong> van die woorde wat jy wil leer en maak die gids in die toepassing oop.',
+          'i18n-gpa-limited-li2': 'Wanneer jy min tyd het met 'n moedertaalspreker, <strong>neem prompts vinnig op</strong> vir soveel items as moontlik.',
+          'i18n-gpa-limited-li3': 'Later, in die <em>Review</em>-oortjie, gebruik <strong>Items per Session</strong> om Dirty Dozen te simuleer: begin met 2, toets; dan 3, toets; dan 4, ens.',
+          'i18n-gpa-limited-note': '<strong>Nota:</strong> Lewende, interaktiewe aktiwiteite met werklike konteks is ideaal. As dit nie haalbaar is nie, help hierdie toepassing jou om doeltreffend te leer met beperkte toegang.',
+          'i18n-gpa-background-heading': 'Agtergrond',
+          'i18n-gpa-background-p': 'Vir agtergrond en breër instruksies, sien die <a href="https://growingparticipatorsapproach.org/" target="_blank" rel="noopener" id="i18n-gpa-background-link">Growing Participator Approach</a>.',
+          'i18n-gpa-background-link': 'Growing Participator Approach',
+        },
+      };
+
+      function detectLanguage() {
+        const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('vatSiteLang') : null;
+        if (stored && LANGS[stored]) return stored;
+        const nav = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
+        const parts = nav.split('-');
+        const base = parts[0];
+        if (base === 'id') return 'id';
+        if (base === 'ko') return 'ko';
+        if (base === 'nl') return 'nl';
+        if (base === 'pt') return 'pt-BR';
+        if (base === 'es') return 'es';
+        if (base === 'af') return 'af';
+        return 'en';
+      }
+
+      function captureOriginals() {
+        const ids = new Set();
+        Object.values(TRANSLATIONS).forEach(dict => {
+          Object.keys(dict).forEach(id => ids.add(id));
+        });
+        ids.forEach(id => {
+          if (Object.prototype.hasOwnProperty.call(ORIGINAL_HTML, id)) return;
+          const el = document.getElementById(id);
+          if (el) {
+            ORIGINAL_HTML[id] = el.innerHTML;
+          }
+        });
+      }
+
+      function applyTranslations(lang) {
+        if (lang === 'en') {
+          // Restore original English content
+          Object.keys(ORIGINAL_HTML).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+              el.innerHTML = ORIGINAL_HTML[id];
+            }
+          });
+        } else {
+          const dict = TRANSLATIONS[lang] || {};
+          Object.keys(dict).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+              el.innerHTML = dict[id];
+            }
+          });
+        }
+        document.documentElement.lang = lang;
+      }
+
+      function initLanguage() {
+        const select = document.getElementById('langSelect');
+        if (!select) return;
+        // Populate dropdown
+        Object.keys(LANGS).forEach(code => {
+          const opt = document.createElement('option');
+          opt.value = code;
+          opt.textContent = LANGS[code].label;
+          select.appendChild(opt);
+        });
+        const lang = detectLanguage();
+        // Capture original English markup before applying any translations
+        captureOriginals();
+        select.value = lang;
+        applyTranslations(lang);
+        select.addEventListener('change', () => {
+          const newLang = select.value;
+          if (LANGS[newLang]) {
+            if (typeof localStorage !== 'undefined') {
+              localStorage.setItem('vatSiteLang', newLang);
+            }
+            applyTranslations(newLang);
+          }
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initLanguage);
+      } else {
+        initLanguage();
+      }
+    })();
+  </script>
 </body>
 </html>

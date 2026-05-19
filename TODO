@@ -35,12 +35,14 @@
  [x] Add a tab for a grid-view interface of still images (and the ability to click each and have a play/record modal/menu come up. For record, confirm overwrite. Recorded audio for images should include the file extension of the image file before .wav so that they don't overwrite the video recording.)
 
 # Website Localization TODO
-[ ] Translate new docs/faq/index.html into all 6 non-English languages (id, ko, nl, pt-BR, es, af).
+[x] Translate new docs/faq/index.html into all 6 non-English languages (id, ko, nl, pt-BR, es, af).
     New page added 2026-05-18 — English only currently.
-[ ] Update translations in docs/index.html for changed English strings (i18n IDs):
+    NOTE: Completed 2026-05-18. Full i18n added: 47 IDs across all sections, TRANSLATIONS object with 46 keys × 6 langs, same localStorage/detectLanguage/applyTranslations pattern as index.html.
+[x] Update translations in docs/index.html for changed English strings (i18n IDs):
     - i18n-working-li3 (audio notes: auto-save + overwrite behavior + delete/edit buttons)
     - i18n-working-li5 (Ocenaudio: bulk-open + normalizer utility)
     - i18n-trouble-li1 (microphone: now Windows-specific)
     - i18n-trouble-li2 (macOS: reworded for interpreted mode)
     - i18n-trouble-li4 (getting help: added experienced-users note)
     - i18n-install-mac-heading (reworded to "macOS (interpreted mode only)")
+    NOTE: Completed 2026-05-18. All 6 strings updated across all 6 languages (id, ko, nl, pt-BR, es, af).

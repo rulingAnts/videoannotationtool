@@ -11,104 +11,586 @@
   <div class="container">
     <header class="header">
       <div class="brand">
-        <h1>FAQ</h1>
+        <h1 id="i18n-faq-page-title">FAQ</h1>
       </div>
       <div class="header-right">
-        <a href="../index.html" style="color: var(--muted); font-size: 14px; text-decoration: none;">← Back to main page</a>
+        <a id="i18n-faq-back-link" href="../index.html" style="color: var(--muted); font-size: 14px; text-decoration: none;">← Back to main page</a>
+        <div class="lang-switcher" style="margin-left:12px;">
+          <label for="langSelect" class="visually-hidden">Language</label>
+          <select id="langSelect"></select>
+        </div>
       </div>
     </header>
 
     <section class="card" id="recording">
-      <h2>Recording &amp; Saving</h2>
+      <h2 id="i18n-faq-rec-heading">Recording &amp; Saving</h2>
 
-      <h3>Can I delete a recording if I made a mistake?</h3>
-      <p>Yes — each recording has a delete button directly in the app. You can also simply record again, which overwrites the existing file automatically.</p>
+      <h3 id="i18n-faq-rec-q1">Can I delete a recording if I made a mistake?</h3>
+      <p id="i18n-faq-rec-a1">Yes — each recording has a delete button directly in the app. You can also simply record again, which overwrites the existing file automatically.</p>
 
-      <h3>Can I edit a recording after I've made it?</h3>
-      <p>Yes — each recording has an edit button that opens that recording in Ocenaudio, where you can trim, adjust volume, or make other edits.</p>
+      <h3 id="i18n-faq-rec-q2">Can I edit a recording after I've made it?</h3>
+      <p id="i18n-faq-rec-a2">Yes — each recording has an edit button that opens that recording in Ocenaudio, where you can trim, adjust volume, or make other edits.</p>
 
-      <h3>Does recording again overwrite the previous take?</h3>
-      <p>Yes. Recording again immediately replaces the existing file for that stimulus item. There is no way to keep multiple takes — the new recording overwrites the old one the moment it is captured.</p>
+      <h3 id="i18n-faq-rec-q3">Does recording again overwrite the previous take?</h3>
+      <p id="i18n-faq-rec-a3">Yes. Recording again immediately replaces the existing file for that stimulus item. There is no way to keep multiple takes — the new recording overwrites the old one the moment it is captured.</p>
 
-      <h3>Does the app save automatically?</h3>
-      <p>Yes. The app saves every recording the moment it is captured. There is no File → Save step.</p>
+      <h3 id="i18n-faq-rec-q4">Does the app save automatically?</h3>
+      <p id="i18n-faq-rec-a4">Yes. The app saves every recording the moment it is captured. There is no File → Save step.</p>
 
-      <h3>How does the app know which recording belongs to which video or image?</h3>
-      <p>Recordings are matched to stimulus files by filename. When you record a response to a video or image, the app saves a <code>.wav</code> file with the same name as the stimulus file — in the same folder. For example, a response to <code>clip01.mp4</code> is saved as <code>clip01.wav</code>, and a response to <code>photo03.jpg</code> is saved as <code>photo03.jpg.wav</code>.</p>
-      <p><strong>Important:</strong> If you rename a stimulus file after recording a response, the app will no longer be able to find that recording.</p>
+      <h3 id="i18n-faq-rec-q5">How does the app know which recording belongs to which video or image?</h3>
+      <p id="i18n-faq-rec-a5">Recordings are matched to stimulus files by filename. When you record a response to a video or image, the app saves a <code>.wav</code> file with the same name as the stimulus file — in the same folder. For example, a response to <code>clip01.mp4</code> is saved as <code>clip01.wav</code>, and a response to <code>photo03.jpg</code> is saved as <code>photo03.jpg.wav</code>.</p>
+      <p id="i18n-faq-rec-a5b"><strong>Important:</strong> If you rename a stimulus file after recording a response, the app will no longer be able to find that recording.</p>
     </section>
 
     <section class="card" id="organization">
-      <h2>File Organization</h2>
+      <h2 id="i18n-faq-org-heading">File Organization</h2>
 
-      <h3>What order does the app display stimulus files in?</h3>
-      <p>Files are sorted by filename, which automatically matches the order in your stimulus set's file list. If you need to change the display order, rename the files with leading-zero numbers at the front of the filename (e.g., <code>01_clip.mp4</code>, <code>02_clip.mp4</code>).</p>
-      <p><strong>Important:</strong> Do this <em>before</em> making any recordings. If you rename a file after recording a response to it, the recording will no longer be matched to that file.</p>
+      <h3 id="i18n-faq-org-q1">What order does the app display stimulus files in?</h3>
+      <p id="i18n-faq-org-a1">Files are sorted by filename, which automatically matches the order in your stimulus set's file list. If you need to change the display order, rename the files with leading-zero numbers at the front of the filename (e.g., <code>01_clip.mp4</code>, <code>02_clip.mp4</code>).</p>
+      <p id="i18n-faq-org-a1b"><strong>Important:</strong> Do this <em>before</em> making any recordings. If you rename a file after recording a response to it, the recording will no longer be matched to that file.</p>
 
-      <h3>Should I work through one stimulus set at a time?</h3>
-      <p>Yes — always open and work through one folder/set at a time. Do not merge multiple sets into a single folder. Sets may contain files with identical filenames, which would cause recordings to overwrite each other.</p>
+      <h3 id="i18n-faq-org-q2">Should I work through one stimulus set at a time?</h3>
+      <p id="i18n-faq-org-a2">Yes — always open and work through one folder/set at a time. Do not merge multiple sets into a single folder. Sets may contain files with identical filenames, which would cause recordings to overwrite each other.</p>
     </section>
 
     <section class="card" id="images">
-      <h2>Still Images</h2>
+      <h2 id="i18n-faq-img-heading">Still Images</h2>
 
-      <h3>How do the still images work? Is that a separate window?</h3>
-      <p>Images are in a separate <strong>tab</strong>, not a separate window. The workflow is the same as for videos: click a stimulus item and record. You can double-click any stimulus to view it fullscreen. Image response files follow the same naming convention as video responses, with the full image filename preserved: e.g., <code>photo03.jpg.wav</code>. Switch between the video and image tabs as your stimulus set instructions indicate — typically every 7–8 items.</p>
+      <h3 id="i18n-faq-img-q1">How do the still images work? Is that a separate window?</h3>
+      <p id="i18n-faq-img-a1">Images are in a separate <strong>tab</strong>, not a separate window. The workflow is the same as for videos: click a stimulus item and record. You can double-click any stimulus to view it fullscreen. Image response files follow the same naming convention as video responses, with the full image filename preserved: e.g., <code>photo03.jpg.wav</code>. Switch between the video and image tabs as your stimulus set instructions indicate — typically every 7–8 items.</p>
     </section>
 
     <section class="card" id="export">
-      <h2>Export</h2>
+      <h2 id="i18n-faq-exp-heading">Export</h2>
 
-      <h3>Does the "Export as single WAV" button export everything?</h3>
-      <p>It exports only the recordings in the <strong>currently active tab</strong> — either all video responses or all image responses, depending on which tab you have open. Switch tabs and export again to get the other set.</p>
+      <h3 id="i18n-faq-exp-q1">Does the "Export as single WAV" button export everything?</h3>
+      <p id="i18n-faq-exp-a1">It exports only the recordings in the <strong>currently active tab</strong> — either all video responses or all image responses, depending on which tab you have open. Switch tabs and export again to get the other set.</p>
     </section>
 
     <section class="card" id="audio-input">
-      <h2>Microphone &amp; Audio Input</h2>
+      <h2 id="i18n-faq-mic-heading">Microphone &amp; Audio Input</h2>
 
-      <h3>What if I plug in a new microphone and it isn't being picked up?</h3>
-      <p>The app uses your system-wide audio input settings — there is no in-app device selector. If you switch to a new recording device, change the input in your <strong>Windows Sound settings</strong> and then <strong>relaunch the app</strong> to pick up the change.</p>
+      <h3 id="i18n-faq-mic-q1">What if I plug in a new microphone and it isn't being picked up?</h3>
+      <p id="i18n-faq-mic-a1">The app uses your system-wide audio input settings — there is no in-app device selector. If you switch to a new recording device, change the input in your <strong>Windows Sound settings</strong> and then <strong>relaunch the app</strong> to pick up the change.</p>
     </section>
 
     <section class="card" id="workflow">
-      <h2>Session Workflow</h2>
+      <h2 id="i18n-faq-wf-heading">Session Workflow</h2>
 
-      <h3>Should I rotate native speakers between stimulus items?</h3>
-      <p>No — don't rotate speakers mid-session. One speaker should work through all video stimuli before the images phase begins, so they've seen everything in context.</p>
+      <h3 id="i18n-faq-wf-q1">Should I rotate native speakers between stimulus items?</h3>
+      <p id="i18n-faq-wf-a1">No — don't rotate speakers mid-session. One speaker should work through all video stimuli before the images phase begins, so they've seen everything in context.</p>
 
-      <h3>Can I work remotely with a consultant who isn't physically present?</h3>
-      <p>Yes. The app supports a remote workflow using WhatsApp Desktop:</p>
-      <ol>
-        <li><strong>Send the stimulus to your consultant:</strong> Right-click a video or image in the app and choose Copy. Paste it into a WhatsApp chat and send it to your consultant.</li>
-        <li><strong>Receive their voice response:</strong> Your consultant records a voice message in WhatsApp and sends it to you.</li>
-        <li>
+      <h3 id="i18n-faq-wf-q2">Can I work remotely with a consultant who isn't physically present?</h3>
+      <p id="i18n-faq-wf-a2">Yes. The app supports a remote workflow using WhatsApp Desktop:</p>
+      <ol id="i18n-faq-wf-steps">
+        <li id="i18n-faq-wf-step1"><strong>Send the stimulus to your consultant:</strong> Right-click a video or image in the app and choose Copy. Paste it into a WhatsApp chat and send it to your consultant.</li>
+        <li id="i18n-faq-wf-step2"><strong>Receive their voice response:</strong> Your consultant records a voice message in WhatsApp and sends it to you.</li>
+        <li id="i18n-faq-wf-step3">
           <strong>Copy the voice message to your computer (WhatsApp Desktop on Windows):</strong>
           <ul>
-            <li>Hover over the voice message in WhatsApp Desktop until a small chevron (▾) appears on the right side of the message.</li>
-            <li>Click the chevron to open the message menu.</li>
-            <li>Select <strong>Forward</strong>.</li>
-            <li>In the forwarding panel that appears, look at the bottom action bar and choose <strong>Copy</strong> to copy the audio file to your clipboard. (On some versions of WhatsApp Desktop, you may see a <strong>Download</strong> option directly in the chevron menu instead, which saves the file to your Downloads folder.)</li>
-            <li>If you used Copy: paste the file into File Explorer (any folder) to save it.</li>
+            <li id="i18n-faq-wf-step3a">Hover over the voice message in WhatsApp Desktop until a small chevron (▾) appears on the right side of the message.</li>
+            <li id="i18n-faq-wf-step3b">Click the chevron to open the message menu.</li>
+            <li id="i18n-faq-wf-step3c">Select <strong>Forward</strong>.</li>
+            <li id="i18n-faq-wf-step3d">In the forwarding panel that appears, look at the bottom action bar and choose <strong>Copy</strong> to copy the audio file to your clipboard. (On some versions of WhatsApp Desktop, you may see a <strong>Download</strong> option directly in the chevron menu instead, which saves the file to your Downloads folder.)</li>
+            <li id="i18n-faq-wf-step3e">If you used Copy: paste the file into File Explorer (any folder) to save it.</li>
           </ul>
         </li>
-        <li><strong>Import into the app:</strong> Use the <strong>Add Audio</strong> button in the app to load the saved audio file and attach it to the corresponding stimulus item.</li>
+        <li id="i18n-faq-wf-step4"><strong>Import into the app:</strong> Use the <strong>Add Audio</strong> button in the app to load the saved audio file and attach it to the corresponding stimulus item.</li>
       </ol>
-      <p><strong>Note:</strong> Audio captured this way is lower quality than a direct recording, and you have less control over the consultant's recording conditions. Direct in-person recording is preferred when possible.</p>
+      <p id="i18n-faq-wf-note"><strong>Note:</strong> Audio captured this way is lower quality than a direct recording, and you have less control over the consultant's recording conditions. Direct in-person recording is preferred when possible.</p>
     </section>
 
-    <!--
-      LOCALIZATION TODO (added 2026-05-18):
-      All content on this FAQ page is English-only and has NOT yet been translated.
-      In the next localization pass, translate all sections into the 6 supported
-      non-English languages: Bahasa Indonesia (id), 한국어 (ko), Nederlands (nl),
-      Português Brasil (pt-BR), Español Latinoamérica (es), Afrikaans (af).
-      Follow the TRANSLATIONS object pattern in docs/index.html.
-    -->
-
-    <p class="footer">
-      <a href="../index.html">← Back to main page</a> ·
+    <p class="footer" id="i18n-faq-footer">
+      <a id="i18n-faq-footer-back" href="../index.html">← Back to main page</a> ·
       Latest release: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → Releases</a>
     </p>
   </div>
+
+  <script>
+    // Simple client-side localization with auto-detected browser language
+    (function() {
+      const LANGS = {
+        en:     { label: 'English' },
+        id:     { label: 'Bahasa Indonesia' },
+        ko:     { label: '한국어' },
+        nl:     { label: 'Nederlands' },
+        'pt-BR':{ label: 'Português (Brasil)' },
+        es:     { label: 'Español (Latinoamérica)' },
+        af:     { label: 'Afrikaans' },
+      };
+
+      // Store original English HTML for all translatable elements so we can
+      // restore it when switching back to English after another language.
+      const ORIGINAL_HTML = {};
+
+      const TRANSLATIONS = {
+        // ── Bahasa Indonesia ─────────────────────────────────────────────────
+        id: {
+          'i18n-faq-page-title': 'Pertanyaan Umum',
+          'i18n-faq-back-link': '← Kembali ke halaman utama',
+
+          // Recording & Saving
+          'i18n-faq-rec-heading': 'Merekam &amp; Menyimpan',
+          'i18n-faq-rec-q1': 'Bisakah saya menghapus rekaman jika saya membuat kesalahan?',
+          'i18n-faq-rec-a1': 'Ya — setiap rekaman memiliki tombol hapus langsung di dalam aplikasi. Anda juga bisa merekam ulang saja, yang akan menimpa berkas yang ada secara otomatis.',
+          'i18n-faq-rec-q2': 'Bisakah saya mengedit rekaman setelah membuatnya?',
+          'i18n-faq-rec-a2': 'Ya — setiap rekaman memiliki tombol edit yang membuka rekaman tersebut di Ocenaudio, di mana Anda dapat memotong, menyesuaikan volume, atau melakukan pengeditan lain.',
+          'i18n-faq-rec-q3': 'Apakah merekam ulang akan menimpa rekaman sebelumnya?',
+          'i18n-faq-rec-a3': 'Ya. Merekam ulang langsung mengganti berkas yang ada untuk item stimulus tersebut. Tidak ada cara untuk menyimpan beberapa take — rekaman baru menimpa yang lama begitu diambil.',
+          'i18n-faq-rec-q4': 'Apakah aplikasi menyimpan secara otomatis?',
+          'i18n-faq-rec-a4': 'Ya. Aplikasi menyimpan setiap rekaman begitu diambil. Tidak ada langkah File → Simpan.',
+          'i18n-faq-rec-q5': 'Bagaimana aplikasi tahu rekaman mana yang cocok dengan video atau gambar mana?',
+          'i18n-faq-rec-a5': 'Rekaman dicocokkan dengan berkas stimulus berdasarkan nama berkas. Saat Anda merekam respons terhadap video atau gambar, aplikasi menyimpan berkas <code>.wav</code> dengan nama yang sama dengan berkas stimulus — di folder yang sama. Misalnya, respons terhadap <code>clip01.mp4</code> disimpan sebagai <code>clip01.wav</code>, dan respons terhadap <code>photo03.jpg</code> disimpan sebagai <code>photo03.jpg.wav</code>.',
+          'i18n-faq-rec-a5b': '<strong>Penting:</strong> Jika Anda mengganti nama berkas stimulus setelah merekam respons, aplikasi tidak akan lagi dapat menemukan rekaman tersebut.',
+
+          // File Organization
+          'i18n-faq-org-heading': 'Pengaturan Berkas',
+          'i18n-faq-org-q1': 'Dalam urutan apa aplikasi menampilkan berkas stimulus?',
+          'i18n-faq-org-a1': 'Berkas diurutkan berdasarkan nama berkas, yang secara otomatis sesuai dengan urutan dalam daftar berkas stimulus Anda. Jika Anda perlu mengubah urutan tampilan, ganti nama berkas dengan angka berawalan nol di depan nama berkas (mis., <code>01_clip.mp4</code>, <code>02_clip.mp4</code>).',
+          'i18n-faq-org-a1b': '<strong>Penting:</strong> Lakukan ini <em>sebelum</em> membuat rekaman apa pun. Jika Anda mengganti nama berkas setelah merekam respons terhadapnya, rekaman tidak akan lagi dicocokkan dengan berkas tersebut.',
+          'i18n-faq-org-q2': 'Haruskah saya mengerjakan satu set stimulus sekaligus?',
+          'i18n-faq-org-a2': 'Ya — selalu buka dan kerjakan satu folder/set sekaligus. Jangan gabungkan beberapa set ke dalam satu folder. Set mungkin berisi berkas dengan nama berkas yang identik, yang akan menyebabkan rekaman saling menimpa.',
+
+          // Still Images
+          'i18n-faq-img-heading': 'Gambar Diam',
+          'i18n-faq-img-q1': 'Bagaimana cara kerja gambar diam? Apakah itu jendela terpisah?',
+          'i18n-faq-img-a1': 'Gambar berada di <strong>tab</strong> terpisah, bukan jendela terpisah. Alur kerja sama seperti untuk video: klik item stimulus dan rekam. Anda bisa klik dua kali stimulus apa pun untuk melihatnya layar penuh. Berkas respons gambar mengikuti konvensi penamaan yang sama dengan respons video, dengan nama berkas gambar lengkap: mis., <code>photo03.jpg.wav</code>. Bergantilah antara tab video dan gambar sesuai petunjuk set stimulus Anda — biasanya setiap 7–8 item.',
+
+          // Export
+          'i18n-faq-exp-heading': 'Ekspor',
+          'i18n-faq-exp-q1': 'Apakah tombol "Ekspor sebagai WAV tunggal" mengekspor semuanya?',
+          'i18n-faq-exp-a1': 'Ini hanya mengekspor rekaman di <strong>tab yang sedang aktif</strong> — baik semua respons video atau semua respons gambar, tergantung tab mana yang terbuka. Ganti tab dan ekspor lagi untuk mendapatkan set lainnya.',
+
+          // Microphone
+          'i18n-faq-mic-heading': 'Mikrofon &amp; Input Audio',
+          'i18n-faq-mic-q1': 'Bagaimana jika saya memasang mikrofon baru dan tidak terdeteksi?',
+          'i18n-faq-mic-a1': 'Aplikasi menggunakan pengaturan input audio seluruh sistem — tidak ada pemilih perangkat di dalam aplikasi. Jika Anda beralih ke perangkat perekam baru, ubah input di <strong>Pengaturan Suara Windows</strong> lalu <strong>luncurkan ulang aplikasi</strong> untuk menerapkan perubahan.',
+
+          // Session Workflow
+          'i18n-faq-wf-heading': 'Alur Kerja Sesi',
+          'i18n-faq-wf-q1': 'Haruskah saya merotasi penutur asli di antara item stimulus?',
+          'i18n-faq-wf-a1': 'Tidak — jangan merotasi penutur di tengah sesi. Satu penutur harus mengerjakan semua stimulus video sebelum fase gambar dimulai, agar mereka telah melihat semuanya dalam konteks.',
+          'i18n-faq-wf-q2': 'Bisakah saya bekerja jarak jauh dengan konsultan yang tidak hadir secara fisik?',
+          'i18n-faq-wf-a2': 'Ya. Aplikasi mendukung alur kerja jarak jauh menggunakan WhatsApp Desktop:',
+          'i18n-faq-wf-step1': '<strong>Kirim stimulus ke konsultan Anda:</strong> Klik kanan video atau gambar di aplikasi dan pilih Salin. Tempel ke obrolan WhatsApp dan kirimkan ke konsultan Anda.',
+          'i18n-faq-wf-step2': '<strong>Terima respons suara mereka:</strong> Konsultan Anda merekam pesan suara di WhatsApp dan mengirimkannya kepada Anda.',
+          'i18n-faq-wf-step3': '<strong>Salin pesan suara ke komputer Anda (WhatsApp Desktop di Windows):</strong>',
+          'i18n-faq-wf-step3a': 'Arahkan kursor ke pesan suara di WhatsApp Desktop hingga muncul chevron kecil (▾) di sisi kanan pesan.',
+          'i18n-faq-wf-step3b': 'Klik chevron untuk membuka menu pesan.',
+          'i18n-faq-wf-step3c': 'Pilih <strong>Teruskan</strong>.',
+          'i18n-faq-wf-step3d': 'Di panel penerusan yang muncul, lihat bilah tindakan bawah dan pilih <strong>Salin</strong> untuk menyalin berkas audio ke papan klip Anda. (Pada beberapa versi WhatsApp Desktop, Anda mungkin melihat opsi <strong>Unduh</strong> langsung di menu chevron, yang menyimpan berkas ke folder Unduhan Anda.)',
+          'i18n-faq-wf-step3e': 'Jika Anda menggunakan Salin: tempel berkas ke File Explorer (folder mana pun) untuk menyimpannya.',
+          'i18n-faq-wf-step4': '<strong>Impor ke aplikasi:</strong> Gunakan tombol <strong>Tambah Audio</strong> di aplikasi untuk memuat berkas audio yang disimpan dan melampirkannya ke item stimulus yang sesuai.',
+          'i18n-faq-wf-note': '<strong>Catatan:</strong> Audio yang direkam dengan cara ini kualitasnya lebih rendah daripada rekaman langsung, dan Anda memiliki kontrol lebih sedikit atas kondisi perekaman konsultan. Rekaman langsung tatap muka lebih disukai jika memungkinkan.',
+
+          // Footer
+          'i18n-faq-footer': '<a href="../index.html">← Kembali ke halaman utama</a> · Rilis terbaru: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → Rilis</a>',
+          'i18n-faq-footer-back': '← Kembali ke halaman utama',
+        },
+
+        // ── 한국어 ────────────────────────────────────────────────────────────
+        ko: {
+          'i18n-faq-page-title': '자주 묻는 질문',
+          'i18n-faq-back-link': '← 메인 페이지로 돌아가기',
+
+          // Recording & Saving
+          'i18n-faq-rec-heading': '녹음 &amp; 저장',
+          'i18n-faq-rec-q1': '실수한 녹음을 삭제할 수 있나요?',
+          'i18n-faq-rec-a1': '네 — 앱 안에서 각 녹음에 삭제 버튼이 있습니다. 또는 다시 녹음하기만 해도 기존 파일을 자동으로 덮어씁니다.',
+          'i18n-faq-rec-q2': '녹음한 후에 편집할 수 있나요?',
+          'i18n-faq-rec-a2': '네 — 각 녹음에는 편집 버튼이 있어서 Ocenaudio에서 해당 녹음을 열 수 있습니다. 거기서 자르기, 볼륨 조절 등 다양한 편집을 할 수 있습니다.',
+          'i18n-faq-rec-q3': '다시 녹음하면 이전 테이크를 덮어쓰나요?',
+          'i18n-faq-rec-a3': '네. 다시 녹음하면 해당 자극 항목의 기존 파일이 즉시 교체됩니다. 여러 테이크를 유지할 방법은 없습니다 — 새 녹음이 캡처되는 즉시 이전 것을 덮어씁니다.',
+          'i18n-faq-rec-q4': '앱이 자동으로 저장하나요?',
+          'i18n-faq-rec-a4': '네. 앱은 녹음이 캡처되는 즉시 저장합니다. 파일 → 저장 단계는 없습니다.',
+          'i18n-faq-rec-q5': '앱은 어떻게 어떤 녹음이 어느 비디오나 이미지에 속하는지 알까요?',
+          'i18n-faq-rec-a5': '녹음은 파일 이름으로 자극 파일과 매칭됩니다. 비디오나 이미지에 대한 응답을 녹음하면 앱은 자극 파일과 같은 이름의 <code>.wav</code> 파일을 같은 폴더에 저장합니다. 예를 들어, <code>clip01.mp4</code>에 대한 응답은 <code>clip01.wav</code>로 저장되고, <code>photo03.jpg</code>에 대한 응답은 <code>photo03.jpg.wav</code>로 저장됩니다.',
+          'i18n-faq-rec-a5b': '<strong>중요:</strong> 응답을 녹음한 후에 자극 파일의 이름을 바꾸면 앱이 그 녹음을 더 이상 찾지 못합니다.',
+
+          // File Organization
+          'i18n-faq-org-heading': '파일 구성',
+          'i18n-faq-org-q1': '앱은 어떤 순서로 자극 파일을 표시하나요?',
+          'i18n-faq-org-a1': '파일은 파일 이름 순으로 정렬되며, 이는 자극 세트의 파일 목록 순서와 자동으로 일치합니다. 표시 순서를 변경해야 한다면, 파일 이름 앞에 앞자리 0이 있는 숫자를 붙여 이름을 바꾸세요(예: <code>01_clip.mp4</code>, <code>02_clip.mp4</code>).',
+          'i18n-faq-org-a1b': '<strong>중요:</strong> 이 작업은 녹음을 시작하기 <em>전에</em> 하세요. 응답을 녹음한 후에 파일 이름을 바꾸면 녹음이 해당 파일과 더 이상 매칭되지 않습니다.',
+          'i18n-faq-org-q2': '한 번에 하나의 자극 세트를 작업해야 하나요?',
+          'i18n-faq-org-a2': '네 — 항상 한 번에 하나의 폴더/세트를 열고 작업하세요. 여러 세트를 하나의 폴더에 합치지 마세요. 세트에는 동일한 파일 이름을 가진 파일이 포함될 수 있으며, 이 경우 녹음이 서로 덮어써질 수 있습니다.',
+
+          // Still Images
+          'i18n-faq-img-heading': '정지 이미지',
+          'i18n-faq-img-q1': '정지 이미지는 어떻게 작동하나요? 별도의 창인가요?',
+          'i18n-faq-img-a1': '이미지는 별도의 창이 아닌 별도의 <strong>탭</strong>에 있습니다. 작업 흐름은 비디오와 동일합니다: 자극 항목을 클릭하고 녹음하세요. 자극을 더블 클릭하면 전체 화면으로 볼 수 있습니다. 이미지 응답 파일은 이미지 파일의 전체 이름을 보존하는 비디오 응답과 같은 이름 규칙을 따릅니다: 예: <code>photo03.jpg.wav</code>. 자극 세트 지침에 따라 비디오와 이미지 탭을 오가세요 — 보통 7–8개 항목마다.',
+
+          // Export
+          'i18n-faq-exp-heading': '내보내기',
+          'i18n-faq-exp-q1': '"단일 WAV로 내보내기" 버튼은 전부 내보내나요?',
+          'i18n-faq-exp-a1': '현재 열려 있는 탭에 따라 <strong>현재 활성화된 탭</strong>의 녹음만 내보냅니다 — 비디오 응답 전체 또는 이미지 응답 전체입니다. 탭을 전환하고 다시 내보내어 다른 세트도 가져오세요.',
+
+          // Microphone
+          'i18n-faq-mic-heading': '마이크 &amp; 오디오 입력',
+          'i18n-faq-mic-q1': '새 마이크를 연결했는데 인식되지 않으면 어떻게 하나요?',
+          'i18n-faq-mic-a1': '앱은 시스템 전체 오디오 입력 설정을 사용합니다 — 앱 내 장치 선택기는 없습니다. 새 녹음 장치로 전환한 경우, <strong>Windows 소리 설정</strong>에서 입력을 변경하고 <strong>앱을 다시 시작</strong>하여 변경 사항을 반영하세요.',
+
+          // Session Workflow
+          'i18n-faq-wf-heading': '세션 작업 흐름',
+          'i18n-faq-wf-q1': '자극 항목 사이에서 원어민을 교체해야 하나요?',
+          'i18n-faq-wf-a1': '아니오 — 세션 중간에 화자를 교체하지 마세요. 한 명의 화자가 이미지 단계가 시작되기 전에 모든 비디오 자극을 다 봐야, 전체 맥락 안에서 모든 것을 볼 수 있습니다.',
+          'i18n-faq-wf-q2': '물리적으로 없는 컨설턴트와 원격으로 작업할 수 있나요?',
+          'i18n-faq-wf-a2': '네. 앱은 WhatsApp Desktop을 사용한 원격 작업 흐름을 지원합니다:',
+          'i18n-faq-wf-step1': '<strong>컨설턴트에게 자극 보내기:</strong> 앱에서 비디오나 이미지를 오른쪽 클릭하고 복사를 선택하세요. WhatsApp 채팅에 붙여넣기 하고 컨설턴트에게 보내세요.',
+          'i18n-faq-wf-step2': '<strong>음성 응답 받기:</strong> 컨설턴트가 WhatsApp에서 음성 메시지를 녹음하여 보내줍니다.',
+          'i18n-faq-wf-step3': '<strong>컴퓨터로 음성 메시지 복사하기 (Windows의 WhatsApp Desktop):</strong>',
+          'i18n-faq-wf-step3a': 'WhatsApp Desktop에서 음성 메시지에 마우스를 올리면 메시지 오른쪽에 작은 꺾쇠(▾)가 나타납니다.',
+          'i18n-faq-wf-step3b': '꺾쇠를 클릭하여 메시지 메뉴를 엽니다.',
+          'i18n-faq-wf-step3c': '<strong>전달</strong>을 선택합니다.',
+          'i18n-faq-wf-step3d': '나타나는 전달 패널에서 하단 작업 표시줄을 보고 <strong>복사</strong>를 선택하여 오디오 파일을 클립보드에 복사합니다. (일부 WhatsApp Desktop 버전에서는 꺾쇠 메뉴에 <strong>다운로드</strong> 옵션이 직접 표시되어 파일을 다운로드 폴더에 저장할 수 있습니다.)',
+          'i18n-faq-wf-step3e': '복사를 사용한 경우: 파일을 파일 탐색기(아무 폴더)에 붙여넣어 저장합니다.',
+          'i18n-faq-wf-step4': '<strong>앱으로 가져오기:</strong> 앱의 <strong>오디오 추가</strong> 버튼을 사용하여 저장된 오디오 파일을 불러오고 해당 자극 항목에 연결합니다.',
+          'i18n-faq-wf-note': '<strong>참고:</strong> 이렇게 녹음된 오디오는 직접 녹음보다 품질이 낮으며, 컨설턴트의 녹음 환경에 대한 통제력이 낮습니다. 가능하면 직접 대면 녹음을 권장합니다.',
+
+          // Footer
+          'i18n-faq-footer': '<a href="../index.html">← 메인 페이지로 돌아가기</a> · 최신 릴리스: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → 릴리스</a>',
+          'i18n-faq-footer-back': '← 메인 페이지로 돌아가기',
+        },
+
+        // ── Nederlands ───────────────────────────────────────────────────────
+        nl: {
+          'i18n-faq-page-title': 'Veelgestelde vragen',
+          'i18n-faq-back-link': '← Terug naar de hoofdpagina',
+
+          // Recording & Saving
+          'i18n-faq-rec-heading': 'Opnemen &amp; Opslaan',
+          'i18n-faq-rec-q1': 'Kan ik een opname verwijderen als ik een fout heb gemaakt?',
+          'i18n-faq-rec-a1': 'Ja — elke opname heeft een verwijderknop rechtstreeks in de app. Je kunt ook gewoon opnieuw opnemen, waardoor het bestaande bestand automatisch wordt overschreven.',
+          'i18n-faq-rec-q2': 'Kan ik een opname bewerken nadat ik die heb gemaakt?',
+          'i18n-faq-rec-a2': 'Ja — elke opname heeft een bewerkknop waarmee je die opname in Ocenaudio opent. Daar kun je bijsnijden, het volume aanpassen of andere bewerkingen uitvoeren.',
+          'i18n-faq-rec-q3': 'Overschrijft opnieuw opnemen de vorige take?',
+          'i18n-faq-rec-a3': 'Ja. Opnieuw opnemen vervangt het bestaande bestand voor dat stimulusitem onmiddellijk. Er is geen manier om meerdere takes te bewaren — de nieuwe opname overschrijft de oude zodra deze is vastgelegd.',
+          'i18n-faq-rec-q4': 'Slaat de app automatisch op?',
+          'i18n-faq-rec-a4': 'Ja. De app slaat elke opname op zodra deze is vastgelegd. Er is geen stap Bestand → Opslaan.',
+          'i18n-faq-rec-q5': 'Hoe weet de app welke opname bij welke video of afbeelding hoort?',
+          'i18n-faq-rec-a5': 'Opnames worden op bestandsnaam gekoppeld aan stimulusbestanden. Wanneer je een respons op een video of afbeelding opneemt, slaat de app een <code>.wav</code>-bestand op met dezelfde naam als het stimulusbestand — in dezelfde map. Een respons op <code>clip01.mp4</code> wordt bijvoorbeeld opgeslagen als <code>clip01.wav</code>, en een respons op <code>photo03.jpg</code> als <code>photo03.jpg.wav</code>.',
+          'i18n-faq-rec-a5b': '<strong>Belangrijk:</strong> Als je een stimulusbestand hernoemt nadat je een respons hebt opgenomen, kan de app die opname niet meer vinden.',
+
+          // File Organization
+          'i18n-faq-org-heading': 'Bestandsorganisatie',
+          'i18n-faq-org-q1': 'In welke volgorde toont de app stimulusbestanden?',
+          'i18n-faq-org-a1': 'Bestanden worden gesorteerd op bestandsnaam, wat automatisch overeenkomt met de volgorde in de bestandslijst van je stimulusset. Als je de weergavevolgorde moet wijzigen, hernoem de bestanden dan met getallen met voorloopnullen aan het begin van de bestandsnaam (bijv. <code>01_clip.mp4</code>, <code>02_clip.mp4</code>).',
+          'i18n-faq-org-a1b': '<strong>Belangrijk:</strong> Doe dit <em>voordat</em> je opnames maakt. Als je een bestand hernoemt nadat je een respons hebt opgenomen, wordt de opname niet langer gekoppeld aan dat bestand.',
+          'i18n-faq-org-q2': 'Moet ik één stimulusset tegelijk doorwerken?',
+          'i18n-faq-org-a2': 'Ja — open en werk altijd één map/set tegelijk door. Voeg meerdere sets niet samen in één map. Sets kunnen bestanden met identieke bestandsnamen bevatten, waardoor opnames elkaar zouden overschrijven.',
+
+          // Still Images
+          'i18n-faq-img-heading': 'Stilstaande afbeeldingen',
+          'i18n-faq-img-q1': 'Hoe werken de stilstaande afbeeldingen? Is dat een apart venster?',
+          'i18n-faq-img-a1': 'Afbeeldingen bevinden zich in een apart <strong>tabblad</strong>, niet in een apart venster. De workflow is dezelfde als voor video\'s: klik op een stimulusitem en neem op. Je kunt op elk stimulus dubbelklikken om het schermvullend te bekijken. Responsbestanden van afbeeldingen volgen dezelfde naamgevingsconventie als videoresponses, met de volledige afbeeldingsbestandsnaam behouden: bijv. <code>photo03.jpg.wav</code>. Wissel tussen de video- en afbeeldingstabbladen zoals de instructies van je stimulusset aangeven — doorgaans elke 7–8 items.',
+
+          // Export
+          'i18n-faq-exp-heading': 'Exporteren',
+          'i18n-faq-exp-q1': 'Exporteert de knop "Exporteer als enkel WAV-bestand" alles?',
+          'i18n-faq-exp-a1': 'Het exporteert alleen de opnames in het <strong>momenteel actieve tabblad</strong> — alle videoresponses of alle afbeeldingsresponses, afhankelijk van welk tabblad je open hebt. Wissel van tabblad en exporteer opnieuw om de andere set te krijgen.',
+
+          // Microphone
+          'i18n-faq-mic-heading': 'Microfoon &amp; Audio-invoer',
+          'i18n-faq-mic-q1': 'Wat als ik een nieuwe microfoon aansluit en die niet wordt herkend?',
+          'i18n-faq-mic-a1': 'De app gebruikt je systeembrede audio-invoerinstellingen — er is geen apparaatskiezer in de app. Als je overschakelt naar een nieuw opnameapparaat, wijzig dan de invoer in je <strong>Windows Geluidsinstellingen</strong> en <strong>herstart de app</strong> om de wijziging te laden.',
+
+          // Session Workflow
+          'i18n-faq-wf-heading': 'Sessieworkflow',
+          'i18n-faq-wf-q1': 'Moet ik moedertaalsprekers afwisselen tussen stimulusitems?',
+          'i18n-faq-wf-a1': 'Nee — wissel niet van spreker midden in een sessie. Één spreker moet alle videostimuli doorlopen voordat de beeldenfase begint, zodat ze alles in context hebben gezien.',
+          'i18n-faq-wf-q2': 'Kan ik op afstand werken met een consultant die niet fysiek aanwezig is?',
+          'i18n-faq-wf-a2': 'Ja. De app ondersteunt een externe workflow via WhatsApp Desktop:',
+          'i18n-faq-wf-step1': '<strong>Stuur de stimulus naar je consultant:</strong> Klik met de rechtermuisknop op een video of afbeelding in de app en kies Kopiëren. Plak het in een WhatsApp-chat en stuur het naar je consultant.',
+          'i18n-faq-wf-step2': '<strong>Ontvang hun spraakrespons:</strong> Je consultant neemt een spraakbericht op in WhatsApp en stuurt het naar jou.',
+          'i18n-faq-wf-step3': '<strong>Kopieer het spraakbericht naar je computer (WhatsApp Desktop op Windows):</strong>',
+          'i18n-faq-wf-step3a': 'Beweeg de muis over het spraakbericht in WhatsApp Desktop totdat er rechts van het bericht een klein chevron (▾) verschijnt.',
+          'i18n-faq-wf-step3b': 'Klik op het chevron om het berichtenmenu te openen.',
+          'i18n-faq-wf-step3c': 'Selecteer <strong>Doorsturen</strong>.',
+          'i18n-faq-wf-step3d': 'In het doorstuurpaneel dat verschijnt, kijk je in de onderste actiebalk en kies je <strong>Kopiëren</strong> om het audiobestand naar je klembord te kopiëren. (In sommige versies van WhatsApp Desktop zie je mogelijk een <strong>Downloaden</strong>-optie direct in het chevronmenu, waarmee het bestand naar je Downloads-map wordt opgeslagen.)',
+          'i18n-faq-wf-step3e': 'Als je Kopiëren hebt gebruikt: plak het bestand in Verkenner (een willekeurige map) om het op te slaan.',
+          'i18n-faq-wf-step4': '<strong>Importeer in de app:</strong> Gebruik de knop <strong>Audio toevoegen</strong> in de app om het opgeslagen audiobestand te laden en te koppelen aan het bijbehorende stimulusitem.',
+          'i18n-faq-wf-note': '<strong>Let op:</strong> Audio die op deze manier is opgenomen heeft een lagere kwaliteit dan een directe opname, en je hebt minder controle over de opname-omstandigheden van de consultant. Directe face-to-face opname heeft de voorkeur wanneer mogelijk.',
+
+          // Footer
+          'i18n-faq-footer': '<a href="../index.html">← Terug naar de hoofdpagina</a> · Laatste release: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → Releases</a>',
+          'i18n-faq-footer-back': '← Terug naar de hoofdpagina',
+        },
+
+        // ── Português Brasil ─────────────────────────────────────────────────
+        'pt-BR': {
+          'i18n-faq-page-title': 'Perguntas Frequentes',
+          'i18n-faq-back-link': '← Voltar à página principal',
+
+          // Recording & Saving
+          'i18n-faq-rec-heading': 'Gravação &amp; Salvamento',
+          'i18n-faq-rec-q1': 'Posso excluir uma gravação se cometi um erro?',
+          'i18n-faq-rec-a1': 'Sim — cada gravação tem um botão de exclusão diretamente no aplicativo. Você também pode simplesmente gravar novamente, o que substitui o arquivo existente automaticamente.',
+          'i18n-faq-rec-q2': 'Posso editar uma gravação depois de fazê-la?',
+          'i18n-faq-rec-a2': 'Sim — cada gravação tem um botão de edição que abre essa gravação no Ocenaudio, onde você pode cortar, ajustar o volume ou fazer outras edições.',
+          'i18n-faq-rec-q3': 'Gravar novamente substitui o take anterior?',
+          'i18n-faq-rec-a3': 'Sim. Gravar novamente substitui imediatamente o arquivo existente para aquele item de estímulo. Não há como manter vários takes — a nova gravação substitui a anterior no momento em que é capturada.',
+          'i18n-faq-rec-q4': 'O aplicativo salva automaticamente?',
+          'i18n-faq-rec-a4': 'Sim. O aplicativo salva cada gravação no momento em que é capturada. Não há etapa de Arquivo → Salvar.',
+          'i18n-faq-rec-q5': 'Como o aplicativo sabe qual gravação pertence a qual vídeo ou imagem?',
+          'i18n-faq-rec-a5': 'As gravações são vinculadas aos arquivos de estímulo pelo nome do arquivo. Quando você grava uma resposta a um vídeo ou imagem, o aplicativo salva um arquivo <code>.wav</code> com o mesmo nome do arquivo de estímulo — na mesma pasta. Por exemplo, uma resposta a <code>clip01.mp4</code> é salva como <code>clip01.wav</code>, e uma resposta a <code>photo03.jpg</code> é salva como <code>photo03.jpg.wav</code>.',
+          'i18n-faq-rec-a5b': '<strong>Importante:</strong> Se você renomear um arquivo de estímulo após gravar uma resposta, o aplicativo não conseguirá mais encontrar essa gravação.',
+
+          // File Organization
+          'i18n-faq-org-heading': 'Organização de Arquivos',
+          'i18n-faq-org-q1': 'Em que ordem o aplicativo exibe os arquivos de estímulo?',
+          'i18n-faq-org-a1': 'Os arquivos são classificados pelo nome do arquivo, o que corresponde automaticamente à ordem na lista de arquivos do seu conjunto de estímulos. Se precisar alterar a ordem de exibição, renomeie os arquivos com números de zeros à esquerda no início do nome (por exemplo, <code>01_clip.mp4</code>, <code>02_clip.mp4</code>).',
+          'i18n-faq-org-a1b': '<strong>Importante:</strong> Faça isso <em>antes</em> de fazer quaisquer gravações. Se você renomear um arquivo após gravar uma resposta para ele, a gravação não será mais vinculada a esse arquivo.',
+          'i18n-faq-org-q2': 'Devo trabalhar um conjunto de estímulos por vez?',
+          'i18n-faq-org-a2': 'Sim — sempre abra e trabalhe em uma pasta/conjunto por vez. Não mescle vários conjuntos em uma única pasta. Os conjuntos podem conter arquivos com nomes idênticos, o que faria as gravações sobrescreverem umas às outras.',
+
+          // Still Images
+          'i18n-faq-img-heading': 'Imagens Estáticas',
+          'i18n-faq-img-q1': 'Como funcionam as imagens estáticas? É uma janela separada?',
+          'i18n-faq-img-a1': 'As imagens ficam em uma <strong>aba</strong> separada, não em uma janela separada. O fluxo de trabalho é o mesmo que para vídeos: clique em um item de estímulo e grave. Você pode dar um duplo clique em qualquer estímulo para visualizá-lo em tela cheia. Os arquivos de resposta de imagem seguem a mesma convenção de nomenclatura das respostas de vídeo, com o nome completo do arquivo de imagem preservado: por exemplo, <code>photo03.jpg.wav</code>. Alterne entre as abas de vídeo e imagem conforme as instruções do seu conjunto de estímulos indicarem — normalmente a cada 7–8 itens.',
+
+          // Export
+          'i18n-faq-exp-heading': 'Exportação',
+          'i18n-faq-exp-q1': 'O botão "Exportar como WAV único" exporta tudo?',
+          'i18n-faq-exp-a1': 'Ele exporta apenas as gravações na <strong>aba atualmente ativa</strong> — todas as respostas de vídeo ou todas as respostas de imagem, dependendo de qual aba está aberta. Mude de aba e exporte novamente para obter o outro conjunto.',
+
+          // Microphone
+          'i18n-faq-mic-heading': 'Microfone &amp; Entrada de Áudio',
+          'i18n-faq-mic-q1': 'E se eu conectar um novo microfone e ele não for reconhecido?',
+          'i18n-faq-mic-a1': 'O aplicativo usa as configurações de entrada de áudio do sistema — não há seletor de dispositivo no aplicativo. Se você mudar para um novo dispositivo de gravação, altere a entrada nas <strong>Configurações de Som do Windows</strong> e depois <strong>reinicie o aplicativo</strong> para detectar a mudança.',
+
+          // Session Workflow
+          'i18n-faq-wf-heading': 'Fluxo de Trabalho da Sessão',
+          'i18n-faq-wf-q1': 'Devo alternar falantes nativos entre itens de estímulo?',
+          'i18n-faq-wf-a1': 'Não — não alterne falantes no meio de uma sessão. Um único falante deve percorrer todos os estímulos de vídeo antes de a fase de imagens começar, para que ele tenha visto tudo em contexto.',
+          'i18n-faq-wf-q2': 'Posso trabalhar remotamente com um consultor que não está fisicamente presente?',
+          'i18n-faq-wf-a2': 'Sim. O aplicativo suporta um fluxo de trabalho remoto usando WhatsApp Desktop:',
+          'i18n-faq-wf-step1': '<strong>Envie o estímulo ao seu consultor:</strong> Clique com o botão direito em um vídeo ou imagem no aplicativo e escolha Copiar. Cole em uma conversa do WhatsApp e envie ao seu consultor.',
+          'i18n-faq-wf-step2': '<strong>Receba a resposta de voz deles:</strong> Seu consultor grava uma mensagem de voz no WhatsApp e envia para você.',
+          'i18n-faq-wf-step3': '<strong>Copie a mensagem de voz para o seu computador (WhatsApp Desktop no Windows):</strong>',
+          'i18n-faq-wf-step3a': 'Passe o mouse sobre a mensagem de voz no WhatsApp Desktop até aparecer um pequeno chevron (▾) no lado direito da mensagem.',
+          'i18n-faq-wf-step3b': 'Clique no chevron para abrir o menu da mensagem.',
+          'i18n-faq-wf-step3c': 'Selecione <strong>Encaminhar</strong>.',
+          'i18n-faq-wf-step3d': 'No painel de encaminhamento que aparece, procure na barra de ações na parte inferior e escolha <strong>Copiar</strong> para copiar o arquivo de áudio para sua área de transferência. (Em algumas versões do WhatsApp Desktop, você pode ver uma opção de <strong>Download</strong> diretamente no menu do chevron, que salva o arquivo na sua pasta Downloads.)',
+          'i18n-faq-wf-step3e': 'Se você usou Copiar: cole o arquivo no Explorador de Arquivos (qualquer pasta) para salvá-lo.',
+          'i18n-faq-wf-step4': '<strong>Importe para o aplicativo:</strong> Use o botão <strong>Adicionar Áudio</strong> no aplicativo para carregar o arquivo de áudio salvo e vinculá-lo ao item de estímulo correspondente.',
+          'i18n-faq-wf-note': '<strong>Observação:</strong> O áudio capturado dessa forma é de qualidade inferior a uma gravação direta, e você tem menos controle sobre as condições de gravação do consultor. A gravação presencial direta é preferível quando possível.',
+
+          // Footer
+          'i18n-faq-footer': '<a href="../index.html">← Voltar à página principal</a> · Última versão: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → Releases</a>',
+          'i18n-faq-footer-back': '← Voltar à página principal',
+        },
+
+        // ── Español Latinoamérica ─────────────────────────────────────────────
+        es: {
+          'i18n-faq-page-title': 'Preguntas Frecuentes',
+          'i18n-faq-back-link': '← Volver a la página principal',
+
+          // Recording & Saving
+          'i18n-faq-rec-heading': 'Grabación &amp; Guardado',
+          'i18n-faq-rec-q1': '¿Puedo eliminar una grabación si cometí un error?',
+          'i18n-faq-rec-a1': 'Sí — cada grabación tiene un botón de eliminar directamente en la app. También puedes grabar de nuevo, lo que sobreescribe el archivo existente automáticamente.',
+          'i18n-faq-rec-q2': '¿Puedo editar una grabación después de haberla hecho?',
+          'i18n-faq-rec-a2': 'Sí — cada grabación tiene un botón de edición que abre esa grabación en Ocenaudio, donde puedes recortar, ajustar el volumen u hacer otras ediciones.',
+          'i18n-faq-rec-q3': '¿Grabar de nuevo sobreescribe la toma anterior?',
+          'i18n-faq-rec-a3': 'Sí. Grabar de nuevo reemplaza inmediatamente el archivo existente para ese ítem de estímulo. No hay forma de conservar varias tomas — la nueva grabación sobreescribe la anterior en el momento en que se captura.',
+          'i18n-faq-rec-q4': '¿La app guarda automáticamente?',
+          'i18n-faq-rec-a4': 'Sí. La app guarda cada grabación en el momento en que se captura. No hay un paso de Archivo → Guardar.',
+          'i18n-faq-rec-q5': '¿Cómo sabe la app qué grabación corresponde a qué video o imagen?',
+          'i18n-faq-rec-a5': 'Las grabaciones se asocian a los archivos de estímulo por nombre de archivo. Cuando grabas una respuesta a un video o imagen, la app guarda un archivo <code>.wav</code> con el mismo nombre que el archivo de estímulo — en la misma carpeta. Por ejemplo, una respuesta a <code>clip01.mp4</code> se guarda como <code>clip01.wav</code>, y una respuesta a <code>photo03.jpg</code> se guarda como <code>photo03.jpg.wav</code>.',
+          'i18n-faq-rec-a5b': '<strong>Importante:</strong> Si renombras un archivo de estímulo después de grabar una respuesta, la app ya no podrá encontrar esa grabación.',
+
+          // File Organization
+          'i18n-faq-org-heading': 'Organización de Archivos',
+          'i18n-faq-org-q1': '¿En qué orden muestra la app los archivos de estímulo?',
+          'i18n-faq-org-a1': 'Los archivos se ordenan por nombre de archivo, lo que coincide automáticamente con el orden de la lista de archivos de tu conjunto de estímulos. Si necesitas cambiar el orden de visualización, renombra los archivos con números con cero inicial al comienzo del nombre (por ejemplo, <code>01_clip.mp4</code>, <code>02_clip.mp4</code>).',
+          'i18n-faq-org-a1b': '<strong>Importante:</strong> Haz esto <em>antes</em> de hacer cualquier grabación. Si renombras un archivo después de haber grabado una respuesta para él, la grabación ya no quedará vinculada a ese archivo.',
+          'i18n-faq-org-q2': '¿Debo trabajar un conjunto de estímulos a la vez?',
+          'i18n-faq-org-a2': 'Sí — abre y trabaja siempre en una sola carpeta/conjunto a la vez. No mezcles varios conjuntos en una sola carpeta. Los conjuntos pueden tener archivos con nombres idénticos, lo que haría que las grabaciones se sobreescriban entre sí.',
+
+          // Still Images
+          'i18n-faq-img-heading': 'Imágenes Estáticas',
+          'i18n-faq-img-q1': '¿Cómo funcionan las imágenes estáticas? ¿Es una ventana separada?',
+          'i18n-faq-img-a1': 'Las imágenes están en una <strong>pestaña</strong> separada, no en una ventana separada. El flujo de trabajo es el mismo que para los videos: haz clic en un ítem de estímulo y graba. Puedes hacer doble clic en cualquier estímulo para verlo en pantalla completa. Los archivos de respuesta de imagen siguen la misma convención de nombres que las respuestas de video, con el nombre completo del archivo de imagen conservado: por ejemplo, <code>photo03.jpg.wav</code>. Alterna entre las pestañas de video e imagen según indiquen las instrucciones de tu conjunto de estímulos — normalmente cada 7–8 ítems.',
+
+          // Export
+          'i18n-faq-exp-heading': 'Exportación',
+          'i18n-faq-exp-q1': '¿El botón "Exportar como WAV único" exporta todo?',
+          'i18n-faq-exp-a1': 'Solo exporta las grabaciones de la <strong>pestaña actualmente activa</strong> — todas las respuestas de video o todas las respuestas de imagen, dependiendo de cuál pestaña tengas abierta. Cambia de pestaña y vuelve a exportar para obtener el otro conjunto.',
+
+          // Microphone
+          'i18n-faq-mic-heading': 'Micrófono &amp; Entrada de Audio',
+          'i18n-faq-mic-q1': '¿Qué hago si conecto un micrófono nuevo y no es detectado?',
+          'i18n-faq-mic-a1': 'La app usa la configuración de entrada de audio de todo el sistema — no hay selector de dispositivo dentro de la app. Si cambias a un nuevo dispositivo de grabación, cambia la entrada en la <strong>Configuración de Sonido de Windows</strong> y luego <strong>reinicia la app</strong> para detectar el cambio.',
+
+          // Session Workflow
+          'i18n-faq-wf-heading': 'Flujo de Trabajo de la Sesión',
+          'i18n-faq-wf-q1': '¿Debo rotar hablantes nativos entre ítems de estímulo?',
+          'i18n-faq-wf-a1': 'No — no rotes hablantes en medio de una sesión. Un solo hablante debe recorrer todos los estímulos de video antes de que comience la fase de imágenes, para que haya visto todo en contexto.',
+          'i18n-faq-wf-q2': '¿Puedo trabajar de forma remota con un consultor que no está físicamente presente?',
+          'i18n-faq-wf-a2': 'Sí. La app admite un flujo de trabajo remoto usando WhatsApp Desktop:',
+          'i18n-faq-wf-step1': '<strong>Envía el estímulo a tu consultor:</strong> Haz clic derecho en un video o imagen en la app y elige Copiar. Pégalo en una conversación de WhatsApp y envíaselo a tu consultor.',
+          'i18n-faq-wf-step2': '<strong>Recibe su respuesta de voz:</strong> Tu consultor graba un mensaje de voz en WhatsApp y te lo envía.',
+          'i18n-faq-wf-step3': '<strong>Copia el mensaje de voz a tu computadora (WhatsApp Desktop en Windows):</strong>',
+          'i18n-faq-wf-step3a': 'Coloca el cursor sobre el mensaje de voz en WhatsApp Desktop hasta que aparezca un pequeño chevron (▾) en el lado derecho del mensaje.',
+          'i18n-faq-wf-step3b': 'Haz clic en el chevron para abrir el menú del mensaje.',
+          'i18n-faq-wf-step3c': 'Selecciona <strong>Reenviar</strong>.',
+          'i18n-faq-wf-step3d': 'En el panel de reenvío que aparece, busca en la barra de acciones inferior y elige <strong>Copiar</strong> para copiar el archivo de audio al portapapeles. (En algunas versiones de WhatsApp Desktop, puede aparecer una opción <strong>Descargar</strong> directamente en el menú del chevron, que guarda el archivo en tu carpeta de Descargas.)',
+          'i18n-faq-wf-step3e': 'Si usaste Copiar: pega el archivo en el Explorador de archivos (cualquier carpeta) para guardarlo.',
+          'i18n-faq-wf-step4': '<strong>Importa a la app:</strong> Usa el botón <strong>Agregar Audio</strong> en la app para cargar el archivo de audio guardado y vincularlo al ítem de estímulo correspondiente.',
+          'i18n-faq-wf-note': '<strong>Nota:</strong> El audio capturado de esta manera tiene menor calidad que una grabación directa, y tienes menos control sobre las condiciones de grabación del consultor. La grabación presencial directa es preferible cuando sea posible.',
+
+          // Footer
+          'i18n-faq-footer': '<a href="../index.html">← Volver a la página principal</a> · Última versión: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → Lanzamientos</a>',
+          'i18n-faq-footer-back': '← Volver a la página principal',
+        },
+
+        // ── Afrikaans ─────────────────────────────────────────────────────────
+        af: {
+          'i18n-faq-page-title': 'Gereelde Vrae',
+          'i18n-faq-back-link': '← Terug na die hoofbladsy',
+
+          // Recording & Saving
+          'i18n-faq-rec-heading': 'Opneem &amp; Stoor',
+          'i18n-faq-rec-q1': 'Kan ek \'n opname uitvee as ek \'n fout gemaak het?',
+          'i18n-faq-rec-a1': 'Ja — elke opname het \'n uitvee-knoppie direk in die toepassing. Jy kan ook eenvoudig weer opneem, wat die bestaande lêer outomaties oorskryf.',
+          'i18n-faq-rec-q2': 'Kan ek \'n opname redigeer nadat ek dit gemaak het?',
+          'i18n-faq-rec-a2': 'Ja — elke opname het \'n redigeerknoppie wat daardie opname in Ocenaudio oopmaak, waar jy kan snoei, die volume aanpas of ander redigering doen.',
+          'i18n-faq-rec-q3': 'Sal weer opneem die vorige opname oorskryf?',
+          'i18n-faq-rec-a3': 'Ja. Weer opneem vervang die bestaande lêer vir daardie stimulusitem onmiddellik. Daar is geen manier om verskeie opnames te bewaar nie — die nuwe opname oorskryf die oue sodra dit vasgelê word.',
+          'i18n-faq-rec-q4': 'Stoor die toepassing outomaties?',
+          'i18n-faq-rec-a4': 'Ja. Die toepassing stoor elke opname sodra dit vasgelê word. Daar is geen Lêer → Stoor-stap nie.',
+          'i18n-faq-rec-q5': 'Hoe weet die toepassing watter opname by watter video of beeld hoort?',
+          'i18n-faq-rec-a5': 'Opnames word aan stimuluslêers gekoppel op grond van die lêernaam. Wanneer jy \'n respons op \'n video of beeld opneem, stoor die toepassing \'n <code>.wav</code>-lêer met dieselfde naam as die stimuluslêer — in dieselfde gids. Byvoorbeeld, \'n respons op <code>clip01.mp4</code> word gestoor as <code>clip01.wav</code>, en \'n respons op <code>photo03.jpg</code> word gestoor as <code>photo03.jpg.wav</code>.',
+          'i18n-faq-rec-a5b': '<strong>Belangrik:</strong> As jy \'n stimuluslêer hernoem nadat jy \'n respons opgeneem het, sal die toepassing nie meer daardie opname kan vind nie.',
+
+          // File Organization
+          'i18n-faq-org-heading': 'Lêerorganisasie',
+          'i18n-faq-org-q1': 'In watter volgorde vertoon die toepassing stimuluslêers?',
+          'i18n-faq-org-a1': 'Lêers word gesorteer volgens lêernaam, wat outomaties ooreenstem met die volgorde in jou stimulusstel se lêerlys. As jy die vertoonvolgorde moet verander, hernoem die lêers met voorloopnul-getalle aan die begin van die lêernaam (bv. <code>01_clip.mp4</code>, <code>02_clip.mp4</code>).',
+          'i18n-faq-org-a1b': '<strong>Belangrik:</strong> Doen dit <em>voordat</em> jy enige opnames maak. As jy \'n lêer hernoem nadat jy \'n respons daarvoor opgeneem het, sal die opname nie meer aan daardie lêer gekoppel wees nie.',
+          'i18n-faq-org-q2': 'Moet ek een stimulusstel op \'n slag deurwerk?',
+          'i18n-faq-org-a2': 'Ja — maak altyd een gids/stel op \'n slag oop en werk deur dit. Moenie verskeie stelle in een gids saamvoeg nie. Stelle kan lêers met identiese lêername bevat, wat sal veroorsaak dat opnames mekaar oorskryf.',
+
+          // Still Images
+          'i18n-faq-img-heading': 'Stilbeelde',
+          'i18n-faq-img-q1': 'Hoe werk die stilbeelde? Is dit \'n aparte venster?',
+          'i18n-faq-img-a1': 'Beelde is in \'n aparte <strong>oortjie</strong>, nie \'n aparte venster nie. Die werkvloei is dieselfde as vir video\'s: klik op \'n stimulusitem en neem op. Jy kan op enige stimulus dubbelklik om dit op volskerm te sien. Beeldrespons-lêers volg dieselfde naamgewingkonvensie as videoresponse, met die volledige beeldlêernaam behou: bv. <code>photo03.jpg.wav</code>. Wissel tussen die video- en beeldoortjies soos jou stimulusstel se instruksies aandui — gewoonlik elke 7–8 items.',
+
+          // Export
+          'i18n-faq-exp-heading': 'Uitvoer',
+          'i18n-faq-exp-q1': 'Voer die knoppie "Voer uit as enkele WAV" alles uit?',
+          'i18n-faq-exp-a1': 'Dit voer slegs die opnames in die <strong>tans aktiewe oortjie</strong> uit — óf alle videoresponse óf alle beeldresponse, afhangende van watter oortjie jy oop het. Wissel van oortjie en voer weer uit om die ander stel te kry.',
+
+          // Microphone
+          'i18n-faq-mic-heading': 'Mikrofoon &amp; Oudio-invoer',
+          'i18n-faq-mic-q1': 'Wat as ek \'n nuwe mikrofoon inprop en dit word nie opgepik nie?',
+          'i18n-faq-mic-a1': 'Die toepassing gebruik jou stelselwye oudio-invoerinstellings — daar is geen toestelkieser in die toepassing nie. As jy na \'n nuwe opname-toestel oorskakel, verander die invoer in jou <strong>Windows-klanksinstellings</strong> en <strong>herbegin die toepassing</strong> om die verandering op te tel.',
+
+          // Session Workflow
+          'i18n-faq-wf-heading': 'Sessie-werkvloei',
+          'i18n-faq-wf-q1': 'Moet ek moedertaalsprekers roteer tussen stimulusitems?',
+          'i18n-faq-wf-a1': 'Nee — moenie sprekers in die middel van \'n sessie roteer nie. Een spreker moet deur al die videostimuli werk voordat die beeldfase begin, sodat hulle alles in konteks gesien het.',
+          'i18n-faq-wf-q2': 'Kan ek op afstand werk met \'n konsultant wat nie fisies teenwoordig is nie?',
+          'i18n-faq-wf-a2': 'Ja. Die toepassing ondersteun \'n afstand-werkvloei via WhatsApp Desktop:',
+          'i18n-faq-wf-step1': '<strong>Stuur die stimulus na jou konsultant:</strong> Regskliek op \'n video of beeld in die toepassing en kies Kopieer. Plak dit in \'n WhatsApp-gesprek en stuur dit na jou konsultant.',
+          'i18n-faq-wf-step2': '<strong>Ontvang hul stemrespons:</strong> Jou konsultant neem \'n stemboodskap op in WhatsApp en stuur dit na jou.',
+          'i18n-faq-wf-step3': '<strong>Kopieer die stemboodskap na jou rekenaar (WhatsApp Desktop op Windows):</strong>',
+          'i18n-faq-wf-step3a': 'Beweeg jou muis oor die stemboodskap in WhatsApp Desktop totdat \'n klein chevron (▾) aan die regterkant van die boodskap verskyn.',
+          'i18n-faq-wf-step3b': 'Klik op die chevron om die boodskapmenu oop te maak.',
+          'i18n-faq-wf-step3c': 'Kies <strong>Aanstuur</strong>.',
+          'i18n-faq-wf-step3d': 'In die aanstuurpaneel wat verskyn, kyk na die onderste aksiebalk en kies <strong>Kopieer</strong> om die oudiolêer na jou knipbord te kopieer. (In sommige weergawes van WhatsApp Desktop kan jy \'n <strong>Aflaai</strong>-opsie direk in die chevron-kieslys sien, wat die lêer in jou Aflaaigids stoor.)',
+          'i18n-faq-wf-step3e': 'As jy Kopieer gebruik het: plak die lêer in Lêerverkenner (enige gids) om dit te stoor.',
+          'i18n-faq-wf-step4': '<strong>Voer in na die toepassing:</strong> Gebruik die knoppie <strong>Voeg Oudio by</strong> in die toepassing om die gestoorde oudiolêer te laai en dit aan die ooreenstemmende stimulusitem te koppel.',
+          'i18n-faq-wf-note': '<strong>Let wel:</strong> Oudio wat op hierdie manier vasgelê word, is van laer gehalte as \'n direkte opname, en jy het minder beheer oor die konsultant se opname-omstandighede. Direkte persoonlike opname word verkies waar moontlik.',
+
+          // Footer
+          'i18n-faq-footer': '<a href="../index.html">← Terug na die hoofbladsy</a> · Nuutste vrystelling: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → Vrystellings</a>',
+          'i18n-faq-footer-back': '← Terug na die hoofbladsy',
+        },
+      };
+
+      function detectLanguage() {
+        const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('vatSiteLang') : null;
+        if (stored && LANGS[stored]) return stored;
+        const nav = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
+        const parts = nav.split('-');
+        const base = parts[0];
+        if (base === 'id') return 'id';
+        if (base === 'ko') return 'ko';
+        if (base === 'nl') return 'nl';
+        if (base === 'pt') return 'pt-BR';
+        if (base === 'es') return 'es';
+        if (base === 'af') return 'af';
+        return 'en';
+      }
+
+      function captureOriginals() {
+        const ids = new Set();
+        Object.values(TRANSLATIONS).forEach(dict => {
+          Object.keys(dict).forEach(id => ids.add(id));
+        });
+        ids.forEach(id => {
+          if (Object.prototype.hasOwnProperty.call(ORIGINAL_HTML, id)) return;
+          const el = document.getElementById(id);
+          if (el) {
+            ORIGINAL_HTML[id] = el.innerHTML;
+          }
+        });
+      }
+
+      function applyTranslations(lang) {
+        if (lang === 'en') {
+          // Restore original English content
+          Object.keys(ORIGINAL_HTML).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+              el.innerHTML = ORIGINAL_HTML[id];
+            }
+          });
+        } else {
+          const dict = TRANSLATIONS[lang] || {};
+          Object.keys(dict).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+              el.innerHTML = dict[id];
+            }
+          });
+        }
+        document.documentElement.lang = lang;
+      }
+
+      function initLanguage() {
+        const select = document.getElementById('langSelect');
+        if (!select) return;
+        // Populate dropdown
+        Object.keys(LANGS).forEach(code => {
+          const opt = document.createElement('option');
+          opt.value = code;
+          opt.textContent = LANGS[code].label;
+          select.appendChild(opt);
+        });
+        const lang = detectLanguage();
+        // Capture original English markup before applying any translations
+        captureOriginals();
+        select.value = lang;
+        applyTranslations(lang);
+        select.addEventListener('change', () => {
+          const newLang = select.value;
+          if (LANGS[newLang]) {
+            if (typeof localStorage !== 'undefined') {
+              localStorage.setItem('vatSiteLang', newLang);
+            }
+            applyTranslations(newLang);
+          }
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initLanguage);
+      } else {
+        initLanguage();
+      }
+    })();
+  </script>
 </body>
 </html>
