@@ -74,6 +74,8 @@ jobs:
           prerelease: true
           make_latest: false
           generate_release_notes: true
-          files: "installer/Visual Stimulus Kit Tool Setup ${{ steps.version.outputs.version }}.exe"
+          files: |
+            installer/Visual Stimulus Kit Tool Setup ${{ steps.version.outputs.version }}.exe
+            dist/Visual Stimulus Kit Tool.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

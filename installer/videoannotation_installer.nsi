@@ -6,9 +6,9 @@
 # Default to per-user
 !define APPNAME "Visual Stimulus Kit Tool"
 !define COMPANY "Seth Johnston"
-; VERSION can be overridden from the command line: makensis /DVERSION=2.2.0
+; VERSION can be overridden from the command line: makensis /DVERSION=2.2.1
 !ifndef VERSION
-!define VERSION "2.2.0"
+!define VERSION "2.2.1"
 !endif
 
 Name "Visual Stimulus Kit Tool"
