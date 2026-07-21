@@ -39,7 +39,10 @@ class JoinWavsWorker(QObject):
                 wav_paths = self.fs.recordings_in()
             wav_files = [os.path.basename(p) for p in wav_paths]
             wav_files.sort()
-            std_rate = 44100
+            # 48 kHz matches the archival capture rate (IASA TC-04). Bit depth
+            # stays 16-bit here because pydub cannot emit true 24-bit PCM (it
+            # upcasts 24-bit to 32-bit internally); see TODO on 24-bit joins.
+            std_rate = 48000
             std_channels = 1
             std_sample_width = 2
             silence_segment = AudioSegment.silent(duration=500, frame_rate=std_rate)

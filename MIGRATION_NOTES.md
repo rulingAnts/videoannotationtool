@@ -91,7 +91,7 @@ All features from the original Tkinter version are preserved:
 - First frame display on video selection
 - Video playback at ~30 FPS
 - Audio playback using PyAudio
-- Audio recording using PyAudio (44.1kHz, mono, 16-bit)
+- Audio recording using PyAudio (48kHz, mono, 24-bit archival PCM WAV per IASA TC-04; falls back to 16-bit if the input device lacks 24-bit support)
 - Open all WAVs in Ocenaudio (with path discovery and persistence)
 - Export WAVs to folder with overwrite confirmation
 - Import WAVs from folder with filename matching

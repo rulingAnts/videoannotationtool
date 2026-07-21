@@ -2672,7 +2672,7 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             pass
     def _handle_add_existing_audio_video(self):
-        """Import an existing audio file for the currently selected video and convert to 16-bit WAV."""
+        """Import an existing audio file for the currently selected video and convert to 16-bit 48 kHz WAV."""
         try:
             if not self.current_video or not self.fs.current_folder:
                 return
@@ -2697,7 +2697,7 @@ class VideoAnnotationApp(QMainWindow):
                 return
             try:
                 seg = AudioSegment.from_file(src_path)
-                seg = seg.set_channels(1).set_frame_rate(44100).set_sample_width(2)
+                seg = seg.set_channels(1).set_frame_rate(48000).set_sample_width(2)
                 seg.export(target_wav, format="wav")
             except Exception as e:
                 QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"Failed to import audio: {e}")
@@ -2712,7 +2712,7 @@ class VideoAnnotationApp(QMainWindow):
             pass
     def _convert_audio_to_wav(self, src_path: str, target_wav: str) -> None:
         seg = AudioSegment.from_file(src_path)
-        seg = seg.set_channels(1).set_frame_rate(44100).set_sample_width(2)
+        seg = seg.set_channels(1).set_frame_rate(48000).set_sample_width(2)
         seg.export(target_wav, format="wav")
     def _clipboard_audio_to_tempfile(self, mime) -> str | None:
         try:
@@ -3369,7 +3369,7 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             pass
     def _handle_add_existing_audio_image(self):
-        """Import an existing audio file for the selected image and convert to 16-bit WAV."""
+        """Import an existing audio file for the selected image and convert to 16-bit 48 kHz WAV."""
         try:
             sel = self.images_list.currentItem()
             if sel is None:
@@ -3406,7 +3406,7 @@ class VideoAnnotationApp(QMainWindow):
                 return
             try:
                 seg = AudioSegment.from_file(src_path)
-                seg = seg.set_channels(1).set_frame_rate(44100).set_sample_width(2)
+                seg = seg.set_channels(1).set_frame_rate(48000).set_sample_width(2)
                 seg.export(target_wav, format="wav")
             except Exception as e:
                 QMessageBox.critical(self, self.LABELS.get("error_title", "Error"), f"Failed to import audio: {e}")

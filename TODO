@@ -49,3 +49,8 @@
 
 # Windows Installer
 [ ] Fix NSIS installer: must register in Windows "Installed Apps" list and have a working uninstaller (per-user install scope). Currently the installer button on the website is commented out (docs/index.html) until this is resolved.
+
+# Recording Format / Archive Compliance
+[x] Make microphone recording language-documentation-archive-compliant (IASA TC-04: uncompressed PCM WAV, 48 kHz, 24-bit).
+    NOTE: vat/audio/recording.py now captures 48 kHz / 24-bit mono (paInt24 via wave module, sampwidth=3), with a graceful fallback to 16-bit at 48 kHz when the input device does not support 24-bit capture. Playback (vat/audio/playback.py) was already format-agnostic. Join/import sample rate bumped to 48 kHz for consistency. NOTE: the previous format was actually 44.1 kHz/16-bit, not 32-bit float as originally assumed.
+[ ] Emit TRUE 24-bit WAV from the pydub-based paths (Join WAVs in vat/audio/joiner.py; "Add audio" import/convert in vat/ui/app.py). pydub cannot represent 24-bit — it silently upcasts 24-bit to 32-bit internally — so these currently stay 16-bit @ 48 kHz to avoid writing non-compliant 32-bit files. A fix needs to bypass pydub for the final write (repack pydub's 32-bit raw_data down to 24-bit and write via the stdlib `wave` module, or shell to ffmpeg with -c:a pcm_s24le). Deferred: the repack depends on pydub's internal 24<->32 byte layout, which is version-specific and needs careful testing. The individual per-item recordings are the archival masters (now true 24-bit); the joined file is a derivative.
