@@ -51,21 +51,10 @@ jobs:
       - name: Build executable with PyInstaller
         run: python -m PyInstaller --clean pyinstaller.spec
 
-      - name: Install NSIS
-        run: choco install nsis --no-progress -y
-
-      - name: Build NSIS installer
-        shell: pwsh
-        run: |
-          $version = (Get-Content VERSION).Trim()
-          $makensis = "C:\Program Files (x86)\NSIS\makensis.exe"
-          if (-not (Test-Path $makensis)) {
-            $makensis = (Get-Command makensis.exe -ErrorAction SilentlyContinue).Source
-          }
-          Write-Host "makensis: $makensis"
-          Write-Host "Building version: $version"
-          & $makensis "/DVERSION=$version" installer\videoannotation_installer.nsi
-
+      # NSIS installer temporarily disabled until the uninstaller/registry issue
+      # is fixed (planned for after the refactor/modularize + PWA work). The
+      # installer script (installer/videoannotation_installer.nsi) is retained.
+      # Portable exe only for now.
       - name: Upload pre-release to GitHub
         uses: softprops/action-gh-release@v2
         with:
@@ -75,7 +64,6 @@ jobs:
           make_latest: false
           generate_release_notes: true
           files: |
-            installer/Visual Stimulus Kit Tool Setup ${{ steps.version.outputs.version }}.exe
             dist/Visual Stimulus Kit Tool.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
