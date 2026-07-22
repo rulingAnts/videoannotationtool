@@ -60,7 +60,35 @@
 [ ] (Optional, low priority) Emit TRUE 24-bit (pcm_s24le) for the joined file if a fully IASA-compliant single-file export is ever wanted. Requires bypassing pydub for the final write — shell to bundled ffmpeg (-c:a pcm_s24le -ar 48000) or write via the stdlib `wave` module (sampwidth=3) from correctly-scaled samples, with a round-trip test. Largely superseded by the 32-bit-lossless approach above, since the joined file is only a convenience copy for ELAN/SayMore and the archival masters are the individual per-item recordings.
 [ ] (Optional) "Add audio" import/convert (vat/ui/app.py) stays 48 kHz / 16-bit. Left as-is deliberately: imported audio (often compressed WhatsApp voice notes per the remote workflow) is never better than its source, so 16-bit is sufficient. Revisit only if users routinely import high-bit-depth source audio worth preserving.
 
-# Architecture: pywebview re-platform → PWA + native wrappers (major, future direction)
+# "All" tab — unified video + image queue (feature/redesign)
+PRIORITY: Do this BEFORE the pywebview/PWA re-platform and before the optional true-24-bit join work (both below).
+[ ] Add an "All" tab that presents videos AND still images together in a single, ordered, one-at-a-time
+    play/record queue — looking and functioning exactly like the current Videos tab, but able to preview
+    still images as well as play videos. For workflows where videos and images are meant to be handled in
+    sequence in one queue rather than in the separate Videos/Images tabs.
+    Where things live today (vat/ui/app.py, the right_panel QTabWidget):
+    - Tabs are indexed 0=Videos, 1=Images, 2=Review. The Videos play/record interface is built ~L866-991;
+      the Images tab ~L993-1166. Adding a tab SHIFTS these indices — update the hardcoded assumptions in
+      _on_tab_changed (~L1183: "0=Videos,1=Images,2=Review"; enables video_listbox only on idx==0) and the
+      setTabText(0/1/2,...) block (~L1254). Prefer looking tabs up by reference instead of magic indices.
+    - Media sources: FolderAccessManager.list_videos() and list_images() (vat/utils/fs_access.py). The "All"
+      queue merges both; confirm desired ordering (likely a single filename sort across both types, matching
+      how a stimulus set interleaves them).
+    - Preview must branch by item type: video -> first-frame + playback (OpenCV/cv2, as in the Videos tab);
+      image -> static display (as in the Images tab / Review fullscreen). The Review tab already distinguishes
+      video vs image and previews both — reuse that logic.
+    - Recording filename differs by type: video -> wav_path_for() (clip01.wav); image -> wav_path_for_image()
+      (photo03.jpg.wav) + find_existing_image_audio() for overwrite detection. The "All" tab must select the
+      correct naming/overwrite path per item.
+    - Keep the same UX: auto-save on capture, overwrite confirmation, per-item delete/edit (Ocenaudio) buttons.
+    - i18n: add an "all_tab_title" label across all 6 languages (vat/i18n/builtin_labels.py) + tab-title logic.
+    Design questions to settle:
+    - Does "All" ADD to the existing Videos/Images tabs (coexist) or replace them? Assume coexist for now.
+    - Recommended refactor: extract the Videos-tab play/record interface into a reusable component parameterised
+      by media type, so Videos / Images / All share ONE implementation instead of duplicating it. This also
+      de-risks the later pywebview migration (a clean, self-contained media-queue component ports more easily).
+
+# Architecture: pywebview re-platform → PWA + native wrappers (major, future direction — AFTER the "All" tab above)
 [ ] Re-platform the app: replace the PySide6/Qt GUI with a pywebview shell and move as much of
     the core functionality and UI/UX as possible into the HTML/CSS/JavaScript frontend. Keep
     Python only for essential native operations: filesystem/folder access, microphone recording,
