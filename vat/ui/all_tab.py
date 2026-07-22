@@ -22,8 +22,8 @@ RESUME STATUS (for interrupted sessions):
   [x] audio playback (AudioPlaybackWorker on a fresh QThread)
   [x] record / stop (AudioRecordingWorker), canonical WAV naming
   [x] delete recording, edit-in-Ocenaudio (via host)
-  [ ] NOT YET: wired into app.py right_panel + tab-index fixups
-  [ ] NOT YET: GUI click-test (PySide6/cv2 unavailable headless — syntax-checked only)
+  [x] wired into app.py right_panel (index 3, added last) + tab-index/ocenaudio/close fixups
+  [ ] NOT YET: GUI click-test (PySide6/cv2 unavailable headless — syntax-checked + pyflakes-clean only)
 """
 
 from __future__ import annotations

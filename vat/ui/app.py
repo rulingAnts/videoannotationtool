@@ -39,6 +39,7 @@ from vat.utils.fs_access import (
     FolderNotFoundError,
 )
 from vat.review import ReviewTab
+from vat.ui.all_tab import AllMediaTab
 
 # Labels are loaded from the builtin module (vat.i18n.builtin_labels)
 # with an optional external YAML/JSON overlay. A minimal English
@@ -1174,14 +1175,25 @@ class VideoAnnotationApp(QMainWindow):
         
         self.review_tab = ReviewTab(self.fs, app_version, self, labels=self.LABELS)
         right_panel.addTab(self.review_tab, self.LABELS.get("review_tab_title", "Review"))
-        
+
+        # "All" tab: unified video + image queue. Added LAST so existing tab
+        # indices (0=Videos, 1=Images, 2=Review) stay valid; All is index 3.
+        self.all_tab = AllMediaTab(self.fs, labels=self.LABELS, host=self)
+        right_panel.addTab(self.all_tab, self.LABELS.get("all_tab_title", "All"))
+        try:
+            self.fs.folderChanged.connect(lambda *_: self.all_tab.refresh_queue())
+            self.fs.videosUpdated.connect(lambda *_: self.all_tab.refresh_queue())
+            self.fs.imagesUpdated.connect(lambda *_: self.all_tab.refresh_queue())
+        except Exception:
+            pass
+
         splitter.addWidget(right_panel)
         # Start with drawer collapsed; remember previous sizes for temporary expand
         splitter.setSizes([0, 600])
         self._splitter_prev_sizes = [240, 600]
         # Connect tab change to enable/disable video_listbox
         def _on_tab_changed(idx):
-            # 0 = Videos, 1 = Images, 2 = Review (assume order)
+            # 0 = Videos, 1 = Images, 2 = Review, 3 = All (assume order)
             try:
                 self.video_listbox.setEnabled(idx == 0)
             except Exception:
@@ -1254,6 +1266,7 @@ class VideoAnnotationApp(QMainWindow):
                 self.right_panel.setTabText(0, self.LABELS.get("videos_tab_title", "Videos"))
                 self.right_panel.setTabText(1, self.LABELS.get("images_tab_title", "Images"))
                 self.right_panel.setTabText(2, self.LABELS.get("review_tab_title", "Review"))
+                self.right_panel.setTabText(3, self.LABELS.get("all_tab_title", "All"))
         except Exception:
             pass
         # Retranslate Review tab
@@ -3531,6 +3544,12 @@ class VideoAnnotationApp(QMainWindow):
             except Exception:
                 pass
             try:
+                all_tab = getattr(self, 'all_tab', None)
+                if all_tab and hasattr(all_tab, 'cleanup'):
+                    all_tab.cleanup()
+            except Exception:
+                pass
+            try:
                 self.stop_audio()
             except Exception:
                 pass
@@ -3646,6 +3665,8 @@ class VideoAnnotationApp(QMainWindow):
                     file_paths = self.fs.recordings_in()
             except Exception:
                 file_paths = self.fs.recordings_in()
+        elif active_index == 3:  # All tab -> every recording in the folder
+            file_paths = self.fs.recordings_in()
         else:  # Videos tab (default)
             file_paths = self.fs.video_recordings_in()
         if not file_paths:
