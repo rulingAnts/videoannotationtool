@@ -835,6 +835,128 @@
         });
     })();
   </script>
+  <style>
+    /* Download version chooser modal — used only when a pre-release is newer than the latest stable.
+       The download button stays a normal button; clicking it opens this chooser. */
+    .dl-overlay {
+      position: fixed; inset: 0; z-index: 1000; display: none;
+      align-items: center; justify-content: center; padding: 16px;
+      background: rgba(0,0,0,.55);
+    }
+    .dl-overlay.open { display: flex; }
+    .dl-modal {
+      width: 100%; max-width: 420px; position: relative;
+      background: var(--card, #fff); color: inherit;
+      border: 1px solid var(--border, rgba(128,128,128,.35)); border-radius: 14px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.35); padding: 20px;
+    }
+    .dl-modal h3 { margin: 0 24px 14px 0; font-size: 18px; }
+    .dl-close {
+      position: absolute; top: 10px; right: 12px; border: none; background: transparent;
+      color: inherit; font-size: 24px; line-height: 1; cursor: pointer; opacity: .7;
+    }
+    .dl-close:hover { opacity: 1; }
+    .dl-choice {
+      display: block; text-decoration: none; color: inherit; text-align: left;
+      border: 1px solid var(--border, rgba(128,128,128,.35)); border-radius: 10px;
+      padding: 12px 14px; margin-top: 10px; transition: border-color .12s, background .12s;
+    }
+    .dl-choice:hover { background: rgba(127,127,127,.10); border-color: var(--accent, #4a90d9); }
+    .dl-choice .dl-c-title { font-weight: 600; }
+    .dl-choice .dl-c-tag { color: var(--muted, #888); font-size: 12px; margin-left: 6px; }
+    .dl-choice .dl-c-note { display: block; margin-top: 3px; color: var(--muted, #888); font-size: 12px; }
+  </style>
+  <script>
+    // The Windows Portable button stays a normal button. ONLY when a pre-release exists that is
+    // newer than the latest stable release, clicking it opens a small modal to choose Stable vs
+    // Pre-release. Otherwise the button behaves normally (direct stable download). Degrades
+    // gracefully if there is no newer pre-release or the GitHub API call fails.
+    (function(){
+      const owner = 'rulingAnts', repo = 'videoannotationtool';
+      const winPortable = document.getElementById('winPortable');
+      if (!winPortable) return;
+      const isInstaller = (n) => /setup|installer/i.test(n);
+      const isPortable = (n) => /\.exe$/i.test(n) && !isInstaller(n);
+      const portableUrl = (rel) => {
+        const a = (rel.assets || []).find(x => x && x.browser_download_url && x.name && isPortable(x.name));
+        return a ? a.browser_download_url : (rel.html_url || null);
+      };
+      // Localized strings (site is localized; keep these in sync with the app's languages).
+      const LABELS = {
+        title:   { en:'Choose a version to download', id:'Pilih versi untuk diunduh', ko:'다운로드할 버전 선택', nl:'Kies een versie om te downloaden', 'pt-BR':'Escolha uma versão para baixar', es:'Elige una versión para descargar', af:'Kies ’n weergawe om af te laai' },
+        stable:  { en:'Stable release', id:'Rilis stabil', ko:'안정 버전', nl:'Stabiele release', 'pt-BR':'Versão estável', es:'Versión estable', af:'Stabiele vrystelling' },
+        pre:     { en:'Pre-release', id:'Pra-rilis', ko:'프리릴리스', nl:'Pre-release', 'pt-BR':'Pré-lançamento', es:'Versión preliminar', af:'Voorvrystelling' },
+        stableN: { en:'Recommended — tested and verified', id:'Direkomendasikan — teruji dan terverifikasi', ko:'권장 — 테스트 및 검증됨', nl:'Aanbevolen — getest en geverifieerd', 'pt-BR':'Recomendado — testado e verificado', es:'Recomendado — probado y verificado', af:'Aanbeveel — getoets en geverifieer' },
+        preN:    { en:'Newest features — not yet verified stable', id:'Fitur terbaru — belum terverifikasi stabil', ko:'최신 기능 — 아직 안정성 미검증', nl:'Nieuwste functies — nog niet als stabiel geverifieerd', 'pt-BR':'Recursos mais recentes — ainda não verificado como estável', es:'Funciones más nuevas — aún no verificado como estable', af:'Nuutste funksies — nog nie as stabiel geverifieer nie' },
+        close:   { en:'Close', id:'Tutup', ko:'닫기', nl:'Sluiten', 'pt-BR':'Fechar', es:'Cerrar', af:'Maak toe' },
+      };
+      let lang = 'en';
+      try { lang = localStorage.getItem('vatSiteLang') || 'en'; } catch (e) {}
+      const t = (k) => (LABELS[k][lang] || LABELS[k].en);
+
+      fetch(`https://api.github.com/repos/${owner}/${repo}/releases?per_page=15`, { headers: { 'Accept': 'application/vnd.github+json' } })
+        .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
+        .then(list => {
+          if (!Array.isArray(list)) return;
+          const live = list.filter(x => x && !x.draft);
+          const stable = live.find(x => !x.prerelease);
+          const pre = live.find(x => x.prerelease);
+          if (!pre) return; // no pre-release
+          if (stable && new Date(pre.published_at) <= new Date(stable.published_at)) return; // pre-release not newer
+          const preUrl = portableUrl(pre);
+          if (!preUrl) return;
+          const stableUrl = stable ? portableUrl(stable) : winPortable.href;
+
+          // Build the chooser modal once.
+          const overlay = document.createElement('div');
+          overlay.className = 'dl-overlay';
+          overlay.setAttribute('role', 'dialog');
+          overlay.setAttribute('aria-modal', 'true');
+
+          const modal = document.createElement('div');
+          modal.className = 'dl-modal';
+
+          const closeBtn = document.createElement('button');
+          closeBtn.type = 'button';
+          closeBtn.className = 'dl-close';
+          closeBtn.setAttribute('aria-label', t('close'));
+          closeBtn.innerHTML = '&times;';
+
+          const heading = document.createElement('h3');
+          heading.textContent = t('title');
+
+          const mkChoice = (title, tag, note, href) => {
+            const a = document.createElement('a');
+            a.className = 'dl-choice';
+            a.href = href;
+            const tt = document.createElement('span'); tt.className = 'dl-c-title'; tt.textContent = title;
+            const tg = document.createElement('span'); tg.className = 'dl-c-tag'; tg.textContent = tag || '';
+            const nn = document.createElement('span'); nn.className = 'dl-c-note'; nn.textContent = note || '';
+            a.appendChild(tt); a.appendChild(tg); a.appendChild(nn);
+            a.addEventListener('click', () => closeOverlay());
+            return a;
+          };
+
+          modal.appendChild(closeBtn);
+          modal.appendChild(heading);
+          modal.appendChild(mkChoice(t('stable'), (stable && (stable.tag_name || stable.name)) || '', t('stableN'), stableUrl));
+          modal.appendChild(mkChoice(t('pre'), (pre.tag_name || pre.name) || '', t('preN'), preUrl));
+          overlay.appendChild(modal);
+          document.body.appendChild(overlay);
+
+          function openOverlay() { overlay.classList.add('open'); }
+          function closeOverlay() { overlay.classList.remove('open'); }
+          overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOverlay(); });
+          closeBtn.addEventListener('click', closeOverlay);
+          document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeOverlay(); });
+
+          // Keep it a button: intercept the click and open the chooser instead of navigating.
+          winPortable.addEventListener('click', (e) => { e.preventDefault(); openOverlay(); });
+          winPortable.setAttribute('aria-haspopup', 'dialog');
+        })
+        .catch(err => console.warn('Pre-release check failed:', err));
+    })();
+  </script>
   <script>
     // Carousel logic with arrow buttons and swipe/drag
     (function() {
