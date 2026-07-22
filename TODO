@@ -67,6 +67,18 @@
 
 # "All" tab — unified video + image queue (feature/redesign)
 PRIORITY: Do this BEFORE the pywebview/PWA re-platform and before the optional true-24-bit join work (both below).
+STATUS (short-term thin implementation): CODE-COMPLETE, PENDING GUI CLICK-TEST. Committed in increments:
+    - i18n all_tab_title added to all 7 languages (vat/i18n/builtin_labels.py).
+    - vat/utils/media_naming.py (new, tested): media_type() + recording_name_for() (canonical, same-stem-safe).
+    - vat/utils/fs_access.py: list_all_media(), media_type_of(), recording_path_for(), has_recording().
+    - vat/ui/all_tab.py (new): self-contained AllMediaTab (queue + one-at-a-time preview + play/record/delete/edit).
+    - vat/ui/app.py: tab added at index 3 (existing 0/1/2 untouched); refresh on folder/media signals; setTabText,
+      open_in_ocenaudio, closeEvent updated.
+    REMAINING before marking done: launch the app and click-test — select/prev-next across a MIXED queue; image
+    preview shows with video controls disabled; record/play/delete/edit per item; same-stem video+image kit maps to
+    distinct WAVs; language switch relabels the tab; no cross-tab worker conflicts. (Couldn't be tested here:
+    PySide6/cv2 unavailable; verified via py_compile + pyflakes only.) Also review the layout vs the Videos tab
+    (this build embeds its own queue list on the left rather than using the drawer listbox) and adjust if desired.
 [ ] Add an "All" tab that presents videos AND still images together in a single, ordered, one-at-a-time
     play/record queue — looking and functioning exactly like the current Videos tab, but able to preview
     still images as well as play videos. For workflows where videos and images are meant to be handled in
