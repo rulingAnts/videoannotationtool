@@ -39,12 +39,17 @@ class JoinWavsWorker(QObject):
                 wav_paths = self.fs.recordings_in()
             wav_files = [os.path.basename(p) for p in wav_paths]
             wav_files.sort()
-            # 48 kHz matches the archival capture rate (IASA TC-04). Bit depth
-            # stays 16-bit here because pydub cannot emit true 24-bit PCM (it
-            # upcasts 24-bit to 32-bit internally); see TODO on 24-bit joins.
+            # 48 kHz matches the archival capture rate (IASA TC-04). The joined
+            # file is a derivative (per-item masters are the archival objects),
+            # so we upscale to 32-bit rather than down to 24-bit: pydub cannot
+            # emit true 24-bit (it upcasts 24-bit to 32-bit internally), and
+            # 32-bit preserves the full 24-bit recordings losslessly instead of
+            # truncating them to 16-bit. Both the 24-bit recordings and the
+            # 16-bit-generated click/silence map to the same full-scale level at
+            # 32-bit, so mixing them does not clip or shift levels.
             std_rate = 48000
             std_channels = 1
-            std_sample_width = 2
+            std_sample_width = 4
             silence_segment = AudioSegment.silent(duration=500, frame_rate=std_rate)
             click_sound = self.generate_click_sound_pydub(duration_ms=5, freq=2000, rate=std_rate)
             click_segment = silence_segment + click_sound + silence_segment

@@ -55,8 +55,41 @@
 # Recording Format / Archive Compliance
 [x] Make microphone recording language-documentation-archive-compliant (IASA TC-04: uncompressed PCM WAV, 48 kHz, 24-bit).
     NOTE: vat/audio/recording.py now captures 48 kHz / 24-bit mono (paInt24 via wave module, sampwidth=3), with a graceful fallback to 16-bit at 48 kHz when the input device does not support 24-bit capture. Playback (vat/audio/playback.py) was already format-agnostic. Join/import sample rate bumped to 48 kHz for consistency. NOTE: the previous format was actually 44.1 kHz/16-bit, not 32-bit float as originally assumed.
-[ ] CLEAN-UP: Emit TRUE 24-bit WAV from the pydub-based paths — "Join WAVs" (vat/audio/joiner.py) and "Add audio" import/convert (vat/ui/app.py). These currently stay 16-bit @ 48 kHz. Context / why deferred:
-    - pydub cannot represent 24-bit: its AudioSegment constructor silently upcasts any 24-bit (sample_width=3) input to 32-bit, so set_sample_width(3) yields a 32-bit file. Using it naively would write non-compliant 32-bit WAVs — the very thing we're avoiding.
-    - Worse, pydub's custom 24->32 upcast (value placed in the top 3 bytes, i.e. scaled x256) does NOT match audioop's standard 16->32 upcast (scaled x65536). The join mixes recording audio (24-bit origin) with generated click/silence segments (16-bit) — concatenating them at 32-bit would put the two at different amplitude scales, so a straight ffmpeg s32->s24 would blow out the click volume. Any true-24-bit join must normalise both to the SAME real amplitude before the final write.
-    - Recommended approach: keep pydub only for decode/resample/concat at 16-bit for the click track, but assemble the final 24-bit master outside pydub — either (a) shell to bundled ffmpeg (-c:a pcm_s24le -ar 48000) reading genuine 24-bit intermediates, or (b) write via the stdlib `wave` module with sampwidth=3 from correctly-scaled int samples. Add a round-trip test (known 24-bit samples in -> bit-exact out) since pydub's internal layout is version-specific.
-    - Priority is low: the per-item direct recordings are the archival masters (now true 24-bit); the joined file is a derivative/convenience copy for ELAN/SayMore. Documented as such in docs/faq/index.html (#archiving) and README.md.
+[x] Avoid information loss in the "Join WAVs" derivative (vat/audio/joiner.py).
+    NOTE: Joined output now upscales to 48 kHz / 32-bit (std_sample_width=4) instead of downconverting to 16-bit. pydub cannot emit true 24-bit (it upcasts 24-bit to 32-bit internally), and 32-bit preserves the 24-bit recordings losslessly. Verified empirically: recordings round-trip bit-exact (top 24 bits), and mixing the 24-bit-origin recordings with the 16-bit-generated click/silence does NOT clip or shift levels (pydub's 24->32 x256 and audioop's 16->32 x65536 both map to the same 32-bit full scale). Decision: the joined file is a non-compliant-but-lossless derivative; the per-item recordings remain the true-24-bit archival masters. Documented in docs/faq/index.html (#archiving).
+[ ] (Optional, low priority) Emit TRUE 24-bit (pcm_s24le) for the joined file if a fully IASA-compliant single-file export is ever wanted. Requires bypassing pydub for the final write — shell to bundled ffmpeg (-c:a pcm_s24le -ar 48000) or write via the stdlib `wave` module (sampwidth=3) from correctly-scaled samples, with a round-trip test. Largely superseded by the 32-bit-lossless approach above, since the joined file is only a convenience copy for ELAN/SayMore and the archival masters are the individual per-item recordings.
+[ ] (Optional) "Add audio" import/convert (vat/ui/app.py) stays 48 kHz / 16-bit. Left as-is deliberately: imported audio (often compressed WhatsApp voice notes per the remote workflow) is never better than its source, so 16-bit is sufficient. Revisit only if users routinely import high-bit-depth source audio worth preserving.
+
+# Architecture: pywebview re-platform → PWA + native wrappers (major, future direction)
+[ ] Re-platform the app: replace the PySide6/Qt GUI with a pywebview shell and move as much of
+    the core functionality and UI/UX as possible into the HTML/CSS/JavaScript frontend. Keep
+    Python only for essential native operations: filesystem/folder access, microphone recording,
+    WAV concatenation/joining, ffmpeg/ffprobe invocation, and OS integration.
+    Target shape:
+    - Frontend (HTML/JS): all UI/UX — Videos & Images tabs, Review tab, playback controls,
+      settings, metadata editing, and i18n (reuse the existing docs/ localization pattern:
+      i18n IDs + per-language TRANSLATIONS + detectLanguage/localStorage across the 6 languages).
+    - Python backend: exposed to JS via pywebview's `window.pywebview.api`. Owns FolderAccessManager
+      (vat/utils/fs_access.py), recording (vat/audio/recording.py — 24-bit/48 kHz PCM), joining
+      (vat/audio/joiner.py), and ffmpeg resolution/config (vat/utils/resources.py).
+    - PWA build: a pure-web variant (no Python) that installs/runs in a browser, mirroring what was
+      done for the flextext editor suite. Aim for interoperability / interconnection with that suite
+      (shared file-naming conventions, data formats, possibly cross-linking/hand-off between apps).
+      CAVEAT: a browser PWA CANNOT produce archive-compliant recordings — MediaRecorder / Web Audio
+      give compressed (WebM/Opus) or non-guaranteed WAV, not uncompressed 24-bit/48 kHz PCM. Position
+      the PWA as a lightweight data-collection tool for contexts where a web platform is needed, and
+      point users to the native app for archival capture. (Reflect this in the FAQ if/when shipped.)
+    - Native wrappers:
+        (a) Windows — pywebview as the native desktop wrapper (replacing/alongside the current
+            PyInstaller packaging); native Python recording keeps archival quality.
+        (b) Android — a native wrapper (e.g. WebView / Trusted Web Activity around the PWA) using
+            native Android audio APIs for better capture quality than a plain browser PWA.
+    Migration considerations / risks:
+    - Large rewrite; must preserve feature parity — Review tab logic & randomization, Export Sets /
+      Export Results, YAML settings + export, click-separated joins, Ocenaudio integration,
+      overwrite-confirm + auto-save UX, image-vs-video thumbnail handling.
+    - Pick the frontend stack (vanilla vs. framework) and SHARE one UI codebase between the pywebview
+      desktop build and the standalone PWA to avoid maintaining two UIs; abstract the native calls
+      behind a small interface (pywebview API on desktop, browser/File System Access API + limited
+      capture on web) so the same frontend targets both.
+    - Define the Python<->JS API surface once and reuse it across desktop and (partially) Android.
