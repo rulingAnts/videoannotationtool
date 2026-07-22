@@ -77,16 +77,99 @@ PRIORITY: Do this BEFORE the pywebview/PWA re-platform and before the optional t
     - Preview must branch by item type: video -> first-frame + playback (OpenCV/cv2, as in the Videos tab);
       image -> static display (as in the Images tab / Review fullscreen). The Review tab already distinguishes
       video vs image and previews both — reuse that logic.
-    - Recording filename differs by type: video -> wav_path_for() (clip01.wav); image -> wav_path_for_image()
-      (photo03.jpg.wav) + find_existing_image_audio() for overwrite detection. The "All" tab must select the
-      correct naming/overwrite path per item.
+    - Display: single-preview / one-at-a-time only (like Videos), NOT a grid. Images render as a static pixmap
+      in the same preview container as video, with video play/stop/convert controls disabled for stills.
+    - Recording naming (SHORT-TERM): reuse the EXISTING per-type canonical names unchanged — video ->
+      wav_path_for() (<stem>.wav), image -> wav_path_for_image() (<fullname>.wav). For the "has a recording?"
+      badge/enable state and for delete/play mapping, use the CANONICAL name only (os.path.exists) — do NOT use
+      the loose find_existing_image_audio() stripped-basename fallback inside the All tab: for a same-stem
+      video+image pair it can return the video's <stem>.wav and mis-map / delete it. Canonical-only keeps video
+      (<stem>.wav) and image (<fullname>.wav) distinct, so same-stem kits are safe without touching the existing
+      tabs. The full uniform-naming redesign (below, in the Roadmap) is deferred.
     - Keep the same UX: auto-save on capture, overwrite confirmation, per-item delete/edit (Ocenaudio) buttons.
     - i18n: add an "all_tab_title" label across all 6 languages (vat/i18n/builtin_labels.py) + tab-title logic.
-    Design questions to settle:
-    - Does "All" ADD to the existing Videos/Images tabs (coexist) or replace them? Assume coexist for now.
-    - Recommended refactor: extract the Videos-tab play/record interface into a reusable component parameterised
-      by media type, so Videos / Images / All share ONE implementation instead of duplicating it. This also
-      de-risks the later pywebview migration (a clean, self-contained media-queue component ports more easily).
+    Approach (SHORT-TERM, least-risky): build the All tab THIN and ADDITIVE — a self-contained clone of the
+    Videos-tab preview+controls with a small per-item-type dispatch, reusing existing backend workers and FS
+    methods. Accept temporary UI-wiring duplication (removed later by the reusable-component extraction in the
+    Roadmap) in exchange for NOT destabilizing the working Videos/Images tabs. Coexists with them (does not
+    replace). Requires GUI click-testing (record/play/navigate across a mixed queue) that can't be done headless.
+
+# Refactoring / Modularization Roadmap (major — do AFTER the short-term "All" tab; ideally a dedicated
+#   ultracode / sub-agent review session once usage resets, ideally Fable on Ultracode)
+#
+# GOAL: modularize the app into reusable components coded ONCE and used in multiple places, cutting the
+# large-scale redundancy that built up across many earlier AI-assisted edits — WITHOUT losing behavior.
+# HARD RULE: redundant-looking components often have real functional DIFFERENCES. Before merging any two,
+# diff their behavior exhaustively and preserve EVERY distinct function. Verify feature-by-feature (ideally
+# with GUI click-testing) before and after each merge. Reducing redundancy must never break a working path.
+#
+# Current state / why (measured):
+#   - vat/ui/app.py is a 4,997-line God object (MainWindow, ~90 methods) — ~40% of the 12,341-line codebase.
+#     It does theming, i18n, drawer, folder load, settings, ALL video handlers, ALL image handlers, audio
+#     playback/recording orchestration, dialogs, export/clear/import/join, diagnostics, fullscreen, clipboard.
+#   - vat/review/review_tab.py (1,645) and vat/i18n/builtin_labels.py (1,522) are the next-largest files.
+#
+# [ ] 1. WAV recording-naming redesign (foundational; enables robust All tab + same-stem kits).
+#     Problem: stimulus kits may contain identically-named video+image files differing only by extension, and
+#     the convert-to-MP4 feature can change a video's name. Current mapping:
+#       - video  -> wav_path_for(): strips ext -> "<stem>.wav"       (clip01.mpg -> clip01.wav)
+#       - image  -> wav_path_for_image(): keeps name -> "<full>.wav" (photo03.jpg -> photo03.jpg.wav)  <-- already uniform
+#       - find_existing_image_audio() ALSO tries a stripped "<stem>.wav" fallback -> HAZARD: for image foo.jpg
+#         it can return foo.wav (a same-stem VIDEO's recording) and play/DELETE it under the image.
+#     Redesign (uniform + backward compatible):
+#       (a) WRITE every recording as "<fullname>.wav" (videos join images in keeping the extension).
+#       (b) READ for a video: prefer "<fullname>.wav", else fall back to legacy "<stem>.wav" (pre-refactor work;
+#           i.e. a WAV with no embedded media extension maps to a video). Images already forward-compatible.
+#       (c) convert-to-MP4 (_convert_current_video_in_place, vat/ui/app.py ~L2451): when foo.mpg -> foo.mp4,
+#           RENAME the recording "<old>.wav" -> "<new>.wav" (source removal already happens via .bak.zip).
+#       (d) Remove/scope the stripped-basename fallback in find_existing_image_audio so it cannot grab a
+#           same-stem video's WAV. Reconcile every caller.
+#       (e) Add unit tests for the mapping (video/image, legacy fallback, same-stem kit, convert migration).
+#     Centralize all of this in FolderAccessManager (vat/utils/fs_access.py): collapse wav_path_for /
+#     wav_path_for_image / find_existing_image_audio / has_image_audio into one media-type-aware API.
+#
+# [ ] 2. Extract a reusable MediaPane component (biggest redundancy win; unlocks the clean "All" tab).
+#     The video and image media-item lifecycles are implemented TWICE in app.py (~16 twin pairs), differing
+#     mainly in WAV naming and preview mechanism. Verify each pair's behavior, then merge into ONE component:
+#       select        on_video_select            / on_image_select
+#       preview        show_first_frame           / _load_image_pixmap
+#       play audio     play_audio                 / play_image_audio
+#       stop audio     stop_audio                 / stop_image_audio
+#       record         toggle_recording           / toggle_image_recording
+#       stop record    (video path)               / stop_image_recording
+#       add audio file _handle_add_existing_audio_video / _handle_add_existing_audio_image
+#       paste audio    _handle_paste_audio_video  / _handle_paste_audio_image
+#       delete rec     _handle_delete_recording_video / _handle_delete_recording_image
+#       edit ocenaudio _handle_edit_recording_ocenaudio_video / _handle_edit_recording_ocenaudio_image
+#       copy clipboard _copy_current_video_to_clipboard / _copy_current_image_to_clipboard
+#       save as        _save_current_video_as     / _save_current_image_as
+#       context menu   _on_videos_context_menu    / _on_images_context_menu
+#       fullscreen     _open_fullscreen_video     / _open_fullscreen_image
+#       controls state update_media_controls      / _update_image_record_controls
+#       folder-updated _on_videos_updated         / _on_images_updated
+#     Give the component a DISPLAY-MODE strategy: single-preview/one-at-a-time (Videos, All) vs grid
+#     (Images, Review). Then Videos / Images / All are all instances of it; the "All" tab stops being a copy.
+#
+# [ ] 3. AudioController — centralize playback/recording/join/convert worker lifecycle (currently scattered
+#     on self with a spray of _on_*_thread_finished / _on_any_audio_finished handlers). This is where
+#     cross-tab play/record state bugs would otherwise breed once a 3rd (All) pane shares the workers.
+#
+# [ ] 4. Split init_ui (~L635-1244, ~600 lines) into per-tab builder functions/classes.
+#
+# [ ] 5. Externalize i18n (builtin_labels.py, 1,522 lines of inline 7-language dict) to JSON/data files.
+#     Cleanup AND a direct enabler for the pywebview/PWA port (the JS side wants JSON i18n anyway).
+#
+# [ ] 6. Review tab (review_tab.py, 1,645 lines): it HAS redundant media components (preview/playback) that
+#     could share the MediaPane, BUT its purpose and behavior are very different (randomized quiz/review,
+#     scoring/SFX, stats, grouped export). Treat its media bits as candidates for sharing the component while
+#     PRESERVING all its distinct functionality — do the functional-diff audit here with extra care.
+#
+# [ ] 7. Small cleanups to fold in as areas are touched:
+#     - De-duplicate generate_click_sound_pydub (exists in BOTH vat/ui/app.py ~L3959 AND vat/audio/joiner.py).
+#     - Resolve the apparent DOUBLE eventFilter definition in MainWindow (app.py ~L1396 and ~L4094 — the second
+#       silently overrides the first; confirm and remove the dead one).
+#     - Tighten blanket "except Exception: pass" (26 in app.py) that swallow errors and hide field bugs
+#       (e.g. the still-open playback segfault).
 
 # Architecture: pywebview re-platform → PWA + native wrappers (major, future direction — AFTER the "All" tab above)
 [ ] Re-platform the app: replace the PySide6/Qt GUI with a pywebview shell and move as much of
