@@ -2,6 +2,7 @@ import os
 import logging
 from typing import List, Optional, Dict
 from PySide6.QtCore import QObject, Signal
+from vat.utils.media_naming import media_type as _media_type, recording_name_for as _recording_name_for
 
 
 class FolderAccessError(Exception):
@@ -215,6 +216,49 @@ class FolderAccessManager(QObject):
 
     def has_image_audio(self, image_or_name: str) -> bool:
         return os.path.exists(self.wav_path_for_image(image_or_name))
+
+    # ---- Unified media helpers (for the "All" tab: one queue of videos + images) ----
+
+    def list_all_media(self, path: Optional[str] = None) -> List[str]:
+        """Return a single merged, ordered queue of videos + images.
+
+        Ordered by basename (case-insensitive) so both media types interleave
+        the way a stimulus set expects. Used by the "All" tab.
+        """
+        folder = path or self.current_folder
+        if not folder:
+            return []
+        vids = self.list_videos(folder)
+        imgs = self.list_images(folder)
+        combined = list(vids) + list(imgs)
+        combined.sort(key=lambda p: os.path.basename(p).lower())
+        return combined
+
+    @staticmethod
+    def media_type_of(name: str) -> Optional[str]:
+        """'video', 'image', or None, from the file extension."""
+        return _media_type(name)
+
+    def recording_path_for(self, media_or_name: str) -> str:
+        """Canonical WAV path for a media file (video OR image), same-stem-safe.
+
+        Unifies wav_path_for() (video) and wav_path_for_image() (image): videos
+        map to "<stem>.wav" and images to "<fullname>.wav", so a same-stem
+        video+image pair never collide. Prefers the media file's own directory
+        when a full path is provided; otherwise the current folder.
+
+        This is canonical-only by design — it does NOT use the loose
+        find_existing_image_audio() basename fallback, which can otherwise return
+        a same-stem video's WAV under an image.
+        """
+        d = os.path.dirname(media_or_name)
+        folder = d if d else (self.current_folder or "")
+        return os.path.join(folder, _recording_name_for(media_or_name))
+
+    def has_recording(self, media_or_name: str) -> bool:
+        """True iff the canonical recording for this media file exists."""
+        p = self.recording_path_for(media_or_name)
+        return bool(p) and os.path.exists(p)
 
     def image_recordings_in(self, folder: Optional[str] = None) -> List[str]:
         fold = folder or self.current_folder
