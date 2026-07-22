@@ -67,6 +67,20 @@
       <p id="i18n-faq-exp-a1">It exports only the recordings in the <strong>currently active tab</strong> — either all video responses or all image responses, depending on which tab you have open. Switch tabs and export again to get the other set.</p>
     </section>
 
+    <section class="card" id="archiving">
+      <h2 id="i18n-faq-arch-heading">Archiving &amp; Audio Format</h2>
+
+      <h3 id="i18n-faq-arch-q1">Are my recordings archive-compliant?</h3>
+      <p id="i18n-faq-arch-a1">Yes. Recordings you make with the microphone are saved as uncompressed linear PCM <strong>WAV at 48&nbsp;kHz, 24-bit, mono</strong> — the archival master format recommended by the <strong>IASA&nbsp;TC-04</strong> preservation standard that language-documentation archives (such as ELAR, PARADISEC, and AILLA) follow. No conversion is needed before depositing them.</p>
+      <p id="i18n-faq-arch-a1b"><strong>Automatic fallback:</strong> if your microphone or audio interface cannot capture 24-bit, the app records 16-bit at 48&nbsp;kHz instead. That is still a widely accepted archival capture format — the minimum most field-recording guidelines specify — so your recordings stay deposit-ready either way.</p>
+
+      <h3 id="i18n-faq-arch-q2">Are imported audio and the single joined WAV also 24-bit?</h3>
+      <p id="i18n-faq-arch-a2">Not currently. Audio brought in with <strong>Add Audio</strong>, and the combined file produced by <strong>Export as single WAV</strong>, are written at 48&nbsp;kHz / 16-bit. (Imported audio also can never be higher quality than the source file you started with.) For an archival deposit, submit the <strong>individual direct recordings</strong> — the per-item <code>.wav</code> files are your 24-bit masters. The joined file is best treated as a convenience copy for annotation tools like ELAN or SayMore.</p>
+
+      <h3 id="i18n-faq-arch-q3">How can I check the format of a recording myself?</h3>
+      <p id="i18n-faq-arch-a3">Open any recording in Ocenaudio (the edit button next to it) or another audio editor and check its properties — you should see <code>48000&nbsp;Hz</code> and <code>24-bit</code> (or <code>16-bit</code> if your device fell back). On Windows you can also right-click the <code>.wav</code> file in File Explorer and choose <strong>Properties&nbsp;→&nbsp;Details</strong>.</p>
+    </section>
+
     <section class="card" id="audio-input">
       <h2 id="i18n-faq-mic-heading">Microphone &amp; Audio Input</h2>
 

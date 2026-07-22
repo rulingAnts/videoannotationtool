@@ -14,6 +14,7 @@ The tool allows users to select a folder of video files, play them back, and rec
 ## Key Features
 
   * **Synchronous Video Playback & Audio Recording:** Record audio annotations while watching video playback.
+  * **Archive-Ready Audio:** Microphone recordings are saved as uncompressed linear PCM WAV at **48&nbsp;kHz / 24-bit** mono — the archival master format recommended by the **IASA&nbsp;TC-04** standard that language-documentation archives (ELAR, PARADISEC, AILLA) follow. If the audio device does not support 24-bit capture, the app falls back automatically to 16-bit at 48&nbsp;kHz. (See the [FAQ](docs/faq/index.html#archiving) for details on imported and joined audio.)
   * **Intuitive User Interface:** A simple, easy-to-use interface built with `PySide6` (Qt for Python).
   * **Multi-language Support:** The application's interface is available in multiple languages, including English, Bahasa Indonesia, 한국어 (Korean), Nederlands, Português (Brasil), Español (Latinoamérica), and Afrikaans.
   * **Linguistic Software Integration:** Seamlessly export all audio annotations into a single file for use in software like [**SayMore**](https://software.sil.org/saymore/) or [**ELAN**](https://archive.mpi.nl/tla/elan/download), or open them directly in [**Ocenaudio**](https://www.ocenaudio.com/) for advanced editing _(the app also generates clicks between each individual oral annotations in the combined audio file for clarity when segmenting and transcribing)_.
