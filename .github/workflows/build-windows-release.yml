@@ -85,11 +85,71 @@ jobs:
           Compress-Archive -Path "dist_onedir\Visual Stimulus Kit Tool" -DestinationPath $zip -CompressionLevel Optimal
           Write-Host "Created $zip"
 
+      - name: Install NSIS
+        run: choco install nsis --no-progress -y
+
+      - name: Build NSIS installer (from the onedir bundle)
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION).Trim()
+          $makensis = "C:\Program Files (x86)\NSIS\makensis.exe"
+          if (-not (Test-Path $makensis)) {
+            $makensis = (Get-Command makensis.exe -ErrorAction SilentlyContinue).Source
+          }
+          Write-Host "makensis: $makensis"
+          & $makensis "/DVERSION=$version" installer\videoannotation_installer.nsi
+          if ($LASTEXITCODE -ne 0) { Write-Error "makensis failed"; exit 1 }
+          Get-ChildItem installer\*.exe | ForEach-Object { Write-Host "built: $($_.Name)" }
+
+      - name: Verify installer (silent install -> checks -> silent uninstall)
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $version = (Get-Content VERSION).Trim()
+          $setup = "installer\Visual-Stimulus-Kit-Tool-$version-setup.exe"
+          $dir = "$env:LOCALAPPDATA\Programs\Visual Stimulus Kit Tool"
+          $regkey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\VisualStimulusKitTool"
+          $fail = $false
+
+          Write-Host "--- silent install ---"
+          Start-Process -FilePath $setup -ArgumentList "/S" -Wait
+
+          foreach ($f in @("$dir\Visual Stimulus Kit Tool.exe", "$dir\_internal", "$dir\Uninstall.exe")) {
+            if (Test-Path $f) { Write-Host "OK   present: $f" }
+            else { Write-Host "FAIL missing: $f"; $fail = $true }
+          }
+
+          if (Test-Path $regkey) {
+            $dn = (Get-ItemProperty $regkey).DisplayName
+            $us = (Get-ItemProperty $regkey).UninstallString
+            Write-Host "OK   Add/Remove entry: DisplayName='$dn' UninstallString=$us"
+          } else {
+            Write-Host "FAIL no Add/Remove Programs entry at $regkey"; $fail = $true
+          }
+
+          Write-Host "--- silent uninstall ---"
+          # _?= keeps the uninstaller in place so -Wait actually waits for it.
+          if (Test-Path "$dir\Uninstall.exe") {
+            Start-Process -FilePath "$dir\Uninstall.exe" -ArgumentList "/S","_?=$dir" -Wait
+          }
+          Start-Sleep -Seconds 3
+
+          if (Test-Path "$dir\Visual Stimulus Kit Tool.exe") {
+            Write-Host "FAIL app still present after uninstall"; $fail = $true
+          } else { Write-Host "OK   app removed" }
+          if (Test-Path $regkey) {
+            Write-Host "FAIL Add/Remove entry still present after uninstall"; $fail = $true
+          } else { Write-Host "OK   Add/Remove entry removed" }
+
+          if ($fail) { Write-Error "Installer verification FAILED"; exit 1 }
+          Write-Host "Installer verification PASSED"
+
       - name: Report artifact sizes
         shell: pwsh
         run: |
           $version = (Get-Content VERSION).Trim()
-          Get-ChildItem "dist_onefile\Visual-Stimulus-Kit-Tool-$version-portable.exe", "Visual-Stimulus-Kit-Tool-$version-portable-folder.zip" |
+          Get-ChildItem "dist_onefile\Visual-Stimulus-Kit-Tool-$version-portable.exe", "Visual-Stimulus-Kit-Tool-$version-portable-folder.zip", "installer\Visual-Stimulus-Kit-Tool-$version-setup.exe" |
             ForEach-Object { "{0,-60} {1,8:N1} MB" -f $_.Name, ($_.Length / 1MB) }
           $dir = Get-ChildItem "dist_onedir\Visual Stimulus Kit Tool" -Recurse | Measure-Object -Property Length -Sum
           "{0,-60} {1,8:N1} MB" -f "onedir folder (extracted)", ($dir.Sum / 1MB)
@@ -124,14 +184,22 @@ jobs:
             drive. Trade-off: you must extract it first, and you need to keep the
             folder together (the `_internal` folder next to the .exe is required).
 
-            Both are the same application. If you use the app regularly, prefer
-            the **portable folder**; if you just want a quick one-off run, take
-            the **single .exe**.
+            **`Visual-Stimulus-Kit-Tool-<version>-setup.exe`** — installer (experimental).
+            Installs the fast-starting folder build, adds Start Menu shortcuts and
+            registers in Windows "Installed Apps" so it can be uninstalled normally.
+            Choose "just for me" (no admin) or "for anyone using this computer"
+            (needs admin). **This installer is newly rewritten and lightly tested —
+            if you want certainty, use one of the portable downloads.**
+
+            All three are the same application. If you use the app regularly, prefer
+            the **portable folder** (or the installer); if you just want a quick
+            one-off run, take the **single .exe**.
 
             > ⚠️ **Unverified pre-release.** Not yet verified as stable — please
             > test with non-critical copies of your data.
           files: |
             dist_onefile/Visual-Stimulus-Kit-Tool-${{ steps.version.outputs.version }}-portable.exe
             Visual-Stimulus-Kit-Tool-${{ steps.version.outputs.version }}-portable-folder.zip
+            installer/Visual-Stimulus-Kit-Tool-${{ steps.version.outputs.version }}-setup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
