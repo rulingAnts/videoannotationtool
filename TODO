@@ -67,7 +67,12 @@
 
 # "All" tab — unified video + image queue (feature/redesign)
 PRIORITY: Do this BEFORE the pywebview/PWA re-platform and before the optional true-24-bit join work (both below).
-STATUS (short-term thin implementation): CODE-COMPLETE, PENDING GUI CLICK-TEST. Committed in increments:
+STATUS: FIELD-TESTED AND WORKING (v2.3.0, 2026-07). Merged list, per-type preview, record/play/
+delete/edit, language switch, same-stem safety, recording format, 32-bit join, regressions and clean
+shutdown ALL PASSED. Follow-ups applied after that test: All tab moved FIRST in the tab order (and
+selected on launch); its own file column removed in favor of the shared drawer list (videos + images
+with check marks); double-click fullscreen added; tabs identified by widget rather than index.
+Implemented in increments:
     - i18n all_tab_title added to all 7 languages (vat/i18n/builtin_labels.py).
     - vat/utils/media_naming.py (new, tested): media_type() + recording_name_for() (canonical, same-stem-safe).
     - vat/utils/fs_access.py: list_all_media(), media_type_of(), recording_path_for(), has_recording().
@@ -110,6 +115,35 @@ STATUS (short-term thin implementation): CODE-COMPLETE, PENDING GUI CLICK-TEST. 
     methods. Accept temporary UI-wiring duplication (removed later by the reusable-component extraction in the
     Roadmap) in exchange for NOT destabilizing the working Videos/Images tabs. Coexists with them (does not
     replace). Requires GUI click-testing (record/play/navigate across a mixed queue) that can't be done headless.
+
+# Robustness / UX issues found in v2.3.0 field testing (2026-07)
+[ ] HIGH: Handle inaccessible/slow source folders gracefully. Selecting a Google Drive folder whose
+    contents were NOT available offline made the app HANG and eventually CRASH. Cause is almost
+    certainly synchronous filesystem work on the UI thread: FolderAccessManager.is_accessible()/
+    list_videos()/list_images() call os.listdir/os.path.isfile directly (vat/utils/fs_access.py), and
+    cloud-backed placeholder files can block for a long time (or fail) while the provider hydrates them.
+    Fixes to make:
+    - Move folder scanning off the UI thread (worker + progress/cancel), or at minimum apply a timeout
+      and show a "still loading / cancel" affordance instead of freezing.
+    - Detect cloud placeholders on Windows (FILE_ATTRIBUTE_RECALL_ON_OPEN / RECALL_ON_DATA_ACCESS,
+      also OFFLINE) and warn the user up front: "This folder is not available offline - make it
+      available offline first, or copy it locally."
+    - Never let a folder-load failure kill the app: catch, log, show a dialog, and leave the previous
+      folder loaded.
+[ ] Slow app startup, especially on lower-resource machines (ThinkPad, Parallels VM). Investigate:
+    PyInstaller onefile self-extraction (~317 MB exe) is a prime suspect - a onedir build or trimming
+    bundled deps would likely help more than app-level changes. Also profile import time (cv2, PySide6,
+    pydub/numpy) and defer heavy imports until first use. NOTE: the refactor/modularization and the
+    pywebview migration may both help here, but measure before assuming.
+[ ] FEATURE: Allow compressed archives as source folders. In the folder picker, let the user select a
+    .zip / .tar.gz / .tgz / .tar / (7z?) archive - or a sub-folder inside one - and have the app
+    auto-extract it (in place, next to the archive, or to a cache dir) and then open the extracted
+    folder as the working folder. Considerations: show extraction progress and allow cancel; handle
+    archives whose media sits in a nested sub-folder (offer a picker or auto-descend when there is a
+    single top-level dir); don't re-extract if already extracted (detect + reuse); make sure recordings
+    are written to the EXTRACTED folder and warn that they live outside the archive; guard against
+    path-traversal entries ("zip slip") and huge/zip-bomb archives; stdlib zipfile/tarfile cover
+    zip/tar.gz so no new dependency is needed for the common cases.
 
 # Refactoring / Modularization Roadmap (major — do AFTER the short-term "All" tab; ideally a dedicated
 #   ultracode / sub-agent review session once usage resets, ideally Fable on Ultracode)
@@ -187,6 +221,8 @@ STATUS (short-term thin implementation): CODE-COMPLETE, PENDING GUI CLICK-TEST. 
 #       silently overrides the first; confirm and remove the dead one).
 #     - Tighten blanket "except Exception: pass" (26 in app.py) that swallow errors and hide field bugs
 #       (e.g. the still-open playback segfault).
+    - Fix undefined name in on_image_select's debug log (vat/ui/app.py: f-string references `exists`,
+      which is not defined -> that log line never emits; silently swallowed by its try/except).
 
 # Architecture: pywebview re-platform → PWA + native wrappers (major, future direction — AFTER the "All" tab above)
 [ ] Re-platform the app: replace the PySide6/Qt GUI with a pywebview shell and move as much of
