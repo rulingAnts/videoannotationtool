@@ -54,13 +54,34 @@
     New i18n IDs, English only currently: i18n-faq-arch-heading, i18n-faq-arch-q1, i18n-faq-arch-a1, i18n-faq-arch-a1b, i18n-faq-arch-q2, i18n-faq-arch-a2, i18n-faq-arch-q3, i18n-faq-arch-a3. (These fall back to English until translated, so the page renders fine meanwhile.)
 
 # Windows Installer
-[ ] Fix NSIS installer: must register in Windows "Installed Apps" list and have a working uninstaller (per-user install scope). Currently the installer button on the website is commented out (docs/index.html) until this is resolved.
-    NOTE (2026-07): installer/videoannotation_installer.nsi is now STALE in two ways and must be updated when revived:
-    (a) it does `File "..\dist\Visual Stimulus Kit Tool.exe"`, but builds now go to dist_onefile/ and the
-        onefile artifact is named Visual-Stimulus-Kit-Tool-<version>-portable.exe;
-    (b) better still, point the installer at the ONEDIR build (dist_onedir/Visual Stimulus Kit Tool/) using
-        `File /r` so installed users get the fast-starting version - an installed app has no reason to pay
-        the onefile self-extraction cost on every launch. The workflow no longer builds the installer at all.
+[~] Fix NSIS installer: must register in Windows "Installed Apps" list and have a working uninstaller
+    (per-user install scope). REWRITTEN 2026-07 (installer/videoannotation_installer.nsi) but NOT YET
+    TESTED ON WINDOWS, so it is still NOT built by the workflow and the website button stays commented
+    out (docs/index.html). What was fixed:
+    - Source is now the ONEDIR build: `File /r "..\dist_onedir\Visual Stimulus Kit Tool\*.*"`, so
+      installed users get the fast-starting one-folder version instead of the self-extracting onefile.
+      (Previously it pointed at the stale path ..\dist\Visual Stimulus Kit Tool.exe.)
+    - Registers in Windows "Installed Apps": writes DisplayName/DisplayVersion/Publisher/DisplayIcon/
+      UninstallString/QuietUninstallString/InstallLocation/EstimatedSize/NoModify/NoRepair under the
+      Uninstall key, in HKLM or HKCU to match the chosen scope. This was missing entirely - the reason
+      the app never appeared in Add/Remove Programs.
+    - $INSTDIR/scope consistency: the scope page now sets $INSTDIR and SetShellVarContext together in a
+      page-leave callback. Previously SetOutPath and $INSTDIR could disagree, so files were installed in
+      one place while the uninstaller and shortcuts pointed at another - the core reason uninstall broke.
+    - Replaced the fragile relative jumps (StrCmp ... +5 / Goto +4) with LogicLib ${If} blocks.
+    - Uninstaller: recovers the install scope from the registry (so it looks in the right Start Menu and
+      hive), removes BOTH registry keys it created, and guards `RMDir /r $INSTDIR` behind a check that
+      the app exe is actually there, so a wrong $INSTDIR cannot delete an unrelated folder.
+    - All-users choice without admin rights now warns and falls back to per-user instead of silently
+      failing to write HKLM/Program Files. RequestExecutionLevel highest.
+    - Output renamed to Visual-Stimulus-Kit-Tool-<version>-setup.exe (matches the portable naming; the
+      website's installer detection matches on /setup|installer/i so it still resolves).
+    VERIFIED: compiles cleanly with `makensis -DVERSION=2.3.3 installer/videoannotation_installer.nsi`
+    against a stub dist_onedir bundle. NOT verified: actual install/uninstall/Add-Remove behavior on a
+    real Windows machine.
+    TO RE-ENABLE: build the onedir spec first (--distpath dist_onedir), run makensis, then add the
+    resulting installer/Visual-Stimulus-Kit-Tool-<version>-setup.exe back to the workflow's upload list
+    and uncomment the website button.
 
 # Recording Format / Archive Compliance
 [x] Make microphone recording language-documentation-archive-compliant (IASA TC-04: uncompressed PCM WAV, 48 kHz, 24-bit).
