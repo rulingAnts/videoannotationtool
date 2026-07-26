@@ -69,6 +69,18 @@
       page-leave callback. Previously SetOutPath and $INSTDIR could disagree, so files were installed in
       one place while the uninstaller and shortcuts pointed at another - the core reason uninstall broke.
     - Replaced the fragile relative jumps (StrCmp ... +5 / Goto +4) with LogicLib ${If} blocks.
+    - FIELD BUG "no uninstaller was generated": root cause was the $INSTDIR/SetOutPath mismatch above -
+      for an all-users install the app went to Program Files (SetOutPath) while Uninstall.exe was written
+      to $INSTDIR (still the per-user directory-page default), so the install folder had no uninstaller
+      and, with no Add/Remove entry either, there was no way to reach it. Now that $INSTDIR is
+      authoritative, WriteUninstaller targets the same folder as the app, and the install ABORTS with a
+      clear message if Uninstall.exe is not present afterwards rather than failing silently.
+    - FIELD BUG "scope page text crammed together/unreadable": the radio buttons were sized in raw pixels
+      (200x12) which clipped the long labels. The page is now laid out in dialog units so it scales with
+      the system font, with a heading, roomier radio rows and an explanatory paragraph under each option.
+      The two radios are created back-to-back (with WS_GROUP on the first) so they stay one
+      mutually-exclusive group, and the descriptive labels are added afterwards into the gaps.
+      Page header/subtitle text is set via the classic 1037/1038 dialog items.
     - Uninstaller: recovers the install scope from the registry (so it looks in the right Start Menu and
       hive), removes BOTH registry keys it created, and guards `RMDir /r $INSTDIR` behind a check that
       the app exe is actually there, so a wrong $INSTDIR cannot delete an unrelated folder.
@@ -76,9 +88,10 @@
       failing to write HKLM/Program Files. RequestExecutionLevel highest.
     - Output renamed to Visual-Stimulus-Kit-Tool-<version>-setup.exe (matches the portable naming; the
       website's installer detection matches on /setup|installer/i so it still resolves).
-    VERIFIED: compiles cleanly with `makensis -DVERSION=2.3.3 installer/videoannotation_installer.nsi`
-    against a stub dist_onedir bundle. NOT verified: actual install/uninstall/Add-Remove behavior on a
-    real Windows machine.
+    VERIFIED: compiles cleanly with `makensis -DVERSION=<v> installer/videoannotation_installer.nsi`
+    against a stub dist_onedir bundle, with no errors/warnings, and makensis reports the Uninstall
+    section is embedded. NOT verified: actual install/uninstall/Add-Remove behavior, and the appearance
+    of the scope page, on a real Windows machine.
     TO RE-ENABLE: build the onedir spec first (--distpath dist_onedir), run makensis, then add the
     resulting installer/Visual-Stimulus-Kit-Tool-<version>-setup.exe back to the workflow's upload list
     and uncomment the website button.

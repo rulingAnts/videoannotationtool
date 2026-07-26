@@ -11,11 +11,16 @@
 !include "nsDialogs.nsh"
 !include "LogicLib.nsh"
 !include "FileFunc.nsh"
+!include "WinMessages.nsh"
 
 !define APPNAME "Visual Stimulus Kit Tool"
 !define COMPANY "Seth Johnston"
 !define REGKEY "Software\VisualStimulusKitTool"
 !define UNINSTKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\VisualStimulusKitTool"
+
+!ifndef WS_GROUP
+!define WS_GROUP 0x00020000
+!endif
 
 ; VERSION can be overridden from the command line: makensis /DVERSION=2.3.3
 !ifndef VERSION
@@ -73,15 +78,38 @@ Function .onInit
 FunctionEnd
 
 Function SelectInstallScope
+    ; Page header text (classic NSIS page: 1037 = title, 1038 = subtitle).
+    GetDlgItem $0 $HWNDPARENT 1037
+    SendMessage $0 ${WM_SETTEXT} 0 "STR:Choose Install Type"
+    GetDlgItem $0 $HWNDPARENT 1038
+    SendMessage $0 ${WM_SETTEXT} 0 "STR:Who should be able to run ${APPNAME}?"
+
     nsDialogs::Create 1018
     Pop $Dialog
     ${If} $Dialog == error
         Abort
     ${EndIf}
-    ${NSD_CreateRadioButton} 10 10 90% 12u "Install for anyone using this computer (requires admin)"
-    Pop $RadioAll
-    ${NSD_CreateRadioButton} 10 30 90% 12u "Install just for me (no admin required)"
+
+    ; All measurements are in dialog units so the text scales with the system
+    ; font instead of being clipped. The two radio buttons are created
+    ; back-to-back so Windows keeps them in one mutually-exclusive group; the
+    ; explanatory labels are added afterwards and positioned in the gaps.
+    ${NSD_CreateLabel} 0 0 100% 20u "Choose how to install ${APPNAME} on this computer:"
+    Pop $0
+
+    ${NSD_CreateRadioButton} 0 24u 100% 11u "Install just for me  (recommended)"
     Pop $RadioUser
+    ${NSD_AddStyle} $RadioUser ${WS_GROUP}
+
+    ${NSD_CreateRadioButton} 0 62u 100% 11u "Install for anyone using this computer"
+    Pop $RadioAll
+
+    ${NSD_CreateLabel} 10u 36u 92% 22u "Installs into your own user folder. No administrator rights are needed. This is the right choice on a computer you do not administer."
+    Pop $0
+
+    ${NSD_CreateLabel} 10u 74u 92% 22u "Installs into Program Files so every user account on this computer can run it. Requires administrator rights."
+    Pop $0
+
     ${NSD_SetState} $RadioUser 1
     nsDialogs::Show
 FunctionEnd
@@ -103,6 +131,8 @@ Function SelectInstallScopeLeave
     ${EndIf}
 
     ; Keep $INSTDIR, the shell context and the install target consistent.
+    ; (Previously SetOutPath and $INSTDIR could disagree, so the app, its
+    ; shortcuts and the uninstaller ended up in different folders.)
     ${If} $AllUsers == 1
         SetShellVarContext all
         StrCpy $INSTDIR "$PROGRAMFILES64\${APPNAME}"
@@ -117,7 +147,13 @@ Section "Install"
     ; Onedir bundle: the launcher .exe plus its _internal folder.
     File /r "..\dist_onedir\${APPNAME}\*.*"
 
+    ; Write the uninstaller and verify it actually landed. If this silently
+    ; fails the app can never be cleanly removed, so fail loudly instead.
     WriteUninstaller "$INSTDIR\Uninstall.exe"
+    ${IfNot} ${FileExists} "$INSTDIR\Uninstall.exe"
+        MessageBox MB_OK|MB_ICONSTOP "Could not create the uninstaller in:$\r$\n$INSTDIR$\r$\n$\r$\nInstallation aborted."
+        Abort
+    ${EndIf}
 
     ; Size reported in Add/Remove Programs (KB).
     ${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
