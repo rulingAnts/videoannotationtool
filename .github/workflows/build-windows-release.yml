@@ -48,8 +48,50 @@ jobs:
       - name: Generate icon assets
         run: python scripts/generate_icon.py
 
-      - name: Build executable with PyInstaller
-        run: python -m PyInstaller --clean pyinstaller.spec
+      - name: Build onefile executable (single portable .exe)
+        run: python -m PyInstaller --clean --distpath dist_onefile pyinstaller.spec
+
+      - name: Build onedir bundle (portable folder)
+        run: python -m PyInstaller --distpath dist_onedir pyinstaller-onedir.spec
+
+      - name: Smoke-test both builds (start offscreen, must stay alive)
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $env:QT_QPA_PLATFORM = 'offscreen'
+          function Test-Build($path, $label) {
+            Write-Host "Smoke-testing $label : $path"
+            if (-not (Test-Path $path)) { Write-Error "$label missing at $path"; return $false }
+            $p = Start-Process -FilePath $path -PassThru
+            Start-Sleep -Seconds 40
+            if ($p.HasExited) {
+              Write-Error "$label exited early with code $($p.ExitCode)"
+              return $false
+            }
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            Write-Host "$label started OK"
+            return $true
+          }
+          $a = Test-Build "dist_onefile\Visual Stimulus Kit Tool.exe" "onefile"
+          $b = Test-Build "dist_onedir\Visual Stimulus Kit Tool\Visual Stimulus Kit Tool.exe" "onedir"
+          if (-not ($a -and $b)) { exit 1 }
+
+      - name: Package onedir bundle as ZIP
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION).Trim()
+          $zip = "Visual-Stimulus-Kit-Tool-$version-portable-folder.zip"
+          Compress-Archive -Path "dist_onedir\Visual Stimulus Kit Tool" -DestinationPath $zip -CompressionLevel Optimal
+          Write-Host "Created $zip"
+
+      - name: Report artifact sizes
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION).Trim()
+          Get-ChildItem "dist_onefile\Visual Stimulus Kit Tool.exe", "Visual-Stimulus-Kit-Tool-$version-portable-folder.zip" |
+            ForEach-Object { "{0,-60} {1,8:N1} MB" -f $_.Name, ($_.Length / 1MB) }
+          $dir = Get-ChildItem "dist_onedir\Visual Stimulus Kit Tool" -Recurse | Measure-Object -Property Length -Sum
+          "{0,-60} {1,8:N1} MB" -f "onedir folder (extracted)", ($dir.Sum / 1MB)
 
       # NSIS installer temporarily disabled until the uninstaller/registry issue
       # is fixed (planned for after the refactor/modularize + PWA work). The
@@ -63,7 +105,32 @@ jobs:
           prerelease: true
           make_latest: false
           generate_release_notes: true
+          body: |
+            ## Downloads — which one should I get?
+
+            **`Visual Stimulus Kit Tool.exe`** — single portable file.
+            Just download and run; nothing to extract or install. Best when you
+            want the simplest possible download, or you're running it once off a
+            thumb drive. Trade-off: **it starts slowly**, because Windows has to
+            unpack the whole program into a temporary folder on *every* launch
+            (noticeably slow on older laptops, virtual machines, or with strict
+            antivirus).
+
+            **`Visual-Stimulus-Kit-Tool-<version>-portable-folder.zip`** — portable folder.
+            Extract the ZIP once, then run `Visual Stimulus Kit Tool.exe` inside
+            the extracted folder. **Starts much faster** (nothing is unpacked at
+            launch) and still fully portable — the folder can live on a thumb
+            drive. Trade-off: you must extract it first, and you need to keep the
+            folder together (the `_internal` folder next to the .exe is required).
+
+            Both are the same application. If you use the app regularly, prefer
+            the **portable folder**; if you just want a quick one-off run, take
+            the **single .exe**.
+
+            > ⚠️ **Unverified pre-release.** Not yet verified as stable — please
+            > test with non-critical copies of your data.
           files: |
-            dist/Visual Stimulus Kit Tool.exe
+            dist_onefile/Visual Stimulus Kit Tool.exe
+            Visual-Stimulus-Kit-Tool-${{ steps.version.outputs.version }}-portable-folder.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

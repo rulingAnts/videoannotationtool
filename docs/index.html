@@ -39,9 +39,13 @@
           <span class="small" title="Installer: Adds shortcuts and Start Menu entry. Recommended for most users, especially if you own the computer you're using.">(.exe)</span>
         </a>
         -->
+        <a id="winFolder" class="button primary" href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">
+          <span id="i18n-btn-win-folder" title="Portable folder: extract once, then run. Starts much faster because nothing is unpacked at launch.">Windows Portable Folder</span>
+          <span class="small" title="Extract the ZIP once, then run the .exe inside. Starts much faster. Keep the folder together — the _internal folder next to the .exe is required.">(.zip — faster)</span>
+        </a>
         <a id="winPortable" class="button secondary" href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">
-          <span id="i18n-btn-win-portable" title="Portable: No installation, just unzip and run. No shortcuts or Start Menu entry.">Windows Portable</span>
-          <span class="small" title="Portable: No installation, just download and run. No shortcuts or Start Menu entry. Can be run off of a thumb drive on public or shared computers that you do not own.">(.exe)</span>
+          <span id="i18n-btn-win-portable" title="Single file: no installation, just download and run. Slower to start.">Windows Single File</span>
+          <span class="small" title="One .exe, nothing to extract. Starts slowly because Windows unpacks the whole program to a temporary folder on every launch. Can be run off of a thumb drive on public or shared computers that you do not own.">(.exe — simplest)</span>
         </a>
         <a id="macLink" class="button secondary" href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener" style="display:none;">
           <span id="i18n-btn-mac">Download for macOS</span>
@@ -53,6 +57,12 @@
         <strong>Tip:</strong> Use <b>Installer</b> if you own the computer (adds shortcuts and Start Menu entry). Use <b>Portable</b> if you don't own the computer or can't install software (no installation, just download and run).
       </div>
       -->
+      <div id="i18n-hero-tip-which" style="margin: 8px 0 0 0; color: var(--muted); font-size: 12px;">
+        <strong>Which one?</strong> Both are the same app.
+        <b>Portable Folder (.zip)</b> — extract once, then run the <code>.exe</code> inside; it <b>starts much faster</b> because nothing is unpacked at launch. Keep the folder together (the <code>_internal</code> folder must stay beside the <code>.exe</code>). Best if you use the app regularly.
+        <b>Single File (.exe)</b> — nothing to extract, just download and run, but it <b>starts slowly</b> because Windows unpacks the whole program to a temporary folder every time you launch it (noticeably slow on older laptops, virtual machines, or with strict antivirus). Best for a quick one-off run.
+        Both are fully portable and can run from a thumb drive on a computer you don’t own.
+      </div>
       <div id="i18n-hero-tip2" style="margin: 8px 0 0 0; color: var(--muted); font-size: 12px;">
         If these buttons don’t start a download, open the <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">latest releases page</a> and pick your file there.
         </div>
@@ -795,6 +805,7 @@
       const api = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
       const winInstaller = document.getElementById('winInstaller');
       const winPortable = document.getElementById('winPortable');
+      const winFolder = document.getElementById('winFolder');
       const macA = document.getElementById('macLink');
       const ver = document.getElementById('latestVersion');
 
@@ -822,6 +833,17 @@
             winPortable.href = portable.browser_download_url;
             winPortable.removeAttribute('target');
             winPortable.removeAttribute('rel');
+          }
+          const folderZip = assets.find(a => a && a.browser_download_url && a.name && /\.zip$/i.test(a.name) && /portable-folder/i.test(a.name));
+          if (winFolder) {
+            if (folderZip) {
+              winFolder.href = folderZip.browser_download_url;
+              winFolder.removeAttribute('target');
+              winFolder.removeAttribute('rel');
+            } else {
+              // Older releases have no folder build; hide the button.
+              winFolder.style.display = 'none';
+            }
           }
           if (dmg && macA) {
             macA.href = dmg.browser_download_url;
@@ -867,21 +889,24 @@
     .dl-choice .dl-c-note { display: block; margin-top: 3px; color: var(--muted, #888); font-size: 12px; }
   </style>
   <script>
-    // The Windows Portable button stays a normal button. ONLY when a pre-release exists that is
-    // newer than the latest stable release, clicking it opens a small modal to choose Stable vs
-    // Pre-release. Otherwise the button behaves normally (direct stable download). Degrades
+    // The download buttons stay normal buttons. ONLY when a pre-release exists that is
+    // newer than the latest stable release, clicking one opens a small modal to choose
+    // Stable vs Pre-release for that same download type (single .exe or portable folder
+    // .zip). Otherwise the buttons behave normally (direct stable download). Degrades
     // gracefully if there is no newer pre-release or the GitHub API call fails.
     (function(){
       const owner = 'rulingAnts', repo = 'videoannotationtool';
-      const winPortable = document.getElementById('winPortable');
-      if (!winPortable) return;
       const isInstaller = (n) => /setup|installer/i.test(n);
-      const isPortable = (n) => /\.exe$/i.test(n) && !isInstaller(n);
-      const portableUrl = (rel) => {
-        const a = (rel.assets || []).find(x => x && x.browser_download_url && x.name && isPortable(x.name));
-        return a ? a.browser_download_url : (rel.html_url || null);
+      const pickExe = (rel) => {
+        const a = (rel.assets || []).find(x => x && x.browser_download_url && x.name
+          && /\.exe$/i.test(x.name) && !isInstaller(x.name));
+        return a ? a.browser_download_url : null;
       };
-      // Localized strings (site is localized; keep these in sync with the app's languages).
+      const pickZip = (rel) => {
+        const a = (rel.assets || []).find(x => x && x.browser_download_url && x.name
+          && /\.zip$/i.test(x.name) && /portable-folder/i.test(x.name));
+        return a ? a.browser_download_url : null;
+      };
       const LABELS = {
         title:   { en:'Choose a version to download', id:'Pilih versi untuk diunduh', ko:'다운로드할 버전 선택', nl:'Kies een versie om te downloaden', 'pt-BR':'Escolha uma versão para baixar', es:'Elige una versión para descargar', af:'Kies ’n weergawe om af te laai' },
         stable:  { en:'Stable release', id:'Rilis stabil', ko:'안정 버전', nl:'Stabiele release', 'pt-BR':'Versão estável', es:'Versión estable', af:'Stabiele vrystelling' },
@@ -894,6 +919,45 @@
       try { lang = localStorage.getItem('vatSiteLang') || 'en'; } catch (e) {}
       const t = (k) => (LABELS[k][lang] || LABELS[k].en);
 
+      function attachChooser(btn, stableUrl, stableTag, preUrl, preTag) {
+        const overlay = document.createElement('div');
+        overlay.className = 'dl-overlay';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        const modal = document.createElement('div');
+        modal.className = 'dl-modal';
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'dl-close';
+        closeBtn.setAttribute('aria-label', t('close'));
+        closeBtn.innerHTML = '&times;';
+        const heading = document.createElement('h3');
+        heading.textContent = t('title');
+        const closeOverlay = () => overlay.classList.remove('open');
+        const mkChoice = (title, tag, note, href) => {
+          const a = document.createElement('a');
+          a.className = 'dl-choice';
+          a.href = href;
+          const tt = document.createElement('span'); tt.className = 'dl-c-title'; tt.textContent = title;
+          const tg = document.createElement('span'); tg.className = 'dl-c-tag'; tg.textContent = tag || '';
+          const nn = document.createElement('span'); nn.className = 'dl-c-note'; nn.textContent = note || '';
+          a.appendChild(tt); a.appendChild(tg); a.appendChild(nn);
+          a.addEventListener('click', closeOverlay);
+          return a;
+        };
+        modal.appendChild(closeBtn);
+        modal.appendChild(heading);
+        modal.appendChild(mkChoice(t('stable'), stableTag, t('stableN'), stableUrl));
+        modal.appendChild(mkChoice(t('pre'), preTag, t('preN'), preUrl));
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOverlay(); });
+        closeBtn.addEventListener('click', closeOverlay);
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeOverlay(); });
+        btn.addEventListener('click', (e) => { e.preventDefault(); overlay.classList.add('open'); });
+        btn.setAttribute('aria-haspopup', 'dialog');
+      }
+
       fetch(`https://api.github.com/repos/${owner}/${repo}/releases?per_page=15`, { headers: { 'Accept': 'application/vnd.github+json' } })
         .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
         .then(list => {
@@ -901,58 +965,20 @@
           const live = list.filter(x => x && !x.draft);
           const stable = live.find(x => !x.prerelease);
           const pre = live.find(x => x.prerelease);
-          if (!pre) return; // no pre-release
-          if (stable && new Date(pre.published_at) <= new Date(stable.published_at)) return; // pre-release not newer
-          const preUrl = portableUrl(pre);
-          if (!preUrl) return;
-          const stableUrl = stable ? portableUrl(stable) : winPortable.href;
-
-          // Build the chooser modal once.
-          const overlay = document.createElement('div');
-          overlay.className = 'dl-overlay';
-          overlay.setAttribute('role', 'dialog');
-          overlay.setAttribute('aria-modal', 'true');
-
-          const modal = document.createElement('div');
-          modal.className = 'dl-modal';
-
-          const closeBtn = document.createElement('button');
-          closeBtn.type = 'button';
-          closeBtn.className = 'dl-close';
-          closeBtn.setAttribute('aria-label', t('close'));
-          closeBtn.innerHTML = '&times;';
-
-          const heading = document.createElement('h3');
-          heading.textContent = t('title');
-
-          const mkChoice = (title, tag, note, href) => {
-            const a = document.createElement('a');
-            a.className = 'dl-choice';
-            a.href = href;
-            const tt = document.createElement('span'); tt.className = 'dl-c-title'; tt.textContent = title;
-            const tg = document.createElement('span'); tg.className = 'dl-c-tag'; tg.textContent = tag || '';
-            const nn = document.createElement('span'); nn.className = 'dl-c-note'; nn.textContent = note || '';
-            a.appendChild(tt); a.appendChild(tg); a.appendChild(nn);
-            a.addEventListener('click', () => closeOverlay());
-            return a;
-          };
-
-          modal.appendChild(closeBtn);
-          modal.appendChild(heading);
-          modal.appendChild(mkChoice(t('stable'), (stable && (stable.tag_name || stable.name)) || '', t('stableN'), stableUrl));
-          modal.appendChild(mkChoice(t('pre'), (pre.tag_name || pre.name) || '', t('preN'), preUrl));
-          overlay.appendChild(modal);
-          document.body.appendChild(overlay);
-
-          function openOverlay() { overlay.classList.add('open'); }
-          function closeOverlay() { overlay.classList.remove('open'); }
-          overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOverlay(); });
-          closeBtn.addEventListener('click', closeOverlay);
-          document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeOverlay(); });
-
-          // Keep it a button: intercept the click and open the chooser instead of navigating.
-          winPortable.addEventListener('click', (e) => { e.preventDefault(); openOverlay(); });
-          winPortable.setAttribute('aria-haspopup', 'dialog');
+          if (!pre) return;
+          if (stable && new Date(pre.published_at) <= new Date(stable.published_at)) return;
+          const stableTag = (stable && (stable.tag_name || stable.name)) || '';
+          const preTag = (pre.tag_name || pre.name) || '';
+          [
+            { el: document.getElementById('winPortable'), pick: pickExe },
+            { el: document.getElementById('winFolder'), pick: pickZip },
+          ].forEach(({ el, pick }) => {
+            if (!el) return;
+            const preUrl = pick(pre);
+            if (!preUrl) return; // this release type not offered in the pre-release
+            const stableUrl = (stable && pick(stable)) || el.href;
+            attachChooser(el, stableUrl, stableTag, preUrl, preTag);
+          });
         })
         .catch(err => console.warn('Pre-release check failed:', err));
     })();

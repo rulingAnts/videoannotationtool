@@ -46,6 +46,10 @@
     - i18n-trouble-li4 (getting help: added experienced-users note)
     - i18n-install-mac-heading (reworded to "macOS (interpreted mode only)")
     NOTE: Completed 2026-05-18. All 6 strings updated across all 6 languages (id, ko, nl, pt-BR, es, af).
+[ ] Translate the new download-chooser strings in docs/index.html into all 6 non-English languages:
+    i18n-btn-win-folder (new "Windows Portable Folder" button) and i18n-hero-tip-which (the
+    which-download-should-I-get explanation). English only currently; they render in English until
+    translated.
 [ ] Translate the new "Archiving & Audio Format" FAQ section (docs/faq/index.html) into all 6 non-English languages (id, ko, nl, pt-BR, es, af).
     New i18n IDs, English only currently: i18n-faq-arch-heading, i18n-faq-arch-q1, i18n-faq-arch-a1, i18n-faq-arch-a1b, i18n-faq-arch-q2, i18n-faq-arch-a2, i18n-faq-arch-q3, i18n-faq-arch-a3. (These fall back to English until translated, so the page renders fine meanwhile.)
 
@@ -130,11 +134,23 @@ Implemented in increments:
       available offline first, or copy it locally."
     - Never let a folder-load failure kill the app: catch, log, show a dialog, and leave the previous
       folder loaded.
-[ ] Slow app startup, especially on lower-resource machines (ThinkPad, Parallels VM). Investigate:
-    PyInstaller onefile self-extraction (~317 MB exe) is a prime suspect - a onedir build or trimming
-    bundled deps would likely help more than app-level changes. Also profile import time (cv2, PySide6,
-    pydub/numpy) and defer heavy imports until first use. NOTE: the refactor/modularization and the
-    pywebview migration may both help here, but measure before assuming.
+[~] Slow app startup, especially on lower-resource machines (ThinkPad, Parallels VM).
+    ADDRESSED (2026-07, pending measurement): the cause is onefile self-extraction - the bootloader
+    unpacked the whole ~317 MB bundle to %TEMP% on EVERY launch. Changes made:
+    - Added pyinstaller-onedir.spec (one-folder build, shipped as a ZIP). Nothing is extracted at
+      launch; DLLs load directly from the _internal folder, so startup should be far faster.
+      Both builds now ship: single .exe (simplest) + portable folder .zip (fast).
+    - upx=False in both specs: UPX decompresses every DLL at load AND is a common antivirus
+      false-positive trigger (matters on lab/shared machines).
+    - Trimmed the bundle: dropped the blanket collect_data_files('PySide6') (it force-collected every
+      Qt DLL/translation regardless of imports) in favour of PyInstaller's PySide6 hook, and added
+      excludes for the Qt frameworks this app never imports (WebEngine, Quick/QML, 3D, Charts,
+      Multimedia, Sql, Pdf, ...). The app only uses QtCore/QtGui/QtWidgets.
+    - CI smoke-tests both builds (QT_QPA_PLATFORM=offscreen, must stay alive 40s) and prints
+      artifact sizes, so bundle trimming can't silently break the app.
+    STILL TO DO: measure real startup time on the ThinkPad/Parallels for both builds and confirm the
+    trimming didn't drop anything needed. Also still worth profiling import time (cv2, PySide6,
+    pydub/numpy) and deferring heavy imports until first use.
 [ ] FEATURE: Allow compressed archives as source folders. In the folder picker, let the user select a
     .zip / .tar.gz / .tgz / .tar / (7z?) archive - or a sub-folder inside one - and have the app
     auto-extract it (in place, next to the archive, or to a cache dir) and then open the extracted
