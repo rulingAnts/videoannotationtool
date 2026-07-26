@@ -563,6 +563,11 @@ class VideoAnnotationApp(QMainWindow):
             logging.warning(f"Failed to refresh videos from FS manager: {e}")
         self.update_media_controls()
         self.update_video_file_checks()
+        # If the All tab is active, its merged list owns the drawer.
+        try:
+            self._refresh_drawer_list()
+        except Exception:
+            pass
     def _reload_folder_and_select(self, target_name: str, retries: int = 6, delay_ms: int = 250):
         """Force a folder reload and try to select target_name after refresh. Retries with a short delay if needed."""
         try:
@@ -867,6 +872,7 @@ class VideoAnnotationApp(QMainWindow):
         right_panel = QTabWidget()
         self.right_panel = right_panel
         videos_tab = QWidget()
+        self._videos_tab_widget = videos_tab
         videos_layout = QVBoxLayout(videos_tab)
         # Tip for fullscreen video
         self.video_fullscreen_tip = QLabel(
@@ -992,6 +998,7 @@ class VideoAnnotationApp(QMainWindow):
         right_panel.addTab(videos_tab, self.LABELS["videos_tab_title"])
         # Images tab
         images_tab = QWidget()
+        self._images_tab_widget = images_tab
         images_layout = QVBoxLayout(images_tab)
         try:
             images_layout.setContentsMargins(0, 0, 0, 0)
@@ -1176,14 +1183,19 @@ class VideoAnnotationApp(QMainWindow):
         self.review_tab = ReviewTab(self.fs, app_version, self, labels=self.LABELS)
         right_panel.addTab(self.review_tab, self.LABELS.get("review_tab_title", "Review"))
 
-        # "All" tab: unified video + image queue. Added LAST so existing tab
-        # indices (0=Videos, 1=Images, 2=Review) stay valid; All is index 3.
-        self.all_tab = AllMediaTab(self.fs, labels=self.LABELS, host=self)
-        right_panel.addTab(self.all_tab, self.LABELS.get("all_tab_title", "All"))
+        # "All" tab: unified video + image queue, shown FIRST. It has no file
+        # column of its own -- the shared drawer list (the same one the Videos
+        # tab uses) drives it, listing videos AND images with recording checks.
+        self.all_tab = AllMediaTab(self.fs, labels=self.LABELS, host=self, external_list=True)
+        right_panel.insertTab(0, self.all_tab, self.LABELS.get("all_tab_title", "All"))
+        right_panel.setCurrentIndex(0)
         try:
             self.fs.folderChanged.connect(lambda *_: self.all_tab.refresh_queue())
             self.fs.videosUpdated.connect(lambda *_: self.all_tab.refresh_queue())
             self.fs.imagesUpdated.connect(lambda *_: self.all_tab.refresh_queue())
+            self.all_tab.queueChanged.connect(self._populate_drawer_for_all_tab)
+            self.all_tab.selectionChanged.connect(self._sync_drawer_row)
+            self.all_tab.recordingChanged.connect(self.update_video_file_checks)
         except Exception:
             pass
 
@@ -1193,9 +1205,15 @@ class VideoAnnotationApp(QMainWindow):
         self._splitter_prev_sizes = [240, 600]
         # Connect tab change to enable/disable video_listbox
         def _on_tab_changed(idx):
-            # 0 = Videos, 1 = Images, 2 = Review, 3 = All (assume order)
+            # Tabs are identified by widget, not index, so reordering is safe.
             try:
-                self.video_listbox.setEnabled(idx == 0)
+                key = self._active_tab_key()
+                # The drawer file list is shared by the Videos and All tabs.
+                self.video_listbox.setEnabled(key in ("videos", "all"))
+            except Exception:
+                pass
+            try:
+                self._refresh_drawer_list()
             except Exception:
                 pass
             # Keep drawer overlay position in sync
@@ -1263,10 +1281,16 @@ class VideoAnnotationApp(QMainWindow):
         # Update tab titles
         try:
             if getattr(self, 'right_panel', None) is not None:
-                self.right_panel.setTabText(0, self.LABELS.get("videos_tab_title", "Videos"))
-                self.right_panel.setTabText(1, self.LABELS.get("images_tab_title", "Images"))
-                self.right_panel.setTabText(2, self.LABELS.get("review_tab_title", "Review"))
-                self.right_panel.setTabText(3, self.LABELS.get("all_tab_title", "All"))
+                for _i in range(self.right_panel.count()):
+                    _w = self.right_panel.widget(_i)
+                    if _w is getattr(self, 'all_tab', None):
+                        self.right_panel.setTabText(_i, self.LABELS.get("all_tab_title", "All"))
+                    elif _w is getattr(self, '_videos_tab_widget', None):
+                        self.right_panel.setTabText(_i, self.LABELS.get("videos_tab_title", "Videos"))
+                    elif _w is getattr(self, '_images_tab_widget', None):
+                        self.right_panel.setTabText(_i, self.LABELS.get("images_tab_title", "Images"))
+                    elif _w is getattr(self, 'review_tab', None):
+                        self.right_panel.setTabText(_i, self.LABELS.get("review_tab_title", "Review"))
         except Exception:
             pass
         # Retranslate Review tab
@@ -1720,6 +1744,11 @@ class VideoAnnotationApp(QMainWindow):
             self.current_video = None
         self.update_media_controls()
         self.update_video_file_checks()
+        # If the All tab is active, its merged list owns the drawer.
+        try:
+            self._refresh_drawer_list()
+        except Exception:
+            pass
     def open_metadata_dialog(self):
         if not self.fs.current_folder:
             return
@@ -1764,8 +1793,110 @@ class VideoAnnotationApp(QMainWindow):
         cancel_btn.clicked.connect(dlg.reject)
         dlg.resize(600, 400)
         dlg.exec()
+    # ---- shared drawer file list (Videos tab + All tab) ----------------
+    def _active_tab_key(self) -> str:
+        """Identify the active right-panel tab by widget identity, not index,
+        so tabs can be reordered without breaking behavior."""
+        try:
+            w = self.right_panel.currentWidget()
+        except Exception:
+            return "videos"
+        if w is getattr(self, 'all_tab', None):
+            return "all"
+        if w is getattr(self, 'review_tab', None):
+            return "review"
+        if w is getattr(self, '_images_tab_widget', None):
+            return "images"
+        return "videos"
+
+    def _refresh_drawer_list(self) -> None:
+        """Repopulate the shared drawer list for whichever tab is active."""
+        key = self._active_tab_key()
+        if key == "all":
+            self._populate_drawer_for_all_tab()
+        elif key == "videos":
+            self._populate_drawer_for_videos()
+
+    def _populate_drawer_for_all_tab(self) -> None:
+        """Drawer list shows the All tab's merged video+image queue."""
+        lb = getattr(self, 'video_listbox', None)
+        at = getattr(self, 'all_tab', None)
+        if lb is None or at is None or self._active_tab_key() != "all":
+            return
+        check = getattr(self, '_check_icon', None)
+        empty = getattr(self, '_empty_icon', None)
+        lb.blockSignals(True)
+        try:
+            lb.clear()
+            for path in at.queue:
+                item = QListWidgetItem(os.path.basename(path))
+                item.setData(Qt.UserRole, path)
+                try:
+                    if check is not None and empty is not None:
+                        item.setIcon(check if self.fs.has_recording(path) else empty)
+                except Exception:
+                    pass
+                lb.addItem(item)
+            if 0 <= at.index < lb.count():
+                lb.setCurrentRow(at.index)
+        finally:
+            lb.blockSignals(False)
+
+    def _populate_drawer_for_videos(self) -> None:
+        """Drawer list shows videos only (Videos tab), preserving selection."""
+        lb = getattr(self, 'video_listbox', None)
+        if lb is None or self._active_tab_key() != "videos":
+            return
+        check = getattr(self, '_check_icon', None)
+        empty = getattr(self, '_empty_icon', None)
+        names = [os.path.basename(vp) for vp in (getattr(self, 'video_files', None) or [])]
+        lb.blockSignals(True)
+        try:
+            lb.clear()
+            for name in names:
+                item = QListWidgetItem(name)
+                try:
+                    if check is not None and empty is not None:
+                        item.setIcon(check if os.path.exists(self.fs.wav_path_for(name)) else empty)
+                except Exception:
+                    pass
+                lb.addItem(item)
+            if self.current_video and self.current_video in names:
+                lb.setCurrentRow(names.index(self.current_video))
+        finally:
+            lb.blockSignals(False)
+        # If nothing is selected yet, select the first item for real (signals on).
+        if not self.current_video and lb.count():
+            lb.setCurrentRow(0)
+
+    def _sync_drawer_row(self, i: int) -> None:
+        """Keep the drawer list row in sync with All-tab prev/next navigation."""
+        if self._active_tab_key() != "all":
+            return
+        lb = getattr(self, 'video_listbox', None)
+        if lb is None or not (0 <= i < lb.count()) or lb.currentRow() == i:
+            return
+        lb.blockSignals(True)
+        try:
+            lb.setCurrentRow(i)
+        finally:
+            lb.blockSignals(False)
+
     def on_video_select(self, current_row):
         if current_row < 0:
+            return
+        # When the All tab is active the shared drawer list drives it instead
+        # of the Videos tab.
+        try:
+            if self._active_tab_key() == "all":
+                item = self.video_listbox.item(current_row)
+                path = item.data(Qt.UserRole) if item is not None else None
+                if path:
+                    self.all_tab.select_path(path)
+                else:
+                    self.all_tab.select_index(current_row)
+                return
+        except Exception:
             return
         try:
             self.stop_audio()
@@ -3653,9 +3784,10 @@ class VideoAnnotationApp(QMainWindow):
             active_index = self.right_panel.currentIndex() if getattr(self, 'right_panel', None) else 0
         except Exception:
             active_index = 0
-        if active_index == 1:  # Images tab
+        _key = self._active_tab_key()
+        if _key == "images":
             file_paths = self.fs.image_recordings_in()
-        elif active_index == 2:  # Review tab
+        elif _key == "review":
             try:
                 review_tab = getattr(self, 'review_tab', None)
                 if review_tab:
@@ -3665,7 +3797,7 @@ class VideoAnnotationApp(QMainWindow):
                     file_paths = self.fs.recordings_in()
             except Exception:
                 file_paths = self.fs.recordings_in()
-        elif active_index == 3:  # All tab -> every recording in the folder
+        elif _key == "all":  # All tab -> every recording in the folder
             file_paths = self.fs.recordings_in()
         else:  # Videos tab (default)
             file_paths = self.fs.video_recordings_in()
@@ -3992,10 +4124,14 @@ class VideoAnnotationApp(QMainWindow):
     def update_video_file_checks(self):
         if not self.fs.current_folder:
             return
+        all_mode = self._active_tab_key() == "all"
         for i in range(self.video_listbox.count()):
             item = self.video_listbox.item(i)
-            name = item.text()
-            wav_exists = os.path.exists(self.fs.wav_path_for(name))
+            if all_mode:
+                target = item.data(Qt.UserRole) or item.text()
+                wav_exists = self.fs.has_recording(target)
+            else:
+                wav_exists = os.path.exists(self.fs.wav_path_for(item.text()))
             desired_icon = self._check_icon if wav_exists else self._empty_icon
             item.setIcon(desired_icon)
         # Update image badges

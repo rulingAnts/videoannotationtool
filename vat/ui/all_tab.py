@@ -11,19 +11,11 @@ canonical, same-stem-safe recording lookups on FolderAccessManager
 to the same WAV.
 
 Wiring: constructed with (fs, labels, host) where `host` is the MainWindow,
-used only for shared services (_launch_ocenaudio, status bar). Not yet added to
-the tab widget — see app.py integration step.
-
-RESUME STATUS (for interrupted sessions):
-  [x] UI skeleton (queue list + preview + controls)
-  [x] queue load / selection / prev-next navigation
-  [x] preview: video first-frame + image static
-  [x] video playback (cv2 + QTimer), disabled for stills
-  [x] audio playback (AudioPlaybackWorker on a fresh QThread)
-  [x] record / stop (AudioRecordingWorker), canonical WAV naming
-  [x] delete recording, edit-in-Ocenaudio (via host)
-  [x] wired into app.py right_panel (index 3, added last) + tab-index/ocenaudio/close fixups
-  [ ] NOT YET: GUI click-test (PySide6/cv2 unavailable headless — syntax-checked + pyflakes-clean only)
+used only for shared services (_launch_ocenaudio, status bar). In the default
+external_list mode this tab has NO file column of its own — the shared drawer
+list (the same one the Videos tab uses) drives it, listing videos AND images
+with recording check marks. The host keeps the two in sync via the
+queueChanged / selectionChanged / recordingChanged signals.
 """
 
 from __future__ import annotations
@@ -33,12 +25,14 @@ import math
 import logging
 from typing import List, Optional
 
-from PySide6.QtCore import Qt, QThread, QTimer
+from PySide6.QtCore import Qt, QThread, QTimer, QEvent, Signal
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QToolButton,
     QListWidget, QListWidgetItem, QMessageBox, QStyle, QSizePolicy,
 )
+
+from vat.ui.fullscreen import FullscreenVideoViewer, FullscreenImageViewer
 
 try:
     import cv2  # type: ignore
@@ -58,11 +52,22 @@ _RECORDED_BORDER = "background-color: black; color: white; border: 3px solid #2e
 class AllMediaTab(QWidget):
     """One-at-a-time preview/record over a merged video+image queue."""
 
-    def __init__(self, fs, labels: Optional[dict] = None, host=None, parent=None):
+    # The host drives the shared drawer file list from these.
+    queueChanged = Signal()          # queue reloaded -> repopulate drawer list
+    selectionChanged = Signal(int)   # current index changed -> sync drawer row
+    recordingChanged = Signal()      # a recording was added/removed -> refresh check marks
+
+    def __init__(self, fs, labels: Optional[dict] = None, host=None, parent=None,
+                 external_list: bool = True):
         super().__init__(parent)
         self.fs = fs
         self.labels = labels or {}
         self.host = host
+        # When True this tab has no file column of its own; the shared drawer
+        # list (the same one the Videos tab uses) drives selection instead.
+        self.external_list = external_list
+        self.list_widget = None
+        self._fullscreen_viewer = None
 
         # Queue state
         self.queue: List[str] = []
@@ -99,16 +104,20 @@ class AllMediaTab(QWidget):
     def _build_ui(self) -> None:
         outer = QHBoxLayout(self)
 
-        # Left: the merged queue list
-        self.list_widget = QListWidget()
-        self.list_widget.setMaximumWidth(240)
-        self.list_widget.setSelectionMode(QListWidget.SingleSelection)
-        self.list_widget.currentRowChanged.connect(self.select_index)
-        outer.addWidget(self.list_widget)
+        # Left: the merged queue list. Omitted in external_list mode, where the
+        # shared drawer list (same as the Videos tab) drives selection instead.
+        if not self.external_list:
+            self.list_widget = QListWidget()
+            self.list_widget.setMaximumWidth(240)
+            self.list_widget.setSelectionMode(QListWidget.SingleSelection)
+            self.list_widget.currentRowChanged.connect(self.select_index)
+            outer.addWidget(self.list_widget)
 
         # Right: preview + controls
         right = QVBoxLayout()
         self.preview_label = QLabel(self._L("video_listbox_no_video", "No media selected"))
+        # Double-click the preview to open fullscreen (matches the Videos tab).
+        self.preview_label.installEventFilter(self)
         self.preview_label.setAlignment(Qt.AlignCenter)
         self.preview_label.setMinimumSize(480, 360)
         try:
@@ -196,13 +205,19 @@ class AllMediaTab(QWidget):
         except Exception as e:
             logging.error(f"AllMediaTab.refresh_queue failed: {e}")
             self.queue = []
-        self.list_widget.blockSignals(True)
-        self.list_widget.clear()
-        for p in self.queue:
-            item = QListWidgetItem(os.path.basename(p))
-            item.setData(Qt.UserRole, p)
-            self.list_widget.addItem(item)
-        self.list_widget.blockSignals(False)
+        if self.list_widget is not None:
+            self.list_widget.blockSignals(True)
+            self.list_widget.clear()
+            for p in self.queue:
+                item = QListWidgetItem(os.path.basename(p))
+                item.setData(Qt.UserRole, p)
+                self.list_widget.addItem(item)
+            self.list_widget.blockSignals(False)
+        # Let the host rebuild the shared drawer list from self.queue.
+        try:
+            self.queueChanged.emit()
+        except Exception:
+            pass
 
         if not self.queue:
             self.index = -1
@@ -225,12 +240,26 @@ class AllMediaTab(QWidget):
         self._stop_all_for_switch()
         self.index = i
         self.current = self.queue[i]
-        if self.list_widget.currentRow() != i:
+        if self.list_widget is not None and self.list_widget.currentRow() != i:
             self.list_widget.blockSignals(True)
             self.list_widget.setCurrentRow(i)
             self.list_widget.blockSignals(False)
         self._show_preview()
         self._update_controls()
+        try:
+            self.selectionChanged.emit(i)
+        except Exception:
+            pass
+
+    def select_path(self, path: str) -> None:
+        """Select by full media path (used by the shared drawer list)."""
+        if not path:
+            return
+        for i, p in enumerate(self.queue):
+            if p == path or os.path.basename(p) == os.path.basename(path):
+                if i != self.index:
+                    self.select_index(i)
+                return
 
     def go_prev(self) -> None:
         if self.queue and self.index > 0:
@@ -306,6 +335,55 @@ class AllMediaTab(QWidget):
         except Exception:
             pass
         return pixmap
+
+    # ---- fullscreen ----------------------------------------------------
+    def eventFilter(self, obj, event):
+        try:
+            if obj is self.preview_label and event.type() == QEvent.MouseButtonDblClick:
+                if self.current and os.path.exists(self.current):
+                    self._open_fullscreen()
+                    return True
+        except Exception:
+            pass
+        return super().eventFilter(obj, event)
+
+    def _open_fullscreen(self) -> None:
+        """Open the current item fullscreen (video player or image viewer)."""
+        try:
+            existing = self._fullscreen_viewer
+            if existing is not None:
+                try:
+                    if existing.isVisible():
+                        existing.raise_()
+                        existing.activateWindow()
+                        existing.setFocus()
+                        return
+                except Exception:
+                    pass
+            # Release our own playback handle so the viewer owns the file.
+            if self.playing_video:
+                self.stop_video()
+            if self._current_kind() == "image":
+                viewer = FullscreenImageViewer(self.current)
+            else:
+                viewer = FullscreenVideoViewer(self.current)
+            self._fullscreen_viewer = viewer
+            viewer.showFullScreen()
+            try:
+                viewer.raise_()
+                viewer.activateWindow()
+                viewer.setFocus()
+            except Exception:
+                pass
+            try:
+                viewer.destroyed.connect(self._on_fullscreen_closed)
+            except Exception:
+                pass
+        except Exception as e:
+            logging.error(f"AllMediaTab fullscreen failed: {e}")
+
+    def _on_fullscreen_closed(self, *_args) -> None:
+        self._fullscreen_viewer = None
 
     # ---- video playback ------------------------------------------------
     def play_video(self) -> None:
@@ -467,6 +545,7 @@ class AllMediaTab(QWidget):
                 self.recording_worker = None
         self._update_recording_indicator()
         self._update_controls()
+        self._emit_recording_changed()
 
     def _on_recording_finished(self) -> None:
         self.recording_thread = None
@@ -474,6 +553,13 @@ class AllMediaTab(QWidget):
         self.is_recording = False
         self._update_recording_indicator()
         self._update_controls()
+        self._emit_recording_changed()
+
+    def _emit_recording_changed(self) -> None:
+        try:
+            self.recordingChanged.emit()
+        except Exception:
+            pass
 
     def _update_recording_indicator(self) -> None:
         try:
@@ -508,6 +594,7 @@ class AllMediaTab(QWidget):
             QMessageBox.critical(self, self._L("error_title", "Error"), str(e))
             return
         self._update_controls()
+        self._emit_recording_changed()
 
     def edit_recording_ocenaudio(self) -> None:
         if not self.current:
