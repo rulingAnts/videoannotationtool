@@ -55,6 +55,12 @@
 
 # Windows Installer
 [ ] Fix NSIS installer: must register in Windows "Installed Apps" list and have a working uninstaller (per-user install scope). Currently the installer button on the website is commented out (docs/index.html) until this is resolved.
+    NOTE (2026-07): installer/videoannotation_installer.nsi is now STALE in two ways and must be updated when revived:
+    (a) it does `File "..\dist\Visual Stimulus Kit Tool.exe"`, but builds now go to dist_onefile/ and the
+        onefile artifact is named Visual-Stimulus-Kit-Tool-<version>-portable.exe;
+    (b) better still, point the installer at the ONEDIR build (dist_onedir/Visual Stimulus Kit Tool/) using
+        `File /r` so installed users get the fast-starting version - an installed app has no reason to pay
+        the onefile self-extraction cost on every launch. The workflow no longer builds the installer at all.
 
 # Recording Format / Archive Compliance
 [x] Make microphone recording language-documentation-archive-compliant (IASA TC-04: uncompressed PCM WAV, 48 kHz, 24-bit).
@@ -148,6 +154,10 @@ Implemented in increments:
       Multimedia, Sql, Pdf, ...). The app only uses QtCore/QtGui/QtWidgets.
     - CI smoke-tests both builds (QT_QPA_PLATFORM=offscreen, must stay alive 40s) and prints
       artifact sizes, so bundle trimming can't silently break the app.
+    MEASURED (v2.3.2 build): single .exe went 317 MB -> 113.2 MB (-64%), folder ZIP 116.9 MB,
+    extracted folder 301.4 MB. Both builds passed the CI smoke test. The size cut came almost entirely
+    from dropping collect_data_files('PySide6') - the app was shipping the whole Qt stack (WebEngine,
+    Quick, 3D, ...) as data files - and it lands DESPITE turning UPX off.
     STILL TO DO: measure real startup time on the ThinkPad/Parallels for both builds and confirm the
     trimming didn't drop anything needed. Also still worth profiling import time (cv2, PySide6,
     pydub/numpy) and deferring heavy imports until first use.

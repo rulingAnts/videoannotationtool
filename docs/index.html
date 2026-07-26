@@ -820,10 +820,14 @@
           const assets = Array.isArray(data.assets) ? data.assets : [];
           // Find installer and portable .exe
           const isInstaller = (n) => /setup|installer/i.test(n);
-          const isPortable = (n) => n.toLowerCase().endsWith('.exe') && !isInstaller(n);
-          const installer = assets.find(a => a && a.browser_download_url && a.name && isInstaller(a.name));
-          const portable = assets.find(a => a && a.browser_download_url && a.name && isPortable(a.name));
-          const dmg = assets.find(a => a && a.browser_download_url && a.name && a.name.toLowerCase().endsWith('.dmg'));
+          const isPortableExe = (n) => /\.exe$/i.test(n) && !isInstaller(n);
+          const usable = assets.filter(a => a && a.browser_download_url && a.name);
+          const installer = usable.find(a => isInstaller(a.name));
+          // Prefer the current naming (Visual-Stimulus-Kit-Tool-<version>-portable.exe);
+          // fall back to any non-installer .exe so older releases still resolve.
+          const portable = usable.find(a => /-portable\.exe$/i.test(a.name))
+                        || usable.find(a => isPortableExe(a.name));
+          const dmg = usable.find(a => a.name.toLowerCase().endsWith('.dmg'));
           if (installer && winInstaller) {
             winInstaller.href = installer.browser_download_url;
             winInstaller.removeAttribute('target');
@@ -834,7 +838,7 @@
             winPortable.removeAttribute('target');
             winPortable.removeAttribute('rel');
           }
-          const folderZip = assets.find(a => a && a.browser_download_url && a.name && /\.zip$/i.test(a.name) && /portable-folder/i.test(a.name));
+          const folderZip = usable.find(a => /\.zip$/i.test(a.name) && /portable-folder/i.test(a.name));
           if (winFolder) {
             if (folderZip) {
               winFolder.href = folderZip.browser_download_url;
@@ -898,8 +902,10 @@
       const owner = 'rulingAnts', repo = 'videoannotationtool';
       const isInstaller = (n) => /setup|installer/i.test(n);
       const pickExe = (rel) => {
-        const a = (rel.assets || []).find(x => x && x.browser_download_url && x.name
-          && /\.exe$/i.test(x.name) && !isInstaller(x.name));
+        const list = (rel.assets || []).filter(x => x && x.browser_download_url && x.name);
+        // Prefer the current "-portable.exe" naming; fall back to any non-installer .exe.
+        const a = list.find(x => /-portable\.exe$/i.test(x.name))
+               || list.find(x => /\.exe$/i.test(x.name) && !isInstaller(x.name));
         return a ? a.browser_download_url : null;
       };
       const pickZip = (rel) => {

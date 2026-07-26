@@ -11,6 +11,17 @@
 
 block_cipher = None
 
+# Artifact name carries the version and "portable" so downloaded files are
+# self-identifying (e.g. Visual-Stimulus-Kit-Tool-2.3.3-portable.exe).
+# SPECPATH is injected by PyInstaller and points at this file's directory.
+import os as _os
+try:
+    with open(_os.path.join(SPECPATH, 'VERSION'), 'r', encoding='utf-8') as _f:
+        _VERSION = _f.read().strip()
+except Exception:
+    _VERSION = '0.0.0'
+APP_NAME = 'Visual-Stimulus-Kit-Tool-%s-portable' % _VERSION
+
 datas = [
     ('assets/icon.ico', 'assets'),
     ('assets/icon.png', 'assets'),
@@ -67,7 +78,7 @@ exe = EXE(pyz,
           a.binaries,
           a.zipfiles,
           a.datas,
-          name='Visual Stimulus Kit Tool',
+          name=APP_NAME,
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
