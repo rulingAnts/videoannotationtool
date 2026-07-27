@@ -37,8 +37,9 @@ class JoinWavsWorker(QObject):
                 if self.fs is None:
                     raise RuntimeError("No FolderAccessManager provided")
                 wav_paths = self.fs.recordings_in()
-            wav_files = [os.path.basename(p) for p in wav_paths]
-            wav_files.sort()
+            # Keep the FULL paths: re-deriving them from basenames breaks any
+            # recording that lives in a subfolder (e.g. images/photo.jpg.wav).
+            wav_files = sorted(wav_paths, key=lambda p: os.path.basename(p).lower())
             # 48 kHz matches the archival capture rate (IASA TC-04). The joined
             # file is a derivative (per-item masters are the archival objects),
             # so we upscale to 32-bit rather than down to 24-bit: pydub cannot
@@ -55,8 +56,7 @@ class JoinWavsWorker(QObject):
             click_segment = silence_segment + click_sound + silence_segment
             combined_audio = AudioSegment.empty()
             combined_audio = combined_audio.set_frame_rate(std_rate).set_channels(std_channels).set_sample_width(std_sample_width)
-            for i, file in enumerate(wav_files):
-                file_path = os.path.join(self.fs.current_folder or "", file)
+            for i, file_path in enumerate(wav_files):
                 audio = AudioSegment.from_file(file_path, format="wav")
                 if audio.frame_rate != std_rate:
                     audio = audio.set_frame_rate(std_rate)

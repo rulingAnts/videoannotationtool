@@ -3780,10 +3780,6 @@ class VideoAnnotationApp(QMainWindow):
         if not self.fs.current_folder:
             QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["no_folder_selected"])
             return
-        try:
-            active_index = self.right_panel.currentIndex() if getattr(self, 'right_panel', None) else 0
-        except Exception:
-            active_index = 0
         _key = self._active_tab_key()
         if _key == "images":
             file_paths = self.fs.image_recordings_in()
@@ -3797,8 +3793,8 @@ class VideoAnnotationApp(QMainWindow):
                     file_paths = self.fs.recordings_in()
             except Exception:
                 file_paths = self.fs.recordings_in()
-        elif _key == "all":  # All tab -> every recording in the folder
-            file_paths = self.fs.recordings_in()
+        elif _key == "all":  # All tab -> recordings for the whole merged queue
+            file_paths = self.fs.all_recordings_in()
         else:  # Videos tab (default)
             file_paths = self.fs.video_recordings_in()
         if not file_paths:
@@ -4061,16 +4057,12 @@ class VideoAnnotationApp(QMainWindow):
         if not self.fs.current_folder:
             QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["no_folder_selected"]) 
             return
-        # Tab-aware: join recordings for the active tab
-        try:
-            active_index = self.right_panel.currentIndex() if getattr(self, 'right_panel', None) else 0
-        except Exception:
-            active_index = 0
-        
-        # Determine which recordings to join based on active tab
-        if active_index == 1:  # Images tab
+        # Tab-aware: join recordings for the active tab. Identified by widget, not
+        # index, so inserting/reordering tabs cannot silently change the scope.
+        _key = self._active_tab_key()
+        if _key == "images":
             wav_paths = self.fs.image_recordings_in()
-        elif active_index == 2:  # Review tab
+        elif _key == "review":
             # Get recordings from Review tab's filtered scope
             try:
                 review_tab = getattr(self, 'review_tab', None)
@@ -4081,6 +4073,9 @@ class VideoAnnotationApp(QMainWindow):
                     wav_paths = self.fs.recordings_in()
             except Exception:
                 wav_paths = self.fs.recordings_in()
+        elif _key == "all":
+            # All tab -> recordings for every item in the merged video+image queue
+            wav_paths = self.fs.all_recordings_in()
         else:  # Videos tab (default)
             wav_paths = self.fs.video_recordings_in()
         if not wav_paths:

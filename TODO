@@ -46,14 +46,32 @@
     - i18n-trouble-li4 (getting help: added experienced-users note)
     - i18n-install-mac-heading (reworded to "macOS (interpreted mode only)")
     NOTE: Completed 2026-05-18. All 6 strings updated across all 6 languages (id, ko, nl, pt-BR, es, af).
-[ ] Translate the new download-chooser strings in docs/index.html into all 6 non-English languages:
-    i18n-btn-win-folder (new "Windows Portable Folder" button) and i18n-hero-tip-which (the
-    which-download-should-I-get explanation). English only currently; they render in English until
-    translated.
+[ ] Translate the simplified download strings in docs/index.html into all 6 non-English languages:
+    i18n-btn-download ("Download for Windows") and i18n-hero-tip-which (which-download-should-I-get).
+    English only currently; they render in English until translated. NOTE (2026-07): the multi-button
+    download UI and the stable/pre-release chooser modal were REMOVED - the buttons were not working in
+    the field and depended on unauthenticated GitHub API calls (60 req/hour/IP) plus asset-name matching.
+    The page now has ONE button pointing at the releases page, which is inherently robust. Stale
+    TRANSLATIONS entries for the removed IDs are harmless (applyTranslations skips missing elements) but
+    could be cleaned up.
 [ ] Translate the new "Archiving & Audio Format" FAQ section (docs/faq/index.html) into all 6 non-English languages (id, ko, nl, pt-BR, es, af).
     New i18n IDs, English only currently: i18n-faq-arch-heading, i18n-faq-arch-q1, i18n-faq-arch-a1, i18n-faq-arch-a1b, i18n-faq-arch-q2, i18n-faq-arch-a2, i18n-faq-arch-q3, i18n-faq-arch-a3. (These fall back to English until translated, so the page renders fine meanwhile.)
 
 # Windows Installer
+FIELD TEST RESULT (v2.3.3): scope page display FIXED [YES]; install AND uninstall work correctly on BOTH
+paths (all-users and per-user) [YES]. The installer is APPROVED for inclusion in current and future
+releases. Two follow-ups below (3a/3b) are for the release AFTER the refactor/modularization lands.
+[ ] 3a. Installer does not detect an EXISTING installation. It should check first, then offer
+    upgrade (when the bundled version is newer) / repair / reinstall / remove. It must also handle the
+    cross-scope case: already installed per-user but now being installed all-users (or vice versa) ->
+    detect the other scope's install and uninstall it automatically first, so the machine never ends up
+    with two copies. Read both HKLM and HKCU "Software\VisualStimulusKitTool" (Install_Dir + Scope) and
+    compare DisplayVersion in the Uninstall key against ${VERSION}.
+[ ] 3b. Make version-number propagation part of the build/release workflow and verifiable. VERSION must
+    flow into: pyinstaller.spec APP_NAME, the onedir ZIP name, makensis /DVERSION, the NSIS
+    VIProductVersion/DisplayVersion, and the release tag. Add a CI assertion that the built artifacts and
+    the installer's registered DisplayVersion all match the VERSION file, so this cannot silently drift
+    (it can't be verified from the installer exe alone).
 [~] Fix NSIS installer: must register in Windows "Installed Apps" list and have a working uninstaller
     (per-user install scope). REWRITTEN 2026-07 (installer/videoannotation_installer.nsi) but NOT YET
     TESTED ON WINDOWS, so it is still NOT built by the workflow and the website button stays commented
@@ -103,6 +121,10 @@
     NOTE: Joined output now upscales to 48 kHz / 32-bit (std_sample_width=4) instead of downconverting to 16-bit. pydub cannot emit true 24-bit (it upcasts 24-bit to 32-bit internally), and 32-bit preserves the 24-bit recordings losslessly. Verified empirically: recordings round-trip bit-exact (top 24 bits), and mixing the 24-bit-origin recordings with the 16-bit-generated click/silence does NOT clip or shift levels (pydub's 24->32 x256 and audioop's 16->32 x65536 both map to the same 32-bit full scale). Decision: the joined file is a non-compliant-but-lossless derivative; the per-item recordings remain the true-24-bit archival masters. Documented in docs/faq/index.html (#archiving).
 [ ] (Optional, low priority) Emit TRUE 24-bit (pcm_s24le) for the joined file if a fully IASA-compliant single-file export is ever wanted. Requires bypassing pydub for the final write — shell to bundled ffmpeg (-c:a pcm_s24le -ar 48000) or write via the stdlib `wave` module (sampwidth=3) from correctly-scaled samples, with a round-trip test. Largely superseded by the 32-bit-lossless approach above, since the joined file is only a convenience copy for ELAN/SayMore and the archival masters are the individual per-item recordings.
 [ ] (Optional) "Add audio" import/convert (vat/ui/app.py) stays 48 kHz / 16-bit. Left as-is deliberately: imported audio (often compressed WhatsApp voice notes per the remote workflow) is never better than its source, so 16-bit is sufficient. Revisit only if users routinely import high-bit-depth source audio worth preserving.
+[ ] Warn on single-file export: when the user runs "Export as single WAV", warn them to KEEP the original
+    individual recordings, because the combined file is not archive-compliant (it is a 32-bit lossless
+    derivative for ELAN/SayMore, not an IASA-compliant 24-bit master). Wording should make clear the
+    per-item recordings are the archival masters. Consider a "don't show again" checkbox.
 [ ] Write BWF (Broadcast Wave Format) metadata into the ORIGINAL isolated recordings (the per-item masters) — IASA TC-04 recommends BWF (.wav with a `bext` chunk) as the preferred archival container.
     - Current: vat/audio/recording.py writes plain PCM WAV via the stdlib `wave` module (fmt + data chunks only); no `bext`. The `wave` module cannot write a bext chunk.
     - `bext` (EBU Tech 3285) fields worth populating: Description, Originator (app name/version), OriginatorReference, OriginationDate, OriginationTime, TimeReference, Version, and CodingHistory (e.g. "A=PCM,F=48000,W=24,M=mono,T=<app> <version>"). These give provenance an archive can trust.
@@ -110,7 +132,7 @@
     - Scope: originals only — NOT the joined derivative. Keep it optional/robust: a malformed bext must never corrupt the audio; players ignore unknown chunks, so a correct bext is safe. Add a round-trip test that the PCM data is byte-identical before/after bext injection.
 
 # "All" tab — unified video + image queue (feature/redesign)
-PRIORITY: Do this BEFORE the pywebview/PWA re-platform and before the optional true-24-bit join work (both below).
+PRIORITY: Do this BEFORE the pywebview re-platform and before the optional true-24-bit join work (both below).
 STATUS: FIELD-TESTED AND WORKING (v2.3.0, 2026-07). Merged list, per-type preview, record/play/
 delete/edit, language switch, same-stem safety, recording format, 32-bit join, regressions and clean
 shutdown ALL PASSED. Follow-ups applied after that test: All tab moved FIRST in the tab order (and
@@ -305,7 +327,7 @@ Implemented in increments:
 # [ ] 4. Split init_ui (~L635-1244, ~600 lines) into per-tab builder functions/classes.
 #
 # [ ] 5. Externalize i18n (builtin_labels.py, 1,522 lines of inline 7-language dict) to JSON/data files.
-#     Cleanup AND a direct enabler for the pywebview/PWA port (the JS side wants JSON i18n anyway).
+#     Cleanup AND a direct enabler for the pywebview/Android port (the JS side wants JSON i18n anyway).
 #
 # [ ] 6. Review tab (review_tab.py, 1,645 lines): it HAS redundant media components (preview/playback) that
 #     could share the MediaPane, BUT its purpose and behavior are very different (randomized quiz/review,
@@ -321,36 +343,74 @@ Implemented in increments:
     - Fix undefined name in on_image_select's debug log (vat/ui/app.py: f-string references `exists`,
       which is not defined -> that log line never emits; silently swallowed by its try/except).
 
-# Architecture: pywebview re-platform → PWA + native wrappers (major, future direction — AFTER the "All" tab above)
-[ ] Re-platform the app: replace the PySide6/Qt GUI with a pywebview shell and move as much of
-    the core functionality and UI/UX as possible into the HTML/CSS/JavaScript frontend. Keep
-    Python only for essential native operations: filesystem/folder access, microphone recording,
-    WAV concatenation/joining, ffmpeg/ffprobe invocation, and OS integration.
+# Architecture: ONE shared web UI + native wrappers (pywebview desktop & Android) — NEXT MAJOR PROJECT
+# DECIDED 2026-07: NO PWA. The web layer is not browser-delivered; it is a shared UI codebase wrapped
+# natively on each platform. Two targets only: pywebview (Windows/desktop) and a native Android app.
+# This removes the whole class of "degrade gracefully in a browser" problems — notably that a browser
+# cannot produce archive-compliant 24-bit/48 kHz PCM, which would make a PWA unfit for the core purpose.
+[ ] Re-platform: replace the PySide6/Qt GUI with an HTML/CSS/JS UI shared UNCHANGED by both wrappers.
+    Native code is reserved strictly for what genuinely requires it.
     Target shape:
-    - Frontend (HTML/JS): all UI/UX — Videos & Images tabs, Review tab, playback controls,
-      settings, metadata editing, and i18n (reuse the existing docs/ localization pattern:
-      i18n IDs + per-language TRANSLATIONS + detectLanguage/localStorage across the 6 languages).
-    - Python backend: exposed to JS via pywebview's `window.pywebview.api`. Owns FolderAccessManager
-      (vat/utils/fs_access.py), recording (vat/audio/recording.py — 24-bit/48 kHz PCM), joining
-      (vat/audio/joiner.py), and ffmpeg resolution/config (vat/utils/resources.py).
-    - PWA build: a pure-web variant (no Python) that installs/runs in a browser, mirroring what was
-      done for the flextext editor suite. Aim for interoperability / interconnection with that suite
-      (shared file-naming conventions, data formats, possibly cross-linking/hand-off between apps).
-      CAVEAT: a browser PWA CANNOT produce archive-compliant recordings — MediaRecorder / Web Audio
-      give compressed (WebM/Opus) or non-guaranteed WAV, not uncompressed 24-bit/48 kHz PCM. Position
-      the PWA as a lightweight data-collection tool for contexts where a web platform is needed, and
-      point users to the native app for archival capture. (Reflect this in the FAQ if/when shipped.)
-    - Native wrappers:
-        (a) Windows — pywebview as the native desktop wrapper (replacing/alongside the current
-            PyInstaller packaging); native Python recording keeps archival quality.
-        (b) Android — a native wrapper (e.g. WebView / Trusted Web Activity around the PWA) using
-            native Android audio APIs for better capture quality than a plain browser PWA.
+    - ONE web UI: all screens and UX (All/Videos/Images/Review, playback controls, settings, metadata,
+      i18n). This must NOT be forked per platform; a change here lands on desktop and Android with no
+      porting work. Design rule: if a feature CAN be done in the web layer, it MUST be, so it is
+      written once.
+    - A NATIVE CAPABILITY CONTRACT with two implementations (Python on desktop, Kotlin/Java on Android).
+      Everything native-only lives behind it: audio capture (48 kHz/24-bit where hardware allows), audio
+      playback, filesystem + folder/file picker, WAV joining and format conversion, clipboard, and OS
+      integration (open-in-external-editor, reveal-in-file-manager).
+    - Desktop wrapper: pywebview over the existing Python (FolderAccessManager, AudioController,
+      JoinWavsWorker, converters, resources.py ffmpeg resolution) exposed via window.pywebview.api.
+    - Android wrapper: native WebView hosting the same UI; AudioRecord for PCM capture (48 kHz is fine;
+      24-bit needs ENCODING_PCM_24BIT_PACKED and device support, else fall back to 16-bit exactly as the
+      desktop app already does), Storage Access Framework for folders/files, MediaCodec or bundled ffmpeg
+      for conversion. NEEDS ITS OWN PLAN before starting.
+    native-layer.js (CONFIRMED APPROACH — build this FIRST, before porting any UI):
+    - A single JS module is the ONLY thing that knows which host it is running in. It detects the host at
+      load (pywebview injects window.pywebview.api; the Android WebView injects an @JavascriptInterface
+      object) and exports platform-neutral functions the rest of the UI calls — e.g. Native.listMedia(),
+      Native.startRecording(path), Native.readClipboardMedia(), Native.pickFolder(). No other file in the
+      web UI may contain a platform conditional.
+    - Make EVERY function Promise-based even where the host is synchronous. pywebview's api returns
+      promises; Android's @JavascriptInterface is synchronous and must be wrapped (callback bridge for
+      anything slow). A uniformly async facade means UI code never has to care which host it is on.
+    - Native.capabilities() should report what the host can actually do (e.g. {record24bit,
+      clipboardImages, clipboardFiles, folderPicker}) so the UI can disable/warn rather than fail at the
+      point of use. This is how the Android 24-bit question and clipboard restrictions stay graceful.
+    - Ship a THIRD implementation: a mock/dev backend so the web UI runs and is testable in a plain
+      browser with no wrapper. Big productivity win and it makes the UI testable in CI.
+    - Normalise errors into one shape so the UI never parses platform-specific messages.
+[ ] CLIPBOARD — hardest single item in the migration; scope it as its own work package.
+    Audited current state: the clipboard surface IS genuinely PySide6-bound and will not survive as-is —
+    QGuiApplication.clipboard().setPixmap/setImage/setMimeData for writing (vat/ui/app.py ~L2348, L2353,
+    L2403, L2460) and _clipboard_audio_to_tempfile / _clipboard_image_to_tempfile (~L2861, L2917) which
+    take a QMimeData. BUT the valuable part is portable: what those helpers do AFTER obtaining the data
+    (URL/file-path extraction, temp-file writing, format sniffing) plus all downstream conversion
+    (pydub/PIL, no Qt). PRESERVE that logic; only the clipboard ACCESS needs reimplementing per platform.
+    Contract should deal only in TEMP FILE PATHS + a kind, never in platform objects:
+      Native.readClipboardMedia() -> {kind: 'audio'|'image'|'video'|null, path}   # host writes a temp file
+      Native.writeClipboardFile(path, kind)                                       # host puts it on the clipboard
+    Platform notes:
+    - Windows/pywebview: pywebview has no clipboard API. Use pywin32 (win32clipboard) for CF_HDROP (file
+      lists), CF_DIB (images) and audio formats. A rewrite of the access layer, not of the logic.
+    - Android: ClipboardManager + ClipData; sharing files needs FileProvider content:// URIs plus
+      grantUriPermission, and Android 10+ restricts background clipboard reads. Expect a reduced
+      capability set — report it via Native.capabilities() rather than failing.
+    - Do NOT use the browser Clipboard API (navigator.clipboard): it cannot do OS-level file/mime
+      exchange and is heavily restricted. Clipboard MUST live in the native layer.
+    - The WhatsApp remote workflow depends on mime-specific clipboard exchange with other apps (paste
+      audio/image/video in and out). Test that end-to-end on BOTH platforms after migrating.
+    Keeping the two platforms in step (plan deliberately; do not leave to discipline):
+    - Version the contract; both wrappers assert they implement the current version at startup and fail
+      loudly on mismatch rather than silently missing a method.
+    - One contract-conformance test suite run against each implementation, so a capability added on
+      desktop but not Android is caught by CI, not by a user.
+    - Single shared i18n data (JSON) consumed by the web UI on both platforms.
     Migration considerations / risks:
-    - Large rewrite; must preserve feature parity — Review tab logic & randomization, Export Sets /
-      Export Results, YAML settings + export, click-separated joins, Ocenaudio integration,
-      overwrite-confirm + auto-save UX, image-vs-video thumbnail handling.
-    - Pick the frontend stack (vanilla vs. framework) and SHARE one UI codebase between the pywebview
-      desktop build and the standalone PWA to avoid maintaining two UIs; abstract the native calls
-      behind a small interface (pywebview API on desktop, browser/File System Access API + limited
-      capture on web) so the same frontend targets both.
-    - Define the Python<->JS API surface once and reuse it across desktop and (partially) Android.
+    - Large rewrite; must preserve feature parity — Review tab logic & randomization, Export Sets/Results,
+      YAML settings + export, click-separated joins, Ocenaudio integration, overwrite-confirm + auto-save
+      UX, image-vs-video thumbnail handling.
+    - The characterization tests in tests/ describe what the current UI does; treat them as the
+      behavioural specification the web UI must reproduce, even though they cannot run against it.
+    - Verify Android audio against the archival requirement before presenting it as fieldwork-capable; if
+      a device cannot do 24-bit, say so in the UI.

@@ -255,6 +255,21 @@ class FolderAccessManager(QObject):
         folder = d if d else (self.current_folder or "")
         return os.path.join(folder, _recording_name_for(media_or_name))
 
+    def all_recordings_in(self, folder: Optional[str] = None) -> List[str]:
+        """Recordings for EVERY item in the merged video+image queue.
+
+        Derived from list_all_media() + recording_path_for(), so it matches the
+        All tab exactly and — unlike recordings_in(), which only scans the top
+        level — it also finds recordings for images kept in an images/ subfolder.
+        """
+        out = []
+        for media in self.list_all_media(folder):
+            wav = self.recording_path_for(media)
+            if wav and os.path.exists(wav):
+                out.append(wav)
+        out.sort(key=lambda p: os.path.basename(p).lower())
+        return out
+
     def has_recording(self, media_or_name: str) -> bool:
         """True iff the canonical recording for this media file exists."""
         p = self.recording_path_for(media_or_name)
