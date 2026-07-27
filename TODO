@@ -160,6 +160,43 @@ Implemented in increments:
     Roadmap) in exchange for NOT destabilizing the working Videos/Images tabs. Coexists with them (does not
     replace). Requires GUI click-testing (record/play/navigate across a mixed queue) that can't be done headless.
 
+# Metadata System overhaul (future release)
+[ ] Replace the current freeform metadata.txt with a structured metadata system that (a) interoperates
+    with lameta / SayMore as far as possible and (b) auto-collects as much as it can, with every field
+    manually editable/overridable.
+    Where we are now: one plain-text metadata.txt per folder (FolderAccessManager.ensure_and_read_metadata /
+    write_metadata; edited via open_metadata_dialog in vat/ui/app.py, and copied by Export/Import WAVs).
+    It is unstructured, carries nothing automatic, and maps to no standard.
+    Target / interop notes:
+    - lameta is the successor to SayMore (SayMore is legacy; lameta is metadata-only and is maintained by a
+      consortium of archiving institutions). Both store metadata as simple XML: `.session` per session,
+      `.person` per person, plus project-level metadata. Field names/labels follow IMDI, and lameta exports
+      IMDI (.imdi XML) + METS packages ("IMDI + Files") for deposit with archives such as ELAR.
+    - Natural mapping: one stimulus-kit folder = one SESSION. Emit a lameta/SayMore-compatible `.session`
+      XML (and `.person` files for speakers/consultants) alongside the media so a folder can be opened or
+      imported by lameta without retyping. Stretch goal: direct IMDI export.
+    - Session fields lameta expects at minimum: ID, Title, Date, Genre, Topic, Keywords, Situation,
+      Location (continent/country/region/address), Participants + their roles, Languages (ISO 639-3),
+      and access/archive info. Person fields include languages spoken and mother's/father's primary
+      language plus biographical details.
+    Auto-collect (each with a manual override):
+    - Recording date + time: we already know this at capture time (vat/audio/recording.py). SHARE this with
+      the BWF/bext work in the Recording Format section - bext OriginationDate/OriginationTime want exactly
+      the same values, so implement one source of truth for both.
+    - Per-file technical metadata: duration, sample rate, bit depth, channels (we already set these), and
+      for video duration/codec/resolution via the bundled ffprobe (vat/utils/resources.py already resolves it).
+    - Provenance: app name + version, and the capture settings actually used (e.g. whether the 24-bit
+      capture fell back to 16-bit) - genuinely useful to an archive.
+    - Location: as accurate as available. On Windows use the OS geolocation API (WinRT
+      Windows.Devices.Geolocation) which requires user consent; fall back to a per-project default location
+      the user sets once, or manual entry. Avoid silent IP geolocation.
+    PRIVACY - important for this domain: precise location can be sensitive for endangered-language
+    communities and individual consultants. Location capture must be OPT-IN, with granularity control
+    (e.g. country/region only vs. precise coordinates) and a clear indication of what will be written into
+    files that may be deposited in a public archive. Same care for participant names.
+    Migration: existing metadata.txt content must be preserved, not silently dropped - map it into a
+    description/notes field and keep writing a human-readable copy for users who rely on it.
+
 # Robustness / UX issues found in v2.3.0 field testing (2026-07)
 [ ] HIGH: Handle inaccessible/slow source folders gracefully. Selecting a Google Drive folder whose
     contents were NOT available offline made the app HANG and eventually CRASH. Cause is almost
