@@ -163,6 +163,10 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: v${{ steps.version.outputs.version }}
+          # Tag the commit that was actually built. Without this the tag is
+          # created on the default branch, which is wrong for a run
+          # dispatched from a feature branch (v2.4.0 was tagged on main).
+          target_commitish: ${{ github.sha }}
           prerelease: true
           make_latest: false
           generate_release_notes: true
