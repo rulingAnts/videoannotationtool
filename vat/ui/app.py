@@ -4431,11 +4431,19 @@ class VideoAnnotationApp(QMainWindow):
             ffp = info.get('ffprobe') or 'none'
             srcm = info.get('ffmpeg_origin')
             srcp = info.get('ffprobe_origin')
+            # Existing is not the same as working: a bundled file can be a
+            # launcher that exits silently (the 2.3.x-2.4.1 Windows builds),
+            # so run each tool once and show what it answers.
+            from vat.audio.normalizer import probe_tool
+            runs_m = probe_tool(ffm, "ffmpeg")[1] if info.get('ffmpeg') else "not found"
+            runs_p = probe_tool(ffp, "ffprobe")[1] if info.get('ffprobe') else "not found"
             msg = (
                 f"FFmpeg: {ffm}\n"
                 f"  origin: {srcm}\n"
+                f"  runs: {runs_m}\n"
                 f"FFprobe: {ffp}\n"
                 f"  origin: {srcp}\n"
+                f"  runs: {runs_p}\n"
             )
             QMessageBox.information(self, "FF Tools Diagnostics", msg)
         except Exception as e:

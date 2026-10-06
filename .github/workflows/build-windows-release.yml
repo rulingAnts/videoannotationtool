@@ -36,14 +36,30 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path assets\ffmpeg-bin\windows | Out-Null
-          $ffmpeg = (Get-Command ffmpeg.exe -ErrorAction SilentlyContinue).Source
-          if (-not $ffmpeg) { $ffmpeg = "C:\ProgramData\chocolatey\bin\ffmpeg.exe" }
-          $ffprobe = (Get-Command ffprobe.exe -ErrorAction SilentlyContinue).Source
-          if (-not $ffprobe) { $ffprobe = "C:\ProgramData\chocolatey\bin\ffprobe.exe" }
-          Write-Host "ffmpeg: $ffmpeg"
-          Write-Host "ffprobe: $ffprobe"
-          Copy-Item $ffmpeg -Destination assets\ffmpeg-bin\windows\ffmpeg.exe
-          Copy-Item $ffprobe -Destination assets\ffmpeg-bin\windows\ffprobe.exe
+          # What Chocolatey puts on PATH (C:\ProgramData\chocolatey\bin\ffmpeg.exe,
+          # which Get-Command returns) is a *shim*: a tiny launcher that runs the
+          # real binary from the package's lib folder. Bundling the shim ships a
+          # launcher that fails silently on every user's PC (no lib folder), which
+          # is what every build up to 2.4.1 did. Take the real binaries instead.
+          $lib = "C:\ProgramData\chocolatey\lib"
+          $ffmpeg = Get-ChildItem -Path $lib -Recurse -Filter ffmpeg.exe -ErrorAction SilentlyContinue | Sort-Object Length -Descending | Select-Object -First 1
+          $ffprobe = Get-ChildItem -Path $lib -Recurse -Filter ffprobe.exe -ErrorAction SilentlyContinue | Sort-Object Length -Descending | Select-Object -First 1
+          if (-not $ffmpeg -or -not $ffprobe) { Write-Error "ffmpeg.exe / ffprobe.exe not found under $lib"; exit 1 }
+          Write-Host ("ffmpeg:  {0} ({1:N1} MB)" -f $ffmpeg.FullName, ($ffmpeg.Length / 1MB))
+          Write-Host ("ffprobe: {0} ({1:N1} MB)" -f $ffprobe.FullName, ($ffprobe.Length / 1MB))
+          # A shim is well under 1 MB; a real static ffmpeg is tens of MB.
+          if ($ffmpeg.Length -lt 10MB -or $ffprobe.Length -lt 10MB) { Write-Error "found a shim, not a real binary"; exit 1 }
+          Copy-Item $ffmpeg.FullName -Destination assets\ffmpeg-bin\windows\ffmpeg.exe
+          Copy-Item $ffprobe.FullName -Destination assets\ffmpeg-bin\windows\ffprobe.exe
+          # The copies must run on their own and carry the filters the app uses.
+          & assets\ffmpeg-bin\windows\ffmpeg.exe -version | Select-Object -First 1
+          if ($LASTEXITCODE -ne 0) { Write-Error "bundled ffmpeg does not run"; exit 1 }
+          & assets\ffmpeg-bin\windows\ffprobe.exe -version | Select-Object -First 1
+          if ($LASTEXITCODE -ne 0) { Write-Error "bundled ffprobe does not run"; exit 1 }
+          $filters = & assets\ffmpeg-bin\windows\ffmpeg.exe -hide_banner -filters
+          foreach ($f in @("loudnorm", "alimiter", "volumedetect", "silencedetect", "volume")) {
+            if (-not ($filters | Select-String -Quiet " $f ")) { Write-Error "bundled ffmpeg lacks the $f filter"; exit 1 }
+          }
 
       - name: Generate icon assets
         run: python scripts/generate_icon.py

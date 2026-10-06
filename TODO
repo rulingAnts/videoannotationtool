@@ -151,6 +151,14 @@ releases. Two follow-ups below (3a/3b) are for the release AFTER the refactor/mo
     measurement is never parsed and the render silently degrades to single-pass dynamic loudnorm;
     (2) loudnorm works at 192 kHz and leaves the OUTPUT at 192 kHz unless "-ar" pins the source rate;
     (3) digital silence through dynamic loudnorm renders full-scale noise — such files are now left as-is.
+[x] Windows builds shipped a BROKEN ffmpeg: the workflow copied C:\ProgramData\chocolatey\bin\ffmpeg.exe,
+    which is Chocolatey's *shim* launcher, not the binary; on a user's PC it exits non-zero and silent
+    ("loudness analysis failed: no error message" with normalization on). Every choco-based build
+    (2.3.x-2.4.1) had this; the plain join never noticed because pydub reads/writes WAV natively, so
+    "Convert to MP4" was presumably broken in those builds too. FIXED in the workflow (copies the real
+    binaries from chocolatey\lib, asserts size, runs -version and checks the filters), and the
+    normalizer now probes ffmpeg with -version, falls back to a system ffmpeg on PATH, and names the
+    broken file and exit code. The FF Tools Diagnostics dialog shows the version line. (2026-10-06)
 [ ] Offer the same option in Review -> Export Sets (vat/review/review_tab.py _on_export_sets /
     GroupedExporter.export_sessions): the Normalizer is reusable; only the copy step needs a normalize path.
 [ ] Website + FAQ: document normalize-on-export (docs/index.html i18n-working-li5 still says a separate

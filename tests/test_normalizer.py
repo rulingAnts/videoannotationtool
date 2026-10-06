@@ -354,5 +354,43 @@ def test_result_name():
 
 def test_missing_ffmpeg_is_a_clear_error(monkeypatch):
     monkeypatch.setattr(N, "resolve_ff_tools", lambda: {"ffmpeg": None, "ffprobe": None})
-    with pytest.raises(NormalizeError):
+    monkeypatch.setattr(N.shutil, "which", lambda name: None)
+    with pytest.raises(NormalizeError, match="ffmpeg not found"):
         Normalizer({})
+
+
+def _fake_tool(tmp_path, name, body):
+    """An executable stand-in for ffmpeg/ffprobe (POSIX shell script)."""
+    p = tmp_path / name
+    p.write_text("#!/bin/sh\n" + body)
+    p.chmod(0o755)
+    return str(p)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="shell-script stand-ins")
+def test_probe_tool_tells_a_working_ffmpeg_from_a_silent_launcher(tmp_path):
+    good = _fake_tool(tmp_path, "ffmpeg", 'echo "ffmpeg version 9.9-test Copyright"\n')
+    ok, detail = N.probe_tool(good, "ffmpeg")
+    assert ok and detail.startswith("ffmpeg version 9.9-test")
+    # What the Chocolatey shim shipped in the 2.3.x-2.4.1 Windows builds does
+    # away from its install: exits non-zero and says nothing.
+    shim = _fake_tool(tmp_path, "ffmpeg-shim", "exit 1\n")
+    ok, detail = N.probe_tool(shim, "ffmpeg")
+    assert not ok and "exit code 1" in detail and "no output" in detail
+    ok, detail = N.probe_tool(str(tmp_path / "nope"), "ffmpeg")
+    assert not ok and "cannot be started" in detail
+
+
+@pytest.mark.skipif(os.name == "nt", reason="shell-script stand-ins")
+def test_find_ff_tools_skips_a_broken_bundled_ffmpeg_and_names_it(tmp_path, monkeypatch):
+    shim = _fake_tool(tmp_path, "ffmpeg", "exit 1\n")
+    monkeypatch.setattr(N, "resolve_ff_tools", lambda: {"ffmpeg": shim, "ffprobe": None})
+    # No system ffmpeg either: the error names the broken file and its exit code.
+    monkeypatch.setattr(N.shutil, "which", lambda name: None)
+    with pytest.raises(NormalizeError) as e:
+        N.find_ff_tools()
+    assert shim in str(e.value) and "exit code 1" in str(e.value)
+    # A working system ffmpeg on PATH is used instead of the broken bundled one.
+    good = _fake_tool(tmp_path, "ffmpeg-system", 'echo "ffmpeg version 9.9-test"\n')
+    monkeypatch.setattr(N.shutil, "which", lambda name: good if name == "ffmpeg" else None)
+    assert N.find_ff_tools() == (good, "")

@@ -30,6 +30,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import struct
 import subprocess
 import sys
@@ -200,19 +201,65 @@ class NormalizeResult:
 # FFmpeg helpers
 # ---------------------------------------------------------------------------
 
-def find_ff_tools() -> Tuple[str, str]:
-    """Return ``(ffmpeg, ffprobe)`` paths, bundled or system, or raise.
+def probe_tool(path: str, name: str = "ffmpeg", timeout: float = 20.0) -> Tuple[bool, str]:
+    """Run ``<tool> -version`` and report ``(runs, detail)``.
 
-    ``ffprobe`` is optional at runtime (durations fall back to the WAV
-    header), so only a missing ``ffmpeg`` is fatal.
+    A file that exists is not enough: the Windows builds up to 2.4.1 shipped
+    Chocolatey's *shim* launcher as ffmpeg.exe, which exits non-zero without
+    a word on any PC that lacks the Chocolatey install it points at. The
+    detail is the first version line when it runs, else the exit code and
+    whatever the tool said.
+    """
+    try:
+        proc = subprocess.Popen([path, "-version"], **_popen_kwargs())
+        try:
+            out, err = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.communicate()
+            return False, f"{name} at {path} did not answer within {timeout:g}s"
+    except OSError as e:
+        return False, f"{name} at {path} cannot be started: {e}"
+    text = (out or b"").decode("utf-8", errors="replace") + (err or b"").decode("utf-8", errors="replace")
+    first = next((ln.strip() for ln in text.splitlines() if ln.strip()), "")
+    if proc.returncode == 0 and first.lower().startswith(f"{name} version"):
+        return True, first
+    return False, (f"{name} at {path} does not run (exit code {proc.returncode}"
+                   + (f": {first}" if first else ", no output") + ")")
+
+
+def find_ff_tools() -> Tuple[str, str]:
+    """Return ``(ffmpeg, ffprobe)`` paths that actually run, or raise.
+
+    Prefers the bundled tools, then a system install on PATH. ``ffprobe``
+    is optional at runtime (durations fall back to the WAV header), so only
+    an unusable ``ffmpeg`` is fatal; the error names every candidate tried.
     """
     tools = resolve_ff_tools()
-    ffmpeg = tools.get("ffmpeg")
-    if not ffmpeg or not os.path.exists(ffmpeg):
-        raise NormalizeError("ffmpeg not found")
-    ffprobe = tools.get("ffprobe") or ""
-    if ffprobe and not os.path.exists(ffprobe):
-        ffprobe = ""
+    candidates: List[str] = []
+    for cand in (tools.get("ffmpeg"), shutil.which("ffmpeg")):
+        if cand and os.path.exists(cand) and cand not in candidates:
+            candidates.append(cand)
+    problems: List[str] = []
+    ffmpeg = ""
+    for cand in candidates:
+        ok, detail = probe_tool(cand, "ffmpeg")
+        if ok:
+            ffmpeg = cand
+            logger.info(f"normalize: using {cand} ({detail})")
+            break
+        logger.warning(f"normalize: {detail}")
+        problems.append(detail)
+    if not ffmpeg:
+        raise NormalizeError("ffmpeg not found" if not problems else "; ".join(problems))
+    ffprobe = ""
+    for cand in (tools.get("ffprobe"), shutil.which("ffprobe")):
+        if cand and os.path.exists(cand):
+            ok, detail = probe_tool(cand, "ffprobe")
+            if ok:
+                ffprobe = cand
+                break
+            logger.warning(f"normalize: {detail}")
     return ffmpeg, ffprobe
 
 
@@ -487,6 +534,12 @@ class Normalizer:
                 self._proc = None
         if self._cancel.is_set():
             raise NormalizeCanceled()
+        if proc.returncode != 0:
+            # Everything needed to diagnose a failure from the app log alone.
+            logger.warning(
+                "ffmpeg exit code %s for %s; stderr tail: %s",
+                proc.returncode, subprocess.list2cmdline([str(c) for c in cmd]), ffmpeg_error_tail(err, 5),
+            )
         return proc.returncode, out or b"", err or b""
 
     def _note(self, result: NormalizeResult, message: str) -> None:
@@ -547,7 +600,7 @@ class Normalizer:
             timeout=600,
         )
         if rc != 0:
-            self._note(result, f"trim detect failed: {ffmpeg_error_tail(err)}")
+            self._note(result, f"trim detect failed (exit code {rc}): {ffmpeg_error_tail(err)}")
             return None
         text = err.decode("utf-8", errors="ignore")
         starts = [float(m.group(1)) for m in re.finditer(r"silence_start: (-?[0-9.]+)", text)]
@@ -682,7 +735,7 @@ class Normalizer:
                  "-f", "null", "-"]
             )
             if rc != 0:
-                raise NormalizeError(f"loudness analysis failed: {ffmpeg_error_tail(err)}")
+                raise NormalizeError(f"loudness analysis failed (exit code {rc}): {ffmpeg_error_tail(err)}")
             parsed = parse_loudnorm_json(err.decode("utf-8", errors="ignore"))
             if parsed:
                 vals = {
@@ -714,7 +767,7 @@ class Normalizer:
                 ["-af", "volumedetect", "-f", "null", "-"]
             )
             if rc != 0:
-                raise NormalizeError(f"peak analysis failed: {ffmpeg_error_tail(err)}")
+                raise NormalizeError(f"peak analysis failed (exit code {rc}): {ffmpeg_error_tail(err)}")
             m = re.search(r"max_volume:\s*(-?[0-9.]+)\s*dB", err.decode("utf-8", errors="ignore"))
             if m:
                 measured_peak_db = float(m.group(1))
@@ -777,7 +830,7 @@ __all__ = [
     "DEFAULT_SETTINGS", "NORM_MODES", "BIT_DEPTHS",
     "normalize_settings", "describe_settings",
     "NormalizeError", "NormalizeCanceled", "NormalizeResult", "Normalizer",
-    "find_ff_tools", "get_wav_format_info", "wav_header_duration",
+    "find_ff_tools", "probe_tool", "get_wav_format_info", "wav_header_duration",
     "choose_output_codec", "parse_loudnorm_json", "ffmpeg_error_tail",
     "ensure_plain_pcm_header",
 ]
