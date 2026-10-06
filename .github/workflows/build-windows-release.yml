@@ -52,11 +52,17 @@ jobs:
           Copy-Item $ffmpeg.FullName -Destination assets\ffmpeg-bin\windows\ffmpeg.exe
           Copy-Item $ffprobe.FullName -Destination assets\ffmpeg-bin\windows\ffprobe.exe
           # The copies must run on their own and carry the filters the app uses.
-          & assets\ffmpeg-bin\windows\ffmpeg.exe -version | Select-Object -First 1
-          if ($LASTEXITCODE -ne 0) { Write-Error "bundled ffmpeg does not run"; exit 1 }
-          & assets\ffmpeg-bin\windows\ffprobe.exe -version | Select-Object -First 1
-          if ($LASTEXITCODE -ne 0) { Write-Error "bundled ffprobe does not run"; exit 1 }
+          # Capture the whole output before checking the exit code: piping into
+          # Select-Object -First 1 closes the pipe early and the exit code reads
+          # as a failure even though the tool ran.
+          $v = & assets\ffmpeg-bin\windows\ffmpeg.exe -version
+          if ($LASTEXITCODE -ne 0) { Write-Error "bundled ffmpeg does not run (exit $LASTEXITCODE)"; exit 1 }
+          Write-Host ($v | Select-Object -First 1)
+          $v = & assets\ffmpeg-bin\windows\ffprobe.exe -version
+          if ($LASTEXITCODE -ne 0) { Write-Error "bundled ffprobe does not run (exit $LASTEXITCODE)"; exit 1 }
+          Write-Host ($v | Select-Object -First 1)
           $filters = & assets\ffmpeg-bin\windows\ffmpeg.exe -hide_banner -filters
+          if ($LASTEXITCODE -ne 0) { Write-Error "bundled ffmpeg -filters failed (exit $LASTEXITCODE)"; exit 1 }
           foreach ($f in @("loudnorm", "alimiter", "volumedetect", "silencedetect", "volume")) {
             if (-not ($filters | Select-String -Quiet " $f ")) { Write-Error "bundled ffmpeg lacks the $f filter"; exit 1 }
           }
