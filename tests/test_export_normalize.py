@@ -303,6 +303,7 @@ def test_export_with_normalization_but_no_ffmpeg_says_so_and_writes_nothing(quie
     import vat.audio.normalizer as N
     w = quiet_recordings
     monkeypatch.setattr(N, "resolve_ff_tools", lambda: {"ffmpeg": None, "ffprobe": None})
+    monkeypatch.setattr(N.shutil, "which", lambda name: None)   # no system ffmpeg on PATH either
     export_dir = str(tmp_path / "export")
     os.makedirs(export_dir)
     monkeypatch.setattr(QFileDialog, "getExistingDirectory", staticmethod(lambda *a, **k: export_dir))
