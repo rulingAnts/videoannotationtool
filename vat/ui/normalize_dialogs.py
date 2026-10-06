@@ -342,6 +342,12 @@ class NormalizeProgressDialog(QProgressDialog):
     def cancel_requested(self) -> bool:
         return self._done and not self._finished
 
+    def reject(self) -> None:
+        # Escape only hides a QProgressDialog; treat it exactly like Cancel so
+        # the job never carries on behind a dialog that is no longer visible.
+        self._cancel_clicked()
+        super().reject()
+
     @Slot(int, int, str)
     def show_normalize_progress(self, index: int, total: int, name: str) -> None:
         self.show_phase("normalize", index, total, name)

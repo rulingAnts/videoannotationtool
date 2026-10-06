@@ -292,6 +292,75 @@ def wav_header_duration(file_path: str) -> float:
     return 0.0
 
 
+#: SubFormat GUID of integer PCM inside a WAVE_FORMAT_EXTENSIBLE header.
+_PCM_SUBFORMAT = b"\x01\x00\x00\x00\x00\x00\x10\x00\x80\x00\x00\xaa\x00\x38\x9b\x71"
+
+
+def ensure_plain_pcm_header(path: str) -> bool:
+    """Rewrite a WAVE_FORMAT_EXTENSIBLE integer-PCM file as classic WAVE_FORMAT_PCM.
+
+    FFmpeg tags any PCM wider than 16 bits as EXTENSIBLE. The app's own
+    recordings (written by the ``wave`` module) carry the classic tag, and
+    ``wave`` before Python 3.12 (the Windows build runs 3.11) refuses the
+    EXTENSIBLE one, so a normalized 24-bit export that was imported back
+    would not play. Only the header changes: every sample is copied as is,
+    and FFmpeg's extra chunks (LIST/INFO) are dropped. Float or more than
+    two channels is left alone. Returns True when the file was rewritten.
+    """
+    try:
+        file_size = os.path.getsize(path)
+        with open(path, "rb") as f:
+            head = f.read(12)
+            if len(head) < 12 or head[:4] != b"RIFF" or head[8:12] != b"WAVE":
+                return False
+            fmt = None
+            data_off = data_size = None
+            pos = 12
+            while pos + 8 <= file_size:
+                f.seek(pos)
+                hdr = f.read(8)
+                if len(hdr) < 8:
+                    break
+                cid, size = hdr[:4], struct.unpack("<I", hdr[4:8])[0]
+                if cid == b"fmt ":
+                    fmt = f.read(size)
+                elif cid == b"data":
+                    data_off, data_size = pos + 8, size
+                    break
+                pos += 8 + size + (size % 2)
+            if fmt is None or data_off is None or len(fmt) < 40:
+                return False
+            tag, channels, rate, byte_rate, block_align, bits = struct.unpack("<HHIIHH", fmt[:16])
+            if tag != 0xFFFE or channels > 2 or fmt[24:40] != _PCM_SUBFORMAT:
+                return False
+            data_size = min(data_size, file_size - data_off)
+            tmp = path + ".pcm-header.tmp"
+            with open(tmp, "wb") as out:
+                riff_size = 4 + (8 + 16) + (8 + data_size + (data_size % 2))
+                out.write(b"RIFF" + struct.pack("<I", riff_size) + b"WAVE")
+                out.write(b"fmt " + struct.pack("<IHHIIHH", 16, 1, channels, rate, byte_rate, block_align, bits))
+                out.write(b"data" + struct.pack("<I", data_size))
+                f.seek(data_off)
+                remaining = data_size
+                while remaining > 0:
+                    chunk = f.read(min(1 << 20, remaining))
+                    if not chunk:
+                        break
+                    out.write(chunk)
+                    remaining -= len(chunk)
+                if data_size % 2:
+                    out.write(b"\x00")
+        os.replace(tmp, path)
+        return True
+    except Exception as e:  # pragma: no cover - defensive: the file stays as FFmpeg wrote it
+        logger.warning(f"could not rewrite WAV header of {path}: {e}")
+        try:
+            os.remove(path + ".pcm-header.tmp")
+        except OSError:
+            pass
+        return False
+
+
 def choose_output_codec(target_bit_depth, input_fmt: Optional[Dict[str, int]]) -> str:
     """Pick the PCM codec for ``targetBitDepth`` given the input's format."""
     if target_bit_depth == "original":
@@ -698,6 +767,9 @@ class Normalizer:
             raise NormalizeError(f"FFmpeg failed (exit code {rc}): {ffmpeg_error_tail(err)}")
         if not os.path.isfile(dst) or os.path.getsize(dst) <= 44:
             raise NormalizeError("FFmpeg wrote no audio")
+        if self._cancel.is_set():
+            raise NormalizeCanceled()
+        ensure_plain_pcm_header(dst)
         self._note(result, f"written: {codec}")
 
 
@@ -707,4 +779,5 @@ __all__ = [
     "NormalizeError", "NormalizeCanceled", "NormalizeResult", "Normalizer",
     "find_ff_tools", "get_wav_format_info", "wav_header_duration",
     "choose_output_codec", "parse_loudnorm_json", "ffmpeg_error_tail",
+    "ensure_plain_pcm_header",
 ]

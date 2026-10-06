@@ -18,6 +18,7 @@ The tool allows users to select a folder of video files, play them back, and rec
   * **Intuitive User Interface:** A simple, easy-to-use interface built with `PySide6` (Qt for Python).
   * **Multi-language Support:** The application's interface is available in multiple languages, including English, Bahasa Indonesia, 한국어 (Korean), Nederlands, Português (Brasil), Español (Latinoamérica), and Afrikaans.
   * **Linguistic Software Integration:** Seamlessly export all audio annotations into a single file for use in software like [**SayMore**](https://software.sil.org/saymore/) or [**ELAN**](https://archive.mpi.nl/tla/elan/download), or open them directly in [**Ocenaudio**](https://www.ocenaudio.com/) for advanced editing _(the app also generates clicks between each individual oral annotations in the combined audio file for clarity when segmenting and transcribing)_.
+  * **Normalize on Export (optional):** Tick *Normalize audio when exporting* and both export buttons — **Export Recorded Data** and **Export as Single Sound File** — normalize every recording on the way out, so normalizing and exporting is one step. It is the same FFmpeg processing as the companion [**Bulk Audio Normalizer**](https://github.com/rulingAnts/bulk_audio_normalizer): peak-dBFS (the default, for acoustic analysis) or two-pass LUFS with a safety limiter (for listening), optional trimming of leading/trailing silence, and a choice of bit depth (the recording's own by default). In the single sound file each recording is normalized *before* the clicks are inserted. Your original recordings are never modified.
   * **Metadata Management:** Easily create and edit a `metadata.txt` file for each project, ensuring your data is well-documented.
   * **Audio File Management:** Import, export, and clear recorded `.wav` files with a single click.
 
@@ -221,7 +222,10 @@ The app has been reorganized into a small Python package for clarity and maintai
 - `vat/ui/app.py`: `VideoAnnotationApp` and interface labels (currently English)
 - `vat/audio/recording.py`: background audio recording worker
 - `vat/audio/playback.py`: background audio playback worker
-- `vat/audio/joiner.py`: WAV concatenation worker with click markers
+- `vat/audio/joiner.py`: WAV concatenation worker with click markers (optionally normalizing each recording first)
+- `vat/audio/normalizer.py`: FFmpeg normalization core (peak dBFS / LUFS, trimming, bit depth), no Qt — ported from the Bulk Audio Normalizer
+- `vat/audio/normalize_worker.py`: background worker that normalizes a batch of WAVs for the folder export
+- `vat/ui/normalize_dialogs.py`: normalization settings dialog and the cancellable progress dialog
 - `vat/utils/resources.py`: `resource_path` and FFmpeg environment configuration
 
 ### Run

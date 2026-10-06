@@ -17,8 +17,9 @@ import pytest
 from vat.audio import normalizer as N
 from vat.audio.normalizer import (
     DEFAULT_SETTINGS, Normalizer, NormalizeError, NormalizeResult,
-    choose_output_codec, describe_settings, get_wav_format_info,
-    normalize_settings, parse_loudnorm_json, wav_header_duration,
+    choose_output_codec, describe_settings, ensure_plain_pcm_header,
+    get_wav_format_info, normalize_settings, parse_loudnorm_json,
+    wav_header_duration,
 )
 
 
@@ -38,30 +39,26 @@ needs_ffmpeg = pytest.mark.skipif(not _ffmpeg_available(), reason="ffmpeg not fo
 def write_tone(path, seconds=1.0, rate=48000, sampwidth=3, amp_db=-20.0,
                lead_silence=0.0, trail_silence=0.0, freq=440.0):
     """Mono sine at ``amp_db`` dBFS, optionally padded with digital silence."""
+    import numpy as np
     amp = 10 ** (amp_db / 20.0) if amp_db > -300 else 0.0
     full = (1 << (8 * sampwidth - 1)) - 1
-    out = bytearray()
-
-    def put(v):
-        iv = int(round(v * full))
-        if sampwidth == 2:
-            out.extend(struct.pack("<h", iv))
-        elif sampwidth == 3:
-            out.extend(iv.to_bytes(3, "little", signed=True))
-        else:
-            out.extend(struct.pack("<i", iv))
-
-    for _ in range(int(rate * lead_silence)):
-        put(0.0)
-    for i in range(int(rate * seconds)):
-        put(amp * math.sin(2 * math.pi * freq * i / rate))
-    for _ in range(int(rate * trail_silence)):
-        put(0.0)
+    t = np.arange(int(rate * seconds)) / rate
+    tone = np.rint(amp * np.sin(2 * np.pi * freq * t) * full).astype(np.int64)
+    samples = np.concatenate([
+        np.zeros(int(rate * lead_silence), np.int64), tone, np.zeros(int(rate * trail_silence), np.int64),
+    ])
+    if sampwidth == 2:
+        data = samples.astype("<i2").tobytes()
+    elif sampwidth == 3:
+        # little-endian 24-bit: the low three bytes of each little-endian 32-bit sample
+        data = np.frombuffer(samples.astype("<i4").tobytes(), np.uint8).reshape(-1, 4)[:, :3].tobytes()
+    else:
+        data = samples.astype("<i4").tobytes()
     with wave.open(path, "wb") as wf:
         wf.setnchannels(1)
         wf.setsampwidth(sampwidth)
         wf.setframerate(rate)
-        wf.writeframes(bytes(out))
+        wf.writeframes(data)
     return path
 
 
@@ -146,6 +143,64 @@ def test_choose_output_codec(depth, fmt, codec):
     assert choose_output_codec(depth, fmt) == codec
 
 
+def _fmt_chunk(path):
+    """(format tag, fmt chunk size, other chunk ids) of a WAV file."""
+    with open(path, "rb") as f:
+        data = f.read()
+    pos, tag, size, others = 12, None, None, []
+    while pos + 8 <= len(data):
+        cid = data[pos:pos + 4]
+        csize = struct.unpack("<I", data[pos + 4:pos + 8])[0]
+        if cid == b"fmt ":
+            tag, size = struct.unpack("<H", data[pos + 8:pos + 10])[0], csize
+        elif cid != b"data":
+            others.append(cid)
+        pos += 8 + csize + (csize % 2)
+    return tag, size, others
+
+
+def _extensible_pcm_wav(path, samples_24bit, with_list_chunk=True):
+    """Hand-build what FFmpeg writes for 24-bit PCM: an EXTENSIBLE fmt plus a LIST chunk."""
+    pcm = b"".join(v.to_bytes(3, "little", signed=True) for v in samples_24bit)
+    fmt = struct.pack("<HHIIHH", 0xFFFE, 1, 48000, 48000 * 3, 3, 24)
+    fmt += struct.pack("<HHI", 22, 24, 4) + b"\x01\x00\x00\x00\x00\x00\x10\x00\x80\x00\x00\xaa\x00\x38\x9b\x71"
+    chunks = b"fmt " + struct.pack("<I", len(fmt)) + fmt
+    if with_list_chunk:
+        info = b"INFOISFT" + struct.pack("<I", 6) + b"Lavf\x00\x00"
+        chunks += b"LIST" + struct.pack("<I", len(info)) + info
+    chunks += b"data" + struct.pack("<I", len(pcm)) + pcm + (b"\x00" if len(pcm) % 2 else b"")
+    with open(path, "wb") as f:
+        f.write(b"RIFF" + struct.pack("<I", 4 + len(chunks)) + b"WAVE" + chunks)
+    return pcm
+
+
+def test_ensure_plain_pcm_header_rewrites_extensible_pcm_and_keeps_samples(tmp_path):
+    p = str(tmp_path / "x.wav")
+    samples = [0, 1, -1, 8388607, -8388608, 123456, -654321]   # odd count: data gets a pad byte
+    pcm = _extensible_pcm_wav(p, samples)
+    assert _fmt_chunk(p)[0] == 0xFFFE
+    assert ensure_plain_pcm_header(p) is True
+    tag, size, others = _fmt_chunk(p)
+    assert tag == 1 and size == 16 and others == []
+    with wave.open(p, "rb") as wf:   # the app's playback path
+        assert (wf.getnchannels(), wf.getsampwidth(), wf.getframerate(), wf.getnframes()) == (1, 3, 48000, len(samples))
+        assert wf.readframes(len(samples)) == pcm
+    with open(p, "rb") as f:
+        riff = f.read()
+    assert struct.unpack("<I", riff[4:8])[0] == len(riff) - 8
+    assert ensure_plain_pcm_header(p) is False, "already plain: nothing to do"
+    assert not os.path.exists(p + ".pcm-header.tmp")
+
+
+def test_ensure_plain_pcm_header_leaves_other_files_alone(tmp_path):
+    p16 = write_tone(str(tmp_path / "p16.wav"), seconds=0.01, sampwidth=2)
+    assert ensure_plain_pcm_header(p16) is False
+    junk = tmp_path / "junk.wav"
+    junk.write_bytes(b"RIFF....WAVEjunk")
+    assert ensure_plain_pcm_header(str(junk)) is False
+    assert ensure_plain_pcm_header(str(tmp_path / "missing.wav")) is False
+
+
 def test_parse_loudnorm_json_skips_braces_in_file_names():
     text = ("Input #0, wav, from 'take {1}.wav':\n ... \n"
             '{\n\t"input_i" : "-23.75",\n\t"input_tp" : "-20.00",\n\t"target_offset" : "0.00"\n}\n')
@@ -166,6 +221,9 @@ def test_peak_mode_boosts_quiet_files_and_keeps_24_bit(tmp_path):
     assert sw == 3 and rate == 48000 and abs(secs - 1.0) < 0.01
     assert abs(r.gain_db - 18.0) < 0.2
     assert not r.trimmed
+    # Same header style as the app's own 24-bit recordings (classic PCM tag),
+    # so an exported file imported back still plays through the wave module.
+    assert _fmt_chunk(dst) == (1, 16, [])
 
 
 @needs_ffmpeg
@@ -275,13 +333,13 @@ def test_normalize_many_reports_each_file_in_order(tmp_path):
 
 @needs_ffmpeg
 def test_cancel_stops_the_batch_and_removes_partial_output(tmp_path):
-    srcs = [write_tone(str(tmp_path / f"{i}.wav"), seconds=20.0, amp_db=-20, sampwidth=2) for i in range(3)]
+    srcs = [write_tone(str(tmp_path / f"{i}.wav"), seconds=60.0, amp_db=-20, sampwidth=2) for i in range(3)]
     pairs = [(s, str(tmp_path / "o" / os.path.basename(s))) for s in srcs]
     norm = Normalizer({"normMode": "lufs"})  # two passes at 192 kHz: slow enough to cancel
 
     def cancel_on_first(i, n, name):
         if i == 0:
-            threading.Timer(0.3, norm.cancel).start()
+            threading.Timer(0.2, norm.cancel).start()
 
     results = norm.normalize_many(pairs, progress=cancel_on_first)
     assert norm.canceled

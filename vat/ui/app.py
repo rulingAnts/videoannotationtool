@@ -29,7 +29,7 @@ from vat.audio import PYAUDIO_AVAILABLE
 from vat.audio.playback import AudioPlaybackWorker
 from vat.audio.recording import AudioRecordingWorker
 from vat.audio.joiner import JoinWavsWorker
-from vat.audio.normalizer import Normalizer, NormalizeError, normalize_settings
+from vat.audio.normalizer import Normalizer, NormalizeError, normalize_settings, describe_settings
 from vat.audio.normalize_worker import NormalizeBatchWorker
 from vat.ui.normalize_dialogs import NormalizeSettingsDialog, NormalizeProgressDialog, label as _normalize_label
 from vat.utils.resources import resource_path
@@ -537,7 +537,9 @@ class VideoAnnotationApp(QMainWindow):
     def _make_export_normalizer(self):
         """A Normalizer for the current settings, or None after telling the user ffmpeg is missing."""
         try:
-            return Normalizer(self.export_normalize_settings, log=lambda m: logging.info(f"normalize: {m}"))
+            normalizer = Normalizer(self.export_normalize_settings, log=lambda m: logging.info(f"normalize: {m}"))
+            logging.info(f"normalize-on-export: {describe_settings(normalizer.settings)}; ffmpeg={normalizer.ffmpeg}")
+            return normalizer
         except NormalizeError:
             QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["ffmpeg_not_found_msg"])
             return None
@@ -559,6 +561,7 @@ class VideoAnnotationApp(QMainWindow):
         worker.done.connect(thread.quit)
         worker.done.connect(worker.deleteLater)
         thread.finished.connect(thread.deleteLater)
+        thread.finished.connect(self._on_export_thread_finished)
         dlg = NormalizeProgressDialog(self, self.LABELS, "normalize_progress_title", on_cancel=worker.cancel)
         worker.progress.connect(dlg.show_normalize_progress)
         worker.finished.connect(self._on_normalized_export_finished)
@@ -567,6 +570,8 @@ class VideoAnnotationApp(QMainWindow):
         self._export_ctx = (list(pairs), export_dir, dlg)
         dlg.show()
         thread.start()
+    def _on_export_thread_finished(self):
+        self.export_thread = None
     def _take_export_ctx(self):
         ctx = self._export_ctx
         self._export_ctx = None

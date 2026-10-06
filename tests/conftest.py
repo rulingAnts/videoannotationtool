@@ -92,6 +92,9 @@ def app_window(qapp, media_folder, tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path / "home"))
     os.makedirs(str(tmp_path / "home"), exist_ok=True)
     from vat.ui.app import VideoAnnotationApp
+    # The startup welcome dialog is modal (exec); it would block any test
+    # that spins the event loop while waiting for a background worker.
+    monkeypatch.setattr(VideoAnnotationApp, "_show_welcome_dialog", lambda self: None)
     w = VideoAnnotationApp()
     w.fs.set_folder(media_folder)
     w.load_video_files()

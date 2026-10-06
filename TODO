@@ -131,6 +131,31 @@ releases. Two follow-ups below (3a/3b) are for the release AFTER the refactor/mo
     - Implementation options: (a) after recording, inject a `bext` chunk into the WAV by rewriting the RIFF (small pure-Python step, files are written once at stop); (b) run the bundled ffmpeg with bext metadata flags as a post step; (c) shell to FADGI/MediaArea `bwfmetaedit` if we ever bundle it. Prefer (a) or (b) to avoid a new dependency.
     - Scope: originals only — NOT the joined derivative. Keep it optional/robust: a malformed bext must never corrupt the audio; players ignore unknown chunks, so a correct bext is safe. Add a round-trip test that the PCM data is byte-identical before/after bext injection.
 
+# Export normalization (Bulk Audio Normalizer integration)
+[x] Add bulk audio normalization to the export processing (optional) for "Export Recorded Data" (folder)
+    and "Export as Single Sound File", so normalize + export is one step. (2026-10-06, v2.4.0)
+    NOTE: vat/audio/normalizer.py is a Qt-free port of bulk_audio_normalizer's audio_processor.py with the
+    SAME setting keys (normMode peak|lufs, peakTargetDb, peakOnlyBoost, lufsTarget, tpMargin, limiterLimit,
+    fastNormalize, targetBitDepth original|16|24, autoTrim + trimPadMs/trimThresholdDb/trimMinDurationMs/
+    trimMinFileMs/trimConservative/trimHPF). vat/audio/normalize_worker.py runs a batch on a QThread for the
+    folder export; JoinWavsWorker takes an optional Normalizer and normalizes every recording into a temp
+    folder BEFORE concatenating (the clicks are added afterwards, untouched). UI: drawer checkbox "Normalize
+    audio when exporting" (OFF by default, so existing exports are unchanged) + "Settings…" opening
+    vat/ui/normalize_dialogs.py (intent, bit depth, auto-trim, Advanced…); persisted in settings.json under
+    "export_normalize". Default bit depth is "original" so the 24-bit masters stay 24-bit. Files that fail
+    to normalize are copied unchanged and listed; Cancel stops ffmpeg; originals are never modified.
+    Labels added for all 7 languages. Tests: tests/test_normalizer.py (core, real ffmpeg) and
+    tests/test_export_normalize.py (both flows headless).
+    Three fixes over the port's source, each found testing against real ffmpeg (worth back-porting to
+    bulk_audio_normalizer): (1) loudnorm prints its two-pass JSON at "-v info", so at "-v error" the
+    measurement is never parsed and the render silently degrades to single-pass dynamic loudnorm;
+    (2) loudnorm works at 192 kHz and leaves the OUTPUT at 192 kHz unless "-ar" pins the source rate;
+    (3) digital silence through dynamic loudnorm renders full-scale noise — such files are now left as-is.
+[ ] Offer the same option in Review -> Export Sets (vat/review/review_tab.py _on_export_sets /
+    GroupedExporter.export_sessions): the Normalizer is reusable; only the copy step needs a normalize path.
+[ ] Website + FAQ: document normalize-on-export (docs/index.html i18n-working-li5 still says a separate
+    normalizer utility is "available from the developer"; docs/faq archiving section) in all 7 languages.
+
 # "All" tab — unified video + image queue (feature/redesign)
 PRIORITY: Do this BEFORE the pywebview re-platform and before the optional true-24-bit join work (both below).
 STATUS: FIELD-TESTED AND WORKING (v2.3.0, 2026-07). Merged list, per-type preview, record/play/

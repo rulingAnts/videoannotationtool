@@ -16,6 +16,7 @@ import time
 import wave
 
 import pytest
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox
 
 from tests.test_normalizer import needs_ffmpeg, wav_info, write_tone
@@ -219,10 +220,15 @@ def test_progress_dialog_finish_never_cancels_but_the_cancel_button_does(qapp):
     dlg.finish()
     assert calls == []
     dlg2 = NormalizeProgressDialog(None, {}, "join_progress_title", on_cancel=lambda: calls.append("cancel"))
-    dlg2.cancel()          # what the Cancel button triggers
+    dlg2.canceled.emit()   # what the Cancel button (and the close box) emit
     assert calls == ["cancel"] and dlg2.cancel_requested
+    dlg2.canceled.emit()
     dlg2.finish()
-    assert calls == ["cancel"]
+    assert calls == ["cancel"], "a second cancel, or finishing after one, must not cancel again"
+    dlg3 = NormalizeProgressDialog(None, {}, "join_progress_title", on_cancel=lambda: calls.append("esc"))
+    dlg3.reject()          # Escape key
+    assert calls == ["cancel", "esc"]
+    dlg3.finish()
 
 
 # --- Export Recorded Data (folder) ----------------------------------------------------
@@ -312,7 +318,7 @@ def test_export_cancel_stops_early_and_reports_what_was_written(quiet_recordings
     w = quiet_recordings
     # Long files so the cancel lands mid-batch.
     for name in ("ant.wav", "bird.wav", "bird.jpg.wav"):
-        write_tone(os.path.join(media_folder, name), seconds=20.0, amp_db=-20, sampwidth=2)
+        write_tone(os.path.join(media_folder, name), seconds=60.0, amp_db=-20, sampwidth=2)
     export_dir = str(tmp_path / "export")
     os.makedirs(export_dir)
     monkeypatch.setattr(QFileDialog, "getExistingDirectory", staticmethod(lambda *a, **k: export_dir))
@@ -322,7 +328,7 @@ def test_export_cancel_stops_early_and_reports_what_was_written(quiet_recordings
     w.export_wavs()
     _wait(qapp, lambda: w._export_ctx is not None)
     dlg = w._export_ctx[2]
-    threading.Timer(0.3, dlg.cancel).start()      # the Cancel button, from the GUI thread's point of view
+    QTimer.singleShot(200, dlg.canceled.emit)     # the Cancel button, on the GUI thread
     _wait(qapp, lambda: bool(boxes))
     _settle(qapp)
     kind, title, text = boxes[-1]
@@ -389,14 +395,14 @@ def test_single_file_export_reports_the_file_that_failed_and_writes_nothing(tmp_
 
 @needs_ffmpeg
 def test_single_file_export_cancel_writes_no_file(tmp_path):
-    srcs = [write_tone(str(tmp_path / f"{i}.wav"), seconds=20.0, amp_db=-20, sampwidth=2) for i in range(3)]
+    srcs = [write_tone(str(tmp_path / f"{i}.wav"), seconds=60.0, amp_db=-20, sampwidth=2) for i in range(3)]
     out = str(tmp_path / "out.wav")
     worker = JoinWavsWorker(output_file=out, file_paths=srcs, normalizer=Normalizer({"normMode": "lufs"}))
     events = []
     worker.canceled.connect(lambda: events.append("canceled"))
     worker.success.connect(lambda p: events.append("success"))
     worker.error.connect(lambda m: events.append(("error", m)))
-    worker.progress.connect(lambda ph, i, n, name: threading.Timer(0.3, worker.cancel).start() if (ph, i) == ("normalize", 0) else None)
+    worker.progress.connect(lambda ph, i, n, name: threading.Timer(0.2, worker.cancel).start() if (ph, i) == ("normalize", 0) else None)
     worker.run()
     assert events == ["canceled"]
     assert not os.path.exists(out)
