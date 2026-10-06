@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QPushButton, QListWidget, QListWidgetItem, QLabel, QTextEdit, QMessageBox,
     QFileDialog, QComboBox, QTabWidget, QSplitter, QToolButton, QStyle, QSizePolicy,
     QListView, QStyledItemDelegate, QApplication, QCheckBox, QGraphicsDropShadowEffect,
-    QMenu, QProgressDialog
+    QMenu, QProgressDialog, QDialog
 )
 from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent, QSize, QRect, QPoint, QLocale, QMetaObject, QUrl, QMimeData
 import time
@@ -29,6 +29,9 @@ from vat.audio import PYAUDIO_AVAILABLE
 from vat.audio.playback import AudioPlaybackWorker
 from vat.audio.recording import AudioRecordingWorker
 from vat.audio.joiner import JoinWavsWorker
+from vat.audio.normalizer import Normalizer, NormalizeError, normalize_settings
+from vat.audio.normalize_worker import NormalizeBatchWorker
+from vat.ui.normalize_dialogs import NormalizeSettingsDialog, NormalizeProgressDialog, label as _normalize_label
 from vat.utils.resources import resource_path
 from vat.utils.video_convert import VideoConvertWorker, ConvertSpec, needs_reencode_to_mp4
 from vat.ui.fullscreen import FullscreenVideoViewer, FullscreenImageViewer
@@ -230,6 +233,14 @@ class VideoAnnotationApp(QMainWindow):
         self.recording_worker = None
         self.join_thread = None
         self.join_worker = None
+        self._join_progress_dlg = None
+        # Normalize-on-export (optional, off by default). The settings use the
+        # Bulk Audio Normalizer's keys; both are restored by load_settings().
+        self.export_normalize_enabled = False
+        self.export_normalize_settings = normalize_settings({})
+        self.export_thread = None
+        self.export_worker = None
+        self._export_ctx = None
         self._suppress_item_changed = False
         # Pending selection target (used to auto-select a file after folder refresh)
         self._pending_select_video_name = None
@@ -494,9 +505,123 @@ class VideoAnnotationApp(QMainWindow):
     def _show_worker_error(self, msg):
         QMessageBox.critical(self, "Error", msg)
     def _on_join_success(self, output_file: str):
+        self._close_join_progress()
         self.ui_info.emit(self.LABELS["success"], f"{self.LABELS['wavs_joined']}\n{output_file}")
     def _on_join_error(self, msg: str):
+        self._close_join_progress()
         self.ui_error.emit(self.LABELS["error_title"], f"An error occurred while joining files:\n{msg}")
+    def _on_join_canceled(self):
+        self._close_join_progress()
+        self.ui_info.emit(self.LABELS["export_cancelled_title"], self._nl("join_cancelled"))
+    def _close_join_progress(self):
+        dlg = self._join_progress_dlg
+        self._join_progress_dlg = None
+        if dlg is not None:
+            try:
+                dlg.finish()
+            except Exception:
+                pass
+
+    # ---- Normalize on export (optional; see vat/audio/normalizer.py) ----
+    def _nl(self, key: str) -> str:
+        """Label for the normalize-on-export UI, with an English fallback."""
+        return _normalize_label(self.LABELS, key)
+    def _on_normalize_export_toggled(self, checked: bool):
+        self.export_normalize_enabled = bool(checked)
+        self.save_settings()
+    def open_normalize_settings(self):
+        dlg = NormalizeSettingsDialog(self.export_normalize_settings, parent=self, labels=self.LABELS)
+        if dlg.exec() == QDialog.Accepted:
+            self.export_normalize_settings = dlg.settings()
+            self.save_settings()
+    def _make_export_normalizer(self):
+        """A Normalizer for the current settings, or None after telling the user ffmpeg is missing."""
+        try:
+            return Normalizer(self.export_normalize_settings, log=lambda m: logging.info(f"normalize: {m}"))
+        except NormalizeError:
+            QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["ffmpeg_not_found_msg"])
+            return None
+    def _write_export_metadata(self, export_dir: str):
+        """Copy the folder's metadata.txt into export_dir; returns an error string or None."""
+        try:
+            content = self.fs.ensure_and_read_metadata(self.fs.current_folder, "")
+            with open(os.path.join(export_dir, "metadata.txt"), "w") as f:
+                f.write(content if isinstance(content, str) else "")
+            return None
+        except Exception as e:
+            return f"metadata.txt: {e}"
+    def _start_normalized_export(self, normalizer, pairs, export_dir: str):
+        """Normalize (src, dst) pairs on a worker thread behind a progress dialog."""
+        worker = NormalizeBatchWorker(normalizer, pairs)
+        thread = QThread()
+        worker.moveToThread(thread)
+        thread.started.connect(worker.run)
+        worker.done.connect(thread.quit)
+        worker.done.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        dlg = NormalizeProgressDialog(self, self.LABELS, "normalize_progress_title", on_cancel=worker.cancel)
+        worker.progress.connect(dlg.show_normalize_progress)
+        worker.finished.connect(self._on_normalized_export_finished)
+        worker.failed.connect(self._on_normalized_export_failed)
+        self.export_thread, self.export_worker = thread, worker
+        self._export_ctx = (list(pairs), export_dir, dlg)
+        dlg.show()
+        thread.start()
+    def _take_export_ctx(self):
+        ctx = self._export_ctx
+        self._export_ctx = None
+        self.export_worker = None
+        if ctx:
+            try:
+                ctx[2].finish()
+            except Exception:
+                pass
+        return ctx
+    def _on_normalized_export_failed(self, msg: str):
+        self._take_export_ctx()
+        QMessageBox.critical(self, self.LABELS["error_title"], f"{self.LABELS.get('group_export_failed_msg', 'Failed to export:')} {msg}")
+    def _on_normalized_export_finished(self, results):
+        ctx = self._take_export_ctx()
+        if not ctx:
+            return
+        pairs, export_dir, _dlg = ctx
+        total = len(pairs)
+        canceled = any(r.canceled for r in results)
+        written = 0
+        copied_as_is = []
+        errors = []
+        for r in results:
+            if r.canceled:
+                break
+            if r.ok:
+                written += 1
+                continue
+            # Could not be normalized: copy the original so the export is
+            # complete, and say so in the summary.
+            try:
+                shutil.copy2(r.source, r.output)
+                written += 1
+                copied_as_is.append(f"{r.name}: {r.error}")
+            except Exception as e:
+                errors.append(f"{r.name}: {e}")
+        if canceled:
+            QMessageBox.information(
+                self, self.LABELS["export_cancelled_title"],
+                self._nl("normalize_export_cancelled").format(done=written, total=total, dir=export_dir),
+            )
+            return
+        meta_err = self._write_export_metadata(export_dir)
+        if meta_err:
+            errors.append(meta_err)
+        if errors:
+            QMessageBox.critical(self, self.LABELS["error_title"], "Some files could not be exported:\n" + "\n".join(errors))
+            return
+        msg = self._nl("normalize_export_done").format(count=written, dir=export_dir)
+        if copied_as_is:
+            msg += "\n\n" + self._nl("normalize_export_partial").format(count=len(copied_as_is)) + "\n" + "\n".join(copied_as_is)
+            QMessageBox.warning(self, self.LABELS["export_wavs"], msg)
+        else:
+            QMessageBox.information(self, self.LABELS["export_wavs"], msg)
     def _on_folder_changed(self, path: str):
         try:
             if getattr(self, '_ui_ready', False):
@@ -790,6 +915,23 @@ class VideoAnnotationApp(QMainWindow):
         except Exception:
             pass
         left_layout.addWidget(self.join_wavs_button)
+        # Optional normalize-on-export: applies to both export buttons above.
+        self.normalize_export_cb = QCheckBox(self._nl("normalize_on_export"))
+        self.normalize_export_cb.setToolTip(self._nl("normalize_on_export_tip"))
+        self.normalize_export_cb.setChecked(bool(self.export_normalize_enabled))
+        self.normalize_export_cb.toggled.connect(self._on_normalize_export_toggled)
+        self.normalize_settings_btn = QPushButton(self._nl("normalize_settings_btn"))
+        self.normalize_settings_btn.setToolTip(self._nl("normalize_settings_title"))
+        self.normalize_settings_btn.clicked.connect(self.open_normalize_settings)
+        try:
+            self.normalize_settings_btn.setMinimumHeight(30)
+        except Exception:
+            pass
+        normalize_row = QHBoxLayout()
+        normalize_row.setContentsMargins(0, 0, 0, 0)
+        normalize_row.addWidget(self.normalize_export_cb, 1)
+        normalize_row.addWidget(self.normalize_settings_btn, 0)
+        left_layout.addLayout(normalize_row)
         self.video_listbox = QListWidget()
         try:
             self.video_listbox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -837,6 +979,7 @@ class VideoAnnotationApp(QMainWindow):
                     self.clear_wavs_button,
                     self.import_wavs_button,
                     self.join_wavs_button,
+                    self.normalize_settings_btn,
                     self.edit_metadata_btn,
                 ):
                     btn.setStyleSheet("")
@@ -1515,6 +1658,12 @@ class VideoAnnotationApp(QMainWindow):
             self.convert_image_to_jpg_cb.setText(self.LABELS.get("convert_to_jpg", "Convert to JPG"))
         if getattr(self, 'edit_metadata_btn', None):
             self.edit_metadata_btn.setText(self.LABELS["edit_metadata"])
+        if getattr(self, 'normalize_export_cb', None):
+            self.normalize_export_cb.setText(self._nl("normalize_on_export"))
+            self.normalize_export_cb.setToolTip(self._nl("normalize_on_export_tip"))
+        if getattr(self, 'normalize_settings_btn', None):
+            self.normalize_settings_btn.setText(self._nl("normalize_settings_btn"))
+            self.normalize_settings_btn.setToolTip(self._nl("normalize_settings_title"))
         if not self.current_video:
             self.video_label.setText(self.LABELS["video_listbox_no_video"])
         # Localized tips and checkbox labels
@@ -1586,6 +1735,16 @@ class VideoAnnotationApp(QMainWindow):
                 zoom = settings.get('fullscreen_zoom')
                 if isinstance(zoom, (int, float)) and zoom > 0:
                     self.fullscreen_zoom = float(zoom)
+                # Normalize-on-export preference (checkbox + settings dialog)
+                try:
+                    norm = settings.get('export_normalize')
+                    if isinstance(norm, dict):
+                        self.export_normalize_enabled = bool(norm.get('enabled', False))
+                        self.export_normalize_settings = normalize_settings(norm.get('settings'))
+                        if getattr(self, 'normalize_export_cb', None) is not None:
+                            self.normalize_export_cb.setChecked(self.export_normalize_enabled)
+                except Exception:
+                    pass
                 
                 # Load review settings if review tab exists
                 if hasattr(self, 'review_tab') and settings:
@@ -1662,6 +1821,10 @@ class VideoAnnotationApp(QMainWindow):
                 # Persist the last used fullscreen zoom if set
                 'fullscreen_zoom': self.fullscreen_zoom if isinstance(self.fullscreen_zoom, (int, float)) else None,
                 'images_thumb_scale': getattr(self, 'images_thumb_scale', 1.0),
+                'export_normalize': {
+                    'enabled': bool(self.export_normalize_enabled),
+                    'settings': dict(self.export_normalize_settings),
+                },
             }
             
             # Save review settings if review tab exists
@@ -3718,11 +3881,20 @@ class VideoAnnotationApp(QMainWindow):
                     logging.info("UI.audio: persistent audio thread stopped on close")
             except Exception:
                 pass
-            try:
-                if hasattr(self, 'join_thread') and self.join_thread and self.join_thread.isRunning():
-                    self.join_thread.wait()
-            except Exception:
-                pass
+            # Stop any export in flight (ffmpeg included) and wait for its thread.
+            for worker_name, thread_name in (("join_worker", "join_thread"), ("export_worker", "export_thread")):
+                try:
+                    worker = getattr(self, worker_name, None)
+                    if worker is not None:
+                        worker.cancel()
+                except Exception:
+                    pass
+                try:
+                    thread = getattr(self, thread_name, None)
+                    if thread is not None and thread.isRunning():
+                        thread.wait()
+                except Exception:
+                    pass
         finally:
             super().closeEvent(event)
     def _launch_ocenaudio(self, file_paths: list) -> None:
@@ -3898,6 +4070,15 @@ class VideoAnnotationApp(QMainWindow):
             if reply == QMessageBox.No:
                 QMessageBox.information(self, self.LABELS["export_cancelled_title"], self.LABELS["export_cancelled_msg"]) 
                 return
+        if self.export_normalize_enabled:
+            # One step: each recording is normalized straight into the export
+            # folder (originals untouched); metadata.txt follows when done.
+            normalizer = self._make_export_normalizer()
+            if normalizer is None:
+                return
+            pairs = [(os.path.join(self.fs.current_folder, wav), os.path.join(export_dir, wav)) for wav in wav_files]
+            self._start_normalized_export(normalizer, pairs, export_dir)
+            return
         errors = []
         for wav in wav_files:
             src = os.path.join(self.fs.current_folder, wav)
@@ -3906,12 +4087,9 @@ class VideoAnnotationApp(QMainWindow):
                 shutil.copy2(src, dst)
             except Exception as e:
                 errors.append(f"{wav}: {e}")
-        try:
-            content = self.fs.ensure_and_read_metadata(self.fs.current_folder, "")
-            with open(metadata_dst, "w") as f:
-                f.write(content if isinstance(content, str) else "")
-        except Exception as e:
-            errors.append(f"metadata.txt: {e}")
+        meta_err = self._write_export_metadata(export_dir)
+        if meta_err:
+            errors.append(meta_err)
         if errors:
             QMessageBox.critical(self, self.LABELS["error_title"], "Some files could not be exported:\n" + "\n".join(errors))
         else:
@@ -4085,6 +4263,12 @@ class VideoAnnotationApp(QMainWindow):
         if not os.path.exists(ffmpeg_path):
             QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["ffmpeg_not_found_msg"]) 
             return
+        normalizer = None
+        if self.export_normalize_enabled:
+            # Normalize each recording before concatenating (see JoinWavsWorker).
+            normalizer = self._make_export_normalizer()
+            if normalizer is None:
+                return
         output_file, _ = QFileDialog.getSaveFileName(
             self,
             self.LABELS["save_combined_wav_dialog_title"],
@@ -4094,7 +4278,7 @@ class VideoAnnotationApp(QMainWindow):
         if not output_file:
             return
         self.join_thread = QThread()
-        self.join_worker = JoinWavsWorker(output_file=output_file, fs=self.fs, file_paths=wav_paths)
+        self.join_worker = JoinWavsWorker(output_file=output_file, fs=self.fs, file_paths=wav_paths, normalizer=normalizer)
         self.join_worker.moveToThread(self.join_thread)
         self.join_thread.started.connect(self.join_worker.run)
         self.join_worker.finished.connect(self.join_thread.quit)
@@ -4102,6 +4286,14 @@ class VideoAnnotationApp(QMainWindow):
         self.join_thread.finished.connect(self.join_thread.deleteLater)
         self.join_worker.success.connect(self._on_join_success)
         self.join_worker.error.connect(self._on_join_error)
+        self.join_worker.canceled.connect(self._on_join_canceled)
+        # Progress (normalizing, then joining) with a Cancel that stops ffmpeg.
+        self._close_join_progress()
+        dlg = NormalizeProgressDialog(self, self.LABELS, "join_progress_title", on_cancel=self.join_worker.cancel)
+        self.join_worker.progress.connect(dlg.show_phase)
+        self.join_worker.finished.connect(dlg.finish)
+        self._join_progress_dlg = dlg
+        dlg.show()
         self.join_thread.start()
         self.update_video_file_checks()
     def generate_click_sound_pydub(self, duration_ms, freq, rate):
