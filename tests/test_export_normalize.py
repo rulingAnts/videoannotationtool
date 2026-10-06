@@ -338,6 +338,53 @@ def test_export_cancel_stops_early_and_reports_what_was_written(quiet_recordings
     assert len([f for f in os.listdir(export_dir) if f.endswith(".wav")]) < 3
 
 
+@needs_ffmpeg
+@pytest.mark.timeout(120, method="thread")
+def test_closing_the_window_during_an_export_does_not_deadlock(quiet_recordings, media_folder, tmp_path, monkeypatch, qapp):
+    """closeEvent waits on the worker thread without running the main event
+    loop, so the worker's quit must not be a queued connection (it hung)."""
+    w = quiet_recordings
+    for name in ("ant.wav", "bird.wav", "bird.jpg.wav"):
+        write_tone(os.path.join(media_folder, name), seconds=60.0, amp_db=-20, sampwidth=2)
+    export_dir = str(tmp_path / "export")
+    os.makedirs(export_dir)
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", staticmethod(lambda *a, **k: export_dir))
+    _capture_boxes(monkeypatch)
+    w.normalize_export_cb.setChecked(True)
+    w.export_normalize_settings = normalize_settings({"normMode": "lufs"})
+    w.export_wavs()
+    _wait(qapp, lambda: w.export_thread is not None and w.export_thread.isRunning())
+    thread = w.export_thread
+    t0 = time.time()
+    w.close()                      # must return: cancel, direct quit, bounded wait
+    assert time.time() - t0 < 60
+    assert not thread.isRunning()
+    _settle(qapp, 1.0)             # deliver the worker's queued signals to this window now
+
+
+@needs_ffmpeg
+@pytest.mark.timeout(120, method="thread")
+def test_closing_the_window_during_a_normalized_join_does_not_deadlock(quiet_recordings, media_folder, tmp_path, monkeypatch, qapp):
+    w = quiet_recordings
+    for name in ("ant.wav", "bird.wav"):
+        write_tone(os.path.join(media_folder, name), seconds=60.0, amp_db=-20, sampwidth=2)
+    out = str(tmp_path / "joined.wav")
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (out, "WAV files (*.wav)")))
+    _capture_boxes(monkeypatch)
+    w.normalize_export_cb.setChecked(True)
+    w.export_normalize_settings = normalize_settings({"normMode": "lufs"})
+    w.right_panel.setCurrentIndex(TAB_INDEX["videos"])
+    w.join_all_wavs()
+    _wait(qapp, lambda: w.join_thread is not None and w.join_thread.isRunning())
+    thread = w.join_thread
+    t0 = time.time()
+    w.close()
+    assert time.time() - t0 < 60
+    assert not thread.isRunning()
+    _settle(qapp, 1.0)             # deliver the worker's queued signals to this window now
+    assert not os.path.exists(out)
+
+
 # --- Export as Single Sound File (join) -----------------------------------------------
 
 @needs_ffmpeg
@@ -419,10 +466,10 @@ def test_join_from_the_app_with_normalization_on(quiet_recordings, tmp_path, mon
     w.right_panel.setCurrentIndex(TAB_INDEX["videos"])     # scope: ant.wav + bird.wav
     assert w._active_tab_key() == "videos"
     w.join_all_wavs()
-    _wait(qapp, lambda: bool(boxes))
+    _wait(qapp, lambda: any(out in b[2] for b in boxes))
     _settle(qapp)
-    kind, _title, text = boxes[-1]
-    assert kind == "information" and out in text, boxes
+    kind, _title, text = next(b for b in boxes if out in b[2])
+    assert kind == "information", boxes
     peak, sw, rate, secs = wav_info(out)
     assert sw == 4 and rate == 48000
     assert abs(secs - (1.0 + 1.005 + 1.0)) < 0.02

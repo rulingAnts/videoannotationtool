@@ -540,8 +540,10 @@ class VideoAnnotationApp(QMainWindow):
             normalizer = Normalizer(self.export_normalize_settings, log=lambda m: logging.info(f"normalize: {m}"))
             logging.info(f"normalize-on-export: {describe_settings(normalizer.settings)}; ffmpeg={normalizer.ffmpeg}")
             return normalizer
-        except NormalizeError:
-            QMessageBox.critical(self, self.LABELS["error_title"], self.LABELS["ffmpeg_not_found_msg"])
+        except NormalizeError as e:
+            # The reason names the file that was tried and its exit code,
+            # e.g. a bundled launcher that exits silently.
+            QMessageBox.critical(self, self.LABELS["error_title"], f"{self.LABELS['ffmpeg_not_found_msg']}\n\n{e}")
             return None
     def _write_export_metadata(self, export_dir: str):
         """Copy the folder's metadata.txt into export_dir; returns an error string or None."""
@@ -558,7 +560,9 @@ class VideoAnnotationApp(QMainWindow):
         thread = QThread()
         worker.moveToThread(thread)
         thread.started.connect(worker.run)
-        worker.done.connect(thread.quit)
+        # Direct: quit() is thread-safe and must not depend on the main
+        # thread's event loop, which closeEvent blocks with thread.wait().
+        worker.done.connect(thread.quit, Qt.DirectConnection)
         worker.done.connect(worker.deleteLater)
         thread.finished.connect(thread.deleteLater)
         thread.finished.connect(self._on_export_thread_finished)
@@ -3897,7 +3901,10 @@ class VideoAnnotationApp(QMainWindow):
                 try:
                     thread = getattr(self, thread_name, None)
                     if thread is not None and thread.isRunning():
-                        thread.wait()
+                        # Bounded: a cancel kills ffmpeg within moments, and
+                        # the window must never freeze forever on close.
+                        if not thread.wait(30000):
+                            logging.warning(f"closeEvent: {thread_name} did not stop within 30 s")
                 except Exception:
                     pass
         finally:
@@ -4286,7 +4293,9 @@ class VideoAnnotationApp(QMainWindow):
         self.join_worker = JoinWavsWorker(output_file=output_file, fs=self.fs, file_paths=wav_paths, normalizer=normalizer)
         self.join_worker.moveToThread(self.join_thread)
         self.join_thread.started.connect(self.join_worker.run)
-        self.join_worker.finished.connect(self.join_thread.quit)
+        # Direct, so closing the app mid-join (closeEvent waits on the thread
+        # without running the main event loop) cannot deadlock on a queued quit.
+        self.join_worker.finished.connect(self.join_thread.quit, Qt.DirectConnection)
         self.join_worker.finished.connect(self.join_worker.deleteLater)
         self.join_thread.finished.connect(self.join_thread.deleteLater)
         self.join_worker.success.connect(self._on_join_success)
