@@ -57,14 +57,14 @@
       <h2 id="i18n-faq-img-heading">Still Images</h2>
 
       <h3 id="i18n-faq-img-q1">How do the still images work? Is that a separate window?</h3>
-      <p id="i18n-faq-img-a1">Images are in a separate <strong>tab</strong>, not a separate window. The workflow is the same as for videos: click a stimulus item and record. You can double-click any stimulus to view it fullscreen. Image response files follow the same naming convention as video responses, with the full image filename preserved: e.g., <code>photo03.jpg.wav</code>. Switch between the video and image tabs as your stimulus set instructions indicate — typically every 7–8 items.</p>
+      <p id="i18n-faq-img-a1">Images are in a separate <strong>tab</strong>, not a separate window. The workflow is the same as for videos: click a stimulus item and record. You can double-click any stimulus to view it fullscreen. Image response files follow the same naming convention as video responses, with the full image filename preserved: e.g., <code>photo03.jpg.wav</code>. Switch between the video and image tabs as your stimulus set instructions indicate — typically every 7–8 items. Or use the <strong>All</strong> tab, which shows videos and images together in one ordered queue, so you can work through a mixed stimulus set without switching tabs.</p>
     </section>
 
     <section class="card" id="export">
       <h2 id="i18n-faq-exp-heading">Export</h2>
 
       <h3 id="i18n-faq-exp-q1">Does the "Export as single WAV" button export everything?</h3>
-      <p id="i18n-faq-exp-a1">It exports only the recordings in the <strong>currently active tab</strong> — either all video responses or all image responses, depending on which tab you have open. Switch tabs and export again to get the other set.</p>
+      <p id="i18n-faq-exp-a1">It exports the recordings of whichever tab is open. On the <strong>All</strong> tab — the first tab, and the one open when the app starts — that is every recording, videos and images together, in the order of the merged queue. On the <strong>Videos</strong> or <strong>Images</strong> tab it is only that tab's responses, and on the <strong>Review</strong> tab only the recordings in the current review set. So for one file with everything, export from the All tab; switch to Videos or Images when you want just one set. The <strong>Open all Recordings in Ocenaudio</strong> button follows the same rule. <strong>Export Recorded Data</strong> does not depend on the tab: it copies all the WAV files in the session folder.</p>
     </section>
 
     <section class="card" id="archiving">
@@ -95,7 +95,7 @@
       <h2 id="i18n-faq-wf-heading">Session Workflow</h2>
 
       <h3 id="i18n-faq-wf-q1">Should I rotate native speakers between stimulus items?</h3>
-      <p id="i18n-faq-wf-a1">No — don't rotate speakers mid-session. One speaker should work through all video stimuli before the images phase begins, so they've seen everything in context.</p>
+      <p id="i18n-faq-wf-a1">Follow the instructions that come with the stimulus kit you are capturing. Each kit says how it is meant to be run — whether one speaker works through everything or speakers take turns, and when to move between videos and images — and those instructions, not the app, decide. Read them before you start recording and stick to them.</p>
 
       <h3 id="i18n-faq-wf-q2">Can I work remotely with a consultant who isn't physically present?</h3>
       <p id="i18n-faq-wf-a2">Yes. The app supports a remote workflow using WhatsApp Desktop:</p>
@@ -171,12 +171,12 @@
           // Still Images
           'i18n-faq-img-heading': 'Gambar Diam',
           'i18n-faq-img-q1': 'Bagaimana cara kerja gambar diam? Apakah itu jendela terpisah?',
-          'i18n-faq-img-a1': 'Gambar berada di <strong>tab</strong> terpisah, bukan jendela terpisah. Alur kerja sama seperti untuk video: klik item stimulus dan rekam. Anda bisa klik dua kali stimulus apa pun untuk melihatnya layar penuh. Berkas respons gambar mengikuti konvensi penamaan yang sama dengan respons video, dengan nama berkas gambar lengkap: mis., <code>photo03.jpg.wav</code>. Bergantilah antara tab video dan gambar sesuai petunjuk set stimulus Anda — biasanya setiap 7–8 item.',
+          'i18n-faq-img-a1': 'Gambar berada di <strong>tab</strong> terpisah, bukan jendela terpisah. Alur kerja sama seperti untuk video: klik item stimulus dan rekam. Anda bisa klik dua kali stimulus apa pun untuk melihatnya layar penuh. Berkas respons gambar mengikuti konvensi penamaan yang sama dengan respons video, dengan nama berkas gambar lengkap: mis., <code>photo03.jpg.wav</code>. Bergantilah antara tab video dan gambar sesuai petunjuk set stimulus Anda — biasanya setiap 7–8 item. Atau gunakan tab <strong>Semua</strong>, yang menampilkan video dan gambar bersama dalam satu antrean berurutan, sehingga Anda dapat mengerjakan set stimulus campuran tanpa berpindah tab.',
 
           // Export
           'i18n-faq-exp-heading': 'Ekspor',
           'i18n-faq-exp-q1': 'Apakah tombol "Ekspor sebagai WAV tunggal" mengekspor semuanya?',
-          'i18n-faq-exp-a1': 'Ini hanya mengekspor rekaman di <strong>tab yang sedang aktif</strong> — baik semua respons video atau semua respons gambar, tergantung tab mana yang terbuka. Ganti tab dan ekspor lagi untuk mendapatkan set lainnya.',
+          'i18n-faq-exp-a1': 'Tombol ini mengekspor rekaman dari tab yang sedang terbuka. Di tab <strong>Semua</strong> — tab pertama, yang terbuka saat aplikasi dimulai — itu berarti semua rekaman, video dan gambar sekaligus, dalam urutan antrean gabungan. Di tab <strong>Video</strong> atau <strong>Gambar</strong> hanya respons tab itu yang diekspor, dan di tab <strong>Ulasan</strong> hanya rekaman dalam set ulasan saat ini. Jadi untuk satu berkas yang berisi semuanya, ekspor dari tab Semua; pindah ke Video atau Gambar jika Anda hanya ingin satu set. Tombol <strong>Buka semua rekaman di Ocenaudio</strong> mengikuti aturan yang sama. <strong>Ekspor Data Rekaman</strong> tidak bergantung pada tab: ia menyalin semua berkas WAV di folder sesi.',
 
           // Microphone
           'i18n-faq-mic-heading': 'Mikrofon &amp; Input Audio',
@@ -186,7 +186,7 @@
           // Session Workflow
           'i18n-faq-wf-heading': 'Alur Kerja Sesi',
           'i18n-faq-wf-q1': 'Haruskah saya merotasi penutur asli di antara item stimulus?',
-          'i18n-faq-wf-a1': 'Tidak — jangan merotasi penutur di tengah sesi. Satu penutur harus mengerjakan semua stimulus video sebelum fase gambar dimulai, agar mereka telah melihat semuanya dalam konteks.',
+          'i18n-faq-wf-a1': 'Ikuti petunjuk yang disertakan dalam paket stimulus yang sedang Anda rekam. Setiap paket menjelaskan bagaimana ia dimaksudkan untuk dijalankan — apakah satu penutur mengerjakan semuanya atau para penutur bergantian, dan kapan berpindah antara video dan gambar — dan petunjuk itulah, bukan aplikasi, yang menentukan. Bacalah sebelum Anda mulai merekam dan patuhi.',
           'i18n-faq-wf-q2': 'Bisakah saya bekerja jarak jauh dengan konsultan yang tidak hadir secara fisik?',
           'i18n-faq-wf-a2': 'Ya. Aplikasi mendukung alur kerja jarak jauh menggunakan WhatsApp Desktop:',
           'i18n-faq-wf-step1': '<strong>Kirim stimulus ke konsultan Anda:</strong> Klik kanan video atau gambar di aplikasi dan pilih Salin. Tempel ke obrolan WhatsApp dan kirimkan ke konsultan Anda.',
@@ -239,12 +239,12 @@
           // Still Images
           'i18n-faq-img-heading': '정지 이미지',
           'i18n-faq-img-q1': '정지 이미지는 어떻게 작동하나요? 별도의 창인가요?',
-          'i18n-faq-img-a1': '이미지는 별도의 창이 아닌 별도의 <strong>탭</strong>에 있습니다. 작업 흐름은 비디오와 동일합니다: 자극 항목을 클릭하고 녹음하세요. 자극을 더블 클릭하면 전체 화면으로 볼 수 있습니다. 이미지 응답 파일은 이미지 파일의 전체 이름을 보존하는 비디오 응답과 같은 이름 규칙을 따릅니다: 예: <code>photo03.jpg.wav</code>. 자극 세트 지침에 따라 비디오와 이미지 탭을 오가세요 — 보통 7–8개 항목마다.',
+          'i18n-faq-img-a1': '이미지는 별도의 창이 아닌 별도의 <strong>탭</strong>에 있습니다. 작업 흐름은 비디오와 동일합니다: 자극 항목을 클릭하고 녹음하세요. 자극을 더블 클릭하면 전체 화면으로 볼 수 있습니다. 이미지 응답 파일은 이미지 파일의 전체 이름을 보존하는 비디오 응답과 같은 이름 규칙을 따릅니다: 예: <code>photo03.jpg.wav</code>. 자극 세트 지침에 따라 비디오와 이미지 탭을 오가세요 — 보통 7–8개 항목마다. 또는 비디오와 이미지를 하나의 정렬된 대기열로 함께 보여 주는 <strong>전체</strong> 탭을 사용하면 탭을 전환하지 않고 혼합된 자극 세트를 차례로 진행할 수 있습니다.',
 
           // Export
           'i18n-faq-exp-heading': '내보내기',
           'i18n-faq-exp-q1': '"단일 WAV로 내보내기" 버튼은 전부 내보내나요?',
-          'i18n-faq-exp-a1': '현재 열려 있는 탭에 따라 <strong>현재 활성화된 탭</strong>의 녹음만 내보냅니다 — 비디오 응답 전체 또는 이미지 응답 전체입니다. 탭을 전환하고 다시 내보내어 다른 세트도 가져오세요.',
+          'i18n-faq-exp-a1': '현재 열려 있는 탭의 녹음을 내보냅니다. <strong>전체</strong> 탭 — 첫 번째 탭이며 앱을 시작하면 열려 있는 탭 — 에서는 비디오와 이미지를 합친 모든 녹음을 병합된 대기열 순서대로 내보냅니다. <strong>비디오</strong> 또는 <strong>이미지</strong> 탭에서는 해당 탭의 응답만, <strong>리뷰</strong> 탭에서는 현재 리뷰 세트의 녹음만 내보냅니다. 따라서 모든 것을 담은 파일 하나가 필요하면 전체 탭에서 내보내고, 한 세트만 원하면 비디오 또는 이미지 탭으로 전환하세요. <strong>모든 녹음을 Ocenaudio에서 열기</strong> 버튼도 같은 규칙을 따릅니다. <strong>녹음 데이터 내보내기</strong>는 탭과 무관하게 세션 폴더의 모든 WAV 파일을 복사합니다.',
 
           // Microphone
           'i18n-faq-mic-heading': '마이크 &amp; 오디오 입력',
@@ -254,7 +254,7 @@
           // Session Workflow
           'i18n-faq-wf-heading': '세션 작업 흐름',
           'i18n-faq-wf-q1': '자극 항목 사이에서 원어민을 교체해야 하나요?',
-          'i18n-faq-wf-a1': '아니오 — 세션 중간에 화자를 교체하지 마세요. 한 명의 화자가 이미지 단계가 시작되기 전에 모든 비디오 자극을 다 봐야, 전체 맥락 안에서 모든 것을 볼 수 있습니다.',
+          'i18n-faq-wf-a1': '지금 캡처하는 자극 키트에 포함된 지침을 따르세요. 각 키트에는 어떻게 진행해야 하는지 — 한 명의 화자가 전부 진행하는지 아니면 화자를 교대하는지, 비디오와 이미지 사이를 언제 옮겨 가는지 — 가 적혀 있으며, 앱이 아니라 그 지침이 기준입니다. 녹음을 시작하기 전에 읽고 그대로 따르세요.',
           'i18n-faq-wf-q2': '물리적으로 없는 컨설턴트와 원격으로 작업할 수 있나요?',
           'i18n-faq-wf-a2': '네. 앱은 WhatsApp Desktop을 사용한 원격 작업 흐름을 지원합니다:',
           'i18n-faq-wf-step1': '<strong>컨설턴트에게 자극 보내기:</strong> 앱에서 비디오나 이미지를 오른쪽 클릭하고 복사를 선택하세요. WhatsApp 채팅에 붙여넣기 하고 컨설턴트에게 보내세요.',
@@ -307,12 +307,12 @@
           // Still Images
           'i18n-faq-img-heading': 'Stilstaande afbeeldingen',
           'i18n-faq-img-q1': 'Hoe werken de stilstaande afbeeldingen? Is dat een apart venster?',
-          'i18n-faq-img-a1': 'Afbeeldingen bevinden zich in een apart <strong>tabblad</strong>, niet in een apart venster. De workflow is dezelfde als voor video\'s: klik op een stimulusitem en neem op. Je kunt op elk stimulus dubbelklikken om het schermvullend te bekijken. Responsbestanden van afbeeldingen volgen dezelfde naamgevingsconventie als videoresponses, met de volledige afbeeldingsbestandsnaam behouden: bijv. <code>photo03.jpg.wav</code>. Wissel tussen de video- en afbeeldingstabbladen zoals de instructies van je stimulusset aangeven — doorgaans elke 7–8 items.',
+          'i18n-faq-img-a1': 'Afbeeldingen bevinden zich in een apart <strong>tabblad</strong>, niet in een apart venster. De workflow is dezelfde als voor video\'s: klik op een stimulusitem en neem op. Je kunt op elk stimulus dubbelklikken om het schermvullend te bekijken. Responsbestanden van afbeeldingen volgen dezelfde naamgevingsconventie als videoresponses, met de volledige afbeeldingsbestandsnaam behouden: bijv. <code>photo03.jpg.wav</code>. Wissel tussen de video- en afbeeldingstabbladen zoals de instructies van je stimulusset aangeven — doorgaans elke 7–8 items. Of gebruik het tabblad <strong>Alles</strong>, dat video\'s en afbeeldingen samen in één geordende wachtrij toont, zodat je een gemengde stimulusset kunt doorlopen zonder van tabblad te wisselen.',
 
           // Export
           'i18n-faq-exp-heading': 'Exporteren',
           'i18n-faq-exp-q1': 'Exporteert de knop "Exporteer als enkel WAV-bestand" alles?',
-          'i18n-faq-exp-a1': 'Het exporteert alleen de opnames in het <strong>momenteel actieve tabblad</strong> — alle videoresponses of alle afbeeldingsresponses, afhankelijk van welk tabblad je open hebt. Wissel van tabblad en exporteer opnieuw om de andere set te krijgen.',
+          'i18n-faq-exp-a1': 'Het exporteert de opnames van het tabblad dat open staat. Op het tabblad <strong>Alles</strong> — het eerste tabblad, dat open staat als de app start — zijn dat alle opnames, video\'s en afbeeldingen samen, in de volgorde van de samengevoegde wachtrij. Op het tabblad <strong>Video\'s</strong> of <strong>Afbeeldingen</strong> zijn het alleen de responses van dat tabblad, en op het tabblad <strong>Review</strong> alleen de opnames in de huidige reviewset. Wil je dus één bestand met alles, exporteer dan vanuit het tabblad Alles; ga naar Video\'s of Afbeeldingen als je maar één set wilt. De knop <strong>Open alle opnamen in Ocenaudio</strong> volgt dezelfde regel. <strong>Opgenomen Data Exporteren</strong> hangt niet van het tabblad af: het kopieert alle WAV-bestanden in de sessiemap.',
 
           // Microphone
           'i18n-faq-mic-heading': 'Microfoon &amp; Audio-invoer',
@@ -322,7 +322,7 @@
           // Session Workflow
           'i18n-faq-wf-heading': 'Sessieworkflow',
           'i18n-faq-wf-q1': 'Moet ik moedertaalsprekers afwisselen tussen stimulusitems?',
-          'i18n-faq-wf-a1': 'Nee — wissel niet van spreker midden in een sessie. Één spreker moet alle videostimuli doorlopen voordat de beeldenfase begint, zodat ze alles in context hebben gezien.',
+          'i18n-faq-wf-a1': 'Volg de instructies die bij de stimuluskit horen die je vastlegt. Elke kit beschrijft hoe hij bedoeld is — of één spreker alles doorloopt of sprekers elkaar afwisselen, en wanneer je van video\'s naar afbeeldingen gaat — en die instructies bepalen het, niet de app. Lees ze voordat je begint met opnemen en houd je eraan.',
           'i18n-faq-wf-q2': 'Kan ik op afstand werken met een consultant die niet fysiek aanwezig is?',
           'i18n-faq-wf-a2': 'Ja. De app ondersteunt een externe workflow via WhatsApp Desktop:',
           'i18n-faq-wf-step1': '<strong>Stuur de stimulus naar je consultant:</strong> Klik met de rechtermuisknop op een video of afbeelding in de app en kies Kopiëren. Plak het in een WhatsApp-chat en stuur het naar je consultant.',
@@ -342,7 +342,7 @@
 
           // Archiving & Audio Format
           'i18n-faq-arch-q4': 'Wat doet “Audio normaliseren bij exporteren”, en verandert het mijn opnames?',
-          'i18n-faq-arch-a4': 'Het brengt het geluid van elke geëxporteerde kopie op niveau — dezelfde bewerking als de bijbehorende <strong>Bulk Audio Normalizer</strong> — terwijl uw originele opnames precies blijven zoals ze zijn. Met het vinkje aan schrijft <strong>Opgenomen Data Exporteren</strong> van elke WAV een genormaliseerde kopie, en normaliseert <strong>Exporteren als Enkel Geluidsbestand</strong> elke opname <em>voordat</em> ze worden samengevoegd, waarbij elk klikje wordt afgestemd op de zachtere opname ernaast. De standaardinstelling is pieknormalisatie naar −2 dBFS, die de amplitudeverhoudingen behoudt waarop akoestische analyse (bijvoorbeeld in Praat) steunt; de knop Instellingen biedt LUFS-luidheid met een limiter voor luistermateriaal, optioneel wegknippen van stilte aan begin en einde, en een keuze van bitdiepte (standaard die van de opname zelf, zodat 24-bit masters 24-bit blijven). Lever voor een archiefdepot nog steeds de onaangetaste originelen in.',
+          'i18n-faq-arch-a4': 'Het brengt het geluid van elke geëxporteerde kopie op niveau — dezelfde bewerking als de bijbehorende <strong>Bulk Audio Normalizer</strong> — terwijl je originele opnames precies blijven zoals ze zijn. Met het vinkje aan schrijft <strong>Opgenomen Data Exporteren</strong> van elke WAV een genormaliseerde kopie, en normaliseert <strong>Exporteren als Enkel Geluidsbestand</strong> elke opname <em>voordat</em> ze worden samengevoegd, waarbij elk klikje wordt afgestemd op de zachtere opname ernaast. De standaardinstelling is pieknormalisatie naar −2 dBFS, die de amplitudeverhoudingen behoudt waarop akoestische analyse (bijvoorbeeld in Praat) steunt; de knop Instellingen biedt LUFS-luidheid met een limiter voor luistermateriaal, optioneel wegknippen van stilte aan begin en einde, en een keuze van bitdiepte (standaard die van de opname zelf, zodat 24-bit masters 24-bit blijven). Lever voor een archiefdepot nog steeds de onaangetaste originelen in.',
         },
 
         // ── Português Brasil ─────────────────────────────────────────────────
@@ -375,12 +375,12 @@
           // Still Images
           'i18n-faq-img-heading': 'Imagens Estáticas',
           'i18n-faq-img-q1': 'Como funcionam as imagens estáticas? É uma janela separada?',
-          'i18n-faq-img-a1': 'As imagens ficam em uma <strong>aba</strong> separada, não em uma janela separada. O fluxo de trabalho é o mesmo que para vídeos: clique em um item de estímulo e grave. Você pode dar um duplo clique em qualquer estímulo para visualizá-lo em tela cheia. Os arquivos de resposta de imagem seguem a mesma convenção de nomenclatura das respostas de vídeo, com o nome completo do arquivo de imagem preservado: por exemplo, <code>photo03.jpg.wav</code>. Alterne entre as abas de vídeo e imagem conforme as instruções do seu conjunto de estímulos indicarem — normalmente a cada 7–8 itens.',
+          'i18n-faq-img-a1': 'As imagens ficam em uma <strong>aba</strong> separada, não em uma janela separada. O fluxo de trabalho é o mesmo que para vídeos: clique em um item de estímulo e grave. Você pode dar um duplo clique em qualquer estímulo para visualizá-lo em tela cheia. Os arquivos de resposta de imagem seguem a mesma convenção de nomenclatura das respostas de vídeo, com o nome completo do arquivo de imagem preservado: por exemplo, <code>photo03.jpg.wav</code>. Alterne entre as abas de vídeo e imagem conforme as instruções do seu conjunto de estímulos indicarem — normalmente a cada 7–8 itens. Ou use a aba <strong>Todos</strong>, que mostra vídeos e imagens juntos em uma única fila ordenada, para percorrer um conjunto de estímulos misto sem trocar de aba.',
 
           // Export
           'i18n-faq-exp-heading': 'Exportação',
           'i18n-faq-exp-q1': 'O botão "Exportar como WAV único" exporta tudo?',
-          'i18n-faq-exp-a1': 'Ele exporta apenas as gravações na <strong>aba atualmente ativa</strong> — todas as respostas de vídeo ou todas as respostas de imagem, dependendo de qual aba está aberta. Mude de aba e exporte novamente para obter o outro conjunto.',
+          'i18n-faq-exp-a1': 'Ele exporta as gravações da aba que estiver aberta. Na aba <strong>Todos</strong> — a primeira aba, que fica aberta quando o aplicativo inicia — são todas as gravações, vídeos e imagens juntos, na ordem da fila combinada. Na aba <strong>Vídeos</strong> ou <strong>Imagens</strong> são apenas as respostas daquela aba, e na aba <strong>Revisão</strong> apenas as gravações do conjunto de revisão atual. Portanto, para um único arquivo com tudo, exporte a partir da aba Todos; mude para Vídeos ou Imagens quando quiser apenas um conjunto. O botão <strong>Abrir todas as gravações no Ocenaudio</strong> segue a mesma regra. <strong>Exportar Dados Gravados</strong> não depende da aba: ele copia todos os arquivos WAV da pasta da sessão.',
 
           // Microphone
           'i18n-faq-mic-heading': 'Microfone &amp; Entrada de Áudio',
@@ -390,7 +390,7 @@
           // Session Workflow
           'i18n-faq-wf-heading': 'Fluxo de Trabalho da Sessão',
           'i18n-faq-wf-q1': 'Devo alternar falantes nativos entre itens de estímulo?',
-          'i18n-faq-wf-a1': 'Não — não alterne falantes no meio de uma sessão. Um único falante deve percorrer todos os estímulos de vídeo antes de a fase de imagens começar, para que ele tenha visto tudo em contexto.',
+          'i18n-faq-wf-a1': 'Siga as instruções que acompanham o kit de estímulos que você está capturando. Cada kit explica como deve ser conduzido — se um único falante percorre tudo ou se os falantes se revezam, e quando passar dos vídeos para as imagens — e são essas instruções, não o aplicativo, que decidem. Leia-as antes de começar a gravar e siga-as à risca.',
           'i18n-faq-wf-q2': 'Posso trabalhar remotamente com um consultor que não está fisicamente presente?',
           'i18n-faq-wf-a2': 'Sim. O aplicativo suporta um fluxo de trabalho remoto usando WhatsApp Desktop:',
           'i18n-faq-wf-step1': '<strong>Envie o estímulo ao seu consultor:</strong> Clique com o botão direito em um vídeo ou imagem no aplicativo e escolha Copiar. Cole em uma conversa do WhatsApp e envie ao seu consultor.',
@@ -443,12 +443,12 @@
           // Still Images
           'i18n-faq-img-heading': 'Imágenes Estáticas',
           'i18n-faq-img-q1': '¿Cómo funcionan las imágenes estáticas? ¿Es una ventana separada?',
-          'i18n-faq-img-a1': 'Las imágenes están en una <strong>pestaña</strong> separada, no en una ventana separada. El flujo de trabajo es el mismo que para los videos: haz clic en un ítem de estímulo y graba. Puedes hacer doble clic en cualquier estímulo para verlo en pantalla completa. Los archivos de respuesta de imagen siguen la misma convención de nombres que las respuestas de video, con el nombre completo del archivo de imagen conservado: por ejemplo, <code>photo03.jpg.wav</code>. Alterna entre las pestañas de video e imagen según indiquen las instrucciones de tu conjunto de estímulos — normalmente cada 7–8 ítems.',
+          'i18n-faq-img-a1': 'Las imágenes están en una <strong>pestaña</strong> separada, no en una ventana separada. El flujo de trabajo es el mismo que para los videos: haz clic en un ítem de estímulo y graba. Puedes hacer doble clic en cualquier estímulo para verlo en pantalla completa. Los archivos de respuesta de imagen siguen la misma convención de nombres que las respuestas de video, con el nombre completo del archivo de imagen conservado: por ejemplo, <code>photo03.jpg.wav</code>. Alterna entre las pestañas de video e imagen según indiquen las instrucciones de tu conjunto de estímulos — normalmente cada 7–8 ítems. O usa la pestaña <strong>Todos</strong>, que muestra videos e imágenes juntos en una sola cola ordenada, para recorrer un conjunto de estímulos mixto sin cambiar de pestaña.',
 
           // Export
           'i18n-faq-exp-heading': 'Exportación',
           'i18n-faq-exp-q1': '¿El botón "Exportar como WAV único" exporta todo?',
-          'i18n-faq-exp-a1': 'Solo exporta las grabaciones de la <strong>pestaña actualmente activa</strong> — todas las respuestas de video o todas las respuestas de imagen, dependiendo de cuál pestaña tengas abierta. Cambia de pestaña y vuelve a exportar para obtener el otro conjunto.',
+          'i18n-faq-exp-a1': 'Exporta las grabaciones de la pestaña que esté abierta. En la pestaña <strong>Todos</strong> — la primera pestaña, que está abierta al iniciar la app — son todas las grabaciones, videos e imágenes juntos, en el orden de la cola combinada. En la pestaña <strong>Videos</strong> o <strong>Imágenes</strong> son solo las respuestas de esa pestaña, y en la pestaña <strong>Revisión</strong> solo las grabaciones del conjunto de revisión actual. Así que, para un solo archivo con todo, exporta desde la pestaña Todos; cambia a Videos o Imágenes cuando quieras un solo conjunto. El botón <strong>Abrir todas las grabaciones en Ocenaudio</strong> sigue la misma regla. <strong>Exportar Datos Grabados</strong> no depende de la pestaña: copia todos los archivos WAV de la carpeta de la sesión.',
 
           // Microphone
           'i18n-faq-mic-heading': 'Micrófono &amp; Entrada de Audio',
@@ -458,7 +458,7 @@
           // Session Workflow
           'i18n-faq-wf-heading': 'Flujo de Trabajo de la Sesión',
           'i18n-faq-wf-q1': '¿Debo rotar hablantes nativos entre ítems de estímulo?',
-          'i18n-faq-wf-a1': 'No — no rotes hablantes en medio de una sesión. Un solo hablante debe recorrer todos los estímulos de video antes de que comience la fase de imágenes, para que haya visto todo en contexto.',
+          'i18n-faq-wf-a1': 'Sigue las instrucciones que vienen con el kit de estímulos que estás capturando. Cada kit explica cómo debe llevarse a cabo — si un solo hablante recorre todo o si los hablantes se turnan, y cuándo pasar de los videos a las imágenes — y son esas instrucciones, no la app, las que mandan. Léelas antes de empezar a grabar y respétalas.',
           'i18n-faq-wf-q2': '¿Puedo trabajar de forma remota con un consultor que no está físicamente presente?',
           'i18n-faq-wf-a2': 'Sí. La app admite un flujo de trabajo remoto usando WhatsApp Desktop:',
           'i18n-faq-wf-step1': '<strong>Envía el estímulo a tu consultor:</strong> Haz clic derecho en un video o imagen en la app y elige Copiar. Pégalo en una conversación de WhatsApp y envíaselo a tu consultor.',
@@ -511,12 +511,12 @@
           // Still Images
           'i18n-faq-img-heading': 'Stilbeelde',
           'i18n-faq-img-q1': 'Hoe werk die stilbeelde? Is dit \'n aparte venster?',
-          'i18n-faq-img-a1': 'Beelde is in \'n aparte <strong>oortjie</strong>, nie \'n aparte venster nie. Die werkvloei is dieselfde as vir video\'s: klik op \'n stimulusitem en neem op. Jy kan op enige stimulus dubbelklik om dit op volskerm te sien. Beeldrespons-lêers volg dieselfde naamgewingkonvensie as videoresponse, met die volledige beeldlêernaam behou: bv. <code>photo03.jpg.wav</code>. Wissel tussen die video- en beeldoortjies soos jou stimulusstel se instruksies aandui — gewoonlik elke 7–8 items.',
+          'i18n-faq-img-a1': 'Beelde is in \'n aparte <strong>oortjie</strong>, nie \'n aparte venster nie. Die werkvloei is dieselfde as vir video\'s: klik op \'n stimulusitem en neem op. Jy kan op enige stimulus dubbelklik om dit op volskerm te sien. Beeldrespons-lêers volg dieselfde naamgewingkonvensie as videoresponse, met die volledige beeldlêernaam behou: bv. <code>photo03.jpg.wav</code>. Wissel tussen die video- en beeldoortjies soos jou stimulusstel se instruksies aandui — gewoonlik elke 7–8 items. Of gebruik die <strong>Alles</strong>-oortjie, wat video\'s en prente saam in een geordende tou wys, sodat jy deur ’n gemengde stimulusstel kan werk sonder om van oortjie te wissel.',
 
           // Export
           'i18n-faq-exp-heading': 'Uitvoer',
           'i18n-faq-exp-q1': 'Voer die knoppie "Voer uit as enkele WAV" alles uit?',
-          'i18n-faq-exp-a1': 'Dit voer slegs die opnames in die <strong>tans aktiewe oortjie</strong> uit — óf alle videoresponse óf alle beeldresponse, afhangende van watter oortjie jy oop het. Wissel van oortjie en voer weer uit om die ander stel te kry.',
+          'i18n-faq-exp-a1': 'Dit voer die opnames uit van die oortjie wat oop is. Op die <strong>Alles</strong>-oortjie — die eerste oortjie, wat oop is wanneer die program begin — is dit elke opname, video\'s en prente saam, in die volgorde van die saamgevoegde tou. Op die <strong>Video\'s</strong>- of <strong>Prente</strong>-oortjie is dit net daardie oortjie se response, en op die <strong>Hersiening</strong>-oortjie net die opnames in die huidige hersieningstel. Vir een lêer met alles, voer dus uit vanaf die Alles-oortjie; skakel oor na Video\'s of Prente as jy net een stel wil hê. Die knoppie <strong>Maak alle Opnames in Ocenaudio oop</strong> volg dieselfde reël. <strong>Voer Opname Data Uit</strong> hang nie van die oortjie af nie: dit kopieer al die WAV-lêers in die sessiegids.',
 
           // Microphone
           'i18n-faq-mic-heading': 'Mikrofoon &amp; Oudio-invoer',
@@ -526,7 +526,7 @@
           // Session Workflow
           'i18n-faq-wf-heading': 'Sessie-werkvloei',
           'i18n-faq-wf-q1': 'Moet ek moedertaalsprekers roteer tussen stimulusitems?',
-          'i18n-faq-wf-a1': 'Nee — moenie sprekers in die middel van \'n sessie roteer nie. Een spreker moet deur al die videostimuli werk voordat die beeldfase begin, sodat hulle alles in konteks gesien het.',
+          'i18n-faq-wf-a1': 'Volg die instruksies wat by die stimuluskit kom wat jy vaslê. Elke kit sê hoe dit bedoel is om gedoen te word — of een spreker deur alles werk of sprekers mekaar afwissel, en wanneer om van video\'s na prente oor te gaan — en daardie instruksies, nie die program nie, bepaal dit. Lees hulle voordat jy begin opneem en hou daarby.',
           'i18n-faq-wf-q2': 'Kan ek op afstand werk met \'n konsultant wat nie fisies teenwoordig is nie?',
           'i18n-faq-wf-a2': 'Ja. Die toepassing ondersteun \'n afstand-werkvloei via WhatsApp Desktop:',
           'i18n-faq-wf-step1': '<strong>Stuur die stimulus na jou konsultant:</strong> Regskliek op \'n video of beeld in die toepassing en kies Kopieer. Plak dit in \'n WhatsApp-gesprek en stuur dit na jou konsultant.',
