@@ -416,6 +416,10 @@ def test_single_file_export_normalizes_each_recording_before_joining(tmp_path, m
     assert abs(segment_peak_db(str(tmp_path / "norm.wav"), 0.0, 1.0) - (-2.0)) < 0.2
     assert abs(segment_peak_db(str(tmp_path / "plain.wav"), 2.05, 2.5) - (-30.0)) < 0.2
     assert abs(segment_peak_db(str(tmp_path / "norm.wav"), 2.05, 2.5) - (-2.0)) < 0.2
+    # The click (at 1.5 s) keeps its fixed -6 dBFS in a plain join, and follows
+    # the quieter neighbour (both at -2 dBFS here) when normalizing.
+    assert abs(segment_peak_db(str(tmp_path / "plain.wav"), 1.0, 2.0) - (-6.0)) < 0.2
+    assert abs(segment_peak_db(str(tmp_path / "norm.wav"), 1.0, 2.0) - (-2.0)) < 0.2
     # Normalized in join order (sorted by name), then joined, then written.
     assert phases == [
         ("normalize", 0, 2, "a.wav"), ("normalize", 1, 2, "b.wav"),
@@ -425,6 +429,29 @@ def test_single_file_export_normalizes_each_recording_before_joining(tmp_path, m
     # The temporary folder of normalized copies is gone; originals untouched.
     assert made and not os.path.exists(made[0])
     assert abs(wav_info(a)[0] - (-20.0)) < 0.2 and abs(wav_info(b)[0] - (-30.0)) < 0.2
+
+
+@needs_ffmpeg
+def test_click_level_follows_the_quieter_neighbour_with_a_floor(tmp_path):
+    """Loud, quiet, silent: the click never rises above the recording on either
+    side of it, and a silent neighbour gets a faint click rather than none."""
+    loud = write_tone(str(tmp_path / "a.wav"), seconds=1.0, amp_db=-1, sampwidth=2)      # stays -1 (only boost)
+    quiet = write_tone(str(tmp_path / "b.wav"), seconds=1.0, amp_db=-20, sampwidth=2)    # boosted to -2
+    silent = write_tone(str(tmp_path / "c.wav"), seconds=1.0, amp_db=-999, sampwidth=2)  # left silent
+    out = str(tmp_path / "norm.wav")
+    worker = JoinWavsWorker(output_file=out, file_paths=[loud, quiet, silent], normalizer=Normalizer({}))
+    events = []
+    worker.success.connect(lambda p: events.append("success"))
+    worker.error.connect(lambda m: events.append(("error", m)))
+    worker.run()
+    assert events == ["success"]
+    # layout: a 0-1.0 | click 1.0-2.005 | b 2.005-3.005 | click 3.005-4.01 | c 4.01-5.01
+    assert abs(segment_peak_db(out, 0.0, 1.0) - (-1.0)) < 0.2
+    assert abs(segment_peak_db(out, 2.05, 3.0) - (-2.0)) < 0.2
+    assert segment_peak_db(out, 4.1, 5.0) == float("-inf")
+    assert abs(segment_peak_db(out, 1.0, 2.0) - (-2.0)) < 0.2, "click between -1 and -2 dB neighbours matches the quieter"
+    floor_db = 20 * math.log10(JoinWavsWorker.CLICK_FLOOR)
+    assert abs(segment_peak_db(out, 3.05, 4.0) - floor_db) < 0.3, "click next to silence sits at the floor"
 
 
 @needs_ffmpeg

@@ -159,6 +159,9 @@ releases. Two follow-ups below (3a/3b) are for the release AFTER the refactor/mo
     binaries from chocolatey\lib, asserts size, runs -version and checks the filters), and the
     normalizer now probes ffmpeg with -version, falls back to a system ffmpeg on PATH, and names the
     broken file and exit code. The FF Tools Diagnostics dialog shows the version line. (2026-10-06)
+[x] Single-file export with normalization on: the click between two recordings is scaled to the quieter
+    neighbour's peak (floor -30 dBFS beside a silent recording) so no click stands out above the levelled
+    speech; a plain join keeps the fixed -6 dBFS click (JoinWavsWorker.CLICK_LEVEL / CLICK_FLOOR). (v2.4.3)
 [ ] Offer the same option in Review -> Export Sets (vat/review/review_tab.py _on_export_sets /
     GroupedExporter.export_sessions): the Normalizer is reusable; only the copy step needs a normalize path.
 [ ] Website + FAQ: document normalize-on-export (docs/index.html i18n-working-li5 still says a separate

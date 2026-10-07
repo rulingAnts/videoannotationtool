@@ -42,18 +42,39 @@ class JoinWavsWorker(QObject):
         if self.normalizer is not None:
             self.normalizer.cancel()
 
-    def generate_click_sound_pydub(self, duration_ms: int, freq: int, rate: int):
+    #: Click peak as a fraction of full scale in a plain join (-6 dBFS), and
+    #: the floor used beside a silent recording when clicks follow the audio.
+    CLICK_LEVEL = 0.5
+    CLICK_FLOOR = 0.03
+
+    def generate_click_sound_pydub(self, duration_ms: int, freq: int, rate: int, level: float = CLICK_LEVEL):
         t = np.linspace(0, duration_ms / 1000, int(rate * duration_ms / 1000), endpoint=False)
         sine_wave = np.sin(2 * np.pi * freq * t)
         decay = np.linspace(1, 0, len(sine_wave))
         click_data = sine_wave * decay
-        click_data = (click_data * 0.5 * (2**15 - 1)).astype(np.int16).tobytes()
+        peak = np.max(np.abs(click_data)) if len(click_data) else 0.0
+        if peak > 0:
+            click_data = click_data / peak      # so `level` is the click's actual peak
+        click_data = (click_data * level * (2**15 - 1)).astype(np.int16).tobytes()
         return AudioSegment(
             data=click_data,
             sample_width=2,
             frame_rate=rate,
             channels=1
         )
+
+    def _click_segment(self, rate: int, level: float) -> AudioSegment:
+        """Half a second of silence, the click, half a second of silence."""
+        silence = AudioSegment.silent(duration=500, frame_rate=rate)
+        return silence + self.generate_click_sound_pydub(duration_ms=5, freq=2000, rate=rate, level=level) + silence
+
+    @staticmethod
+    def _peak_level(segment: AudioSegment) -> float:
+        """The segment's peak as a fraction of full scale (0..1)."""
+        try:
+            return min(1.0, segment.max / segment.max_possible_amplitude)
+        except Exception:
+            return 0.0
 
     def _normalized_copies(self, wav_files: list, tmpdir: str) -> list:
         """Normalize every recording into tmpdir, in order; raise on failure."""
@@ -102,26 +123,39 @@ class JoinWavsWorker(QObject):
             std_rate = 48000
             std_channels = 1
             std_sample_width = 4
-            silence_segment = AudioSegment.silent(duration=500, frame_rate=std_rate)
-            click_sound = self.generate_click_sound_pydub(duration_ms=5, freq=2000, rate=std_rate)
-            click_segment = silence_segment + click_sound + silence_segment
-            combined_audio = AudioSegment.empty()
-            combined_audio = combined_audio.set_frame_rate(std_rate).set_channels(std_channels).set_sample_width(std_sample_width)
-            total = len(wav_files)
-            for i, file_path in enumerate(wav_files):
-                if self._cancel.is_set():
-                    raise _Canceled()
-                self.progress.emit("join", i, total, os.path.basename(file_path))
-                audio = AudioSegment.from_file(file_path, format="wav")
+
+            def load(path: str) -> AudioSegment:
+                audio = AudioSegment.from_file(path, format="wav")
                 if audio.frame_rate != std_rate:
                     audio = audio.set_frame_rate(std_rate)
                 if audio.channels != std_channels:
                     audio = audio.set_channels(std_channels)
                 if audio.sample_width != std_sample_width:
                     audio = audio.set_sample_width(std_sample_width)
+                return audio
+
+            # With normalization on, each click is scaled to the quieter of
+            # the two recordings around it, so no click stands out above the
+            # (now level) speech. A plain join keeps the fixed click; whether
+            # it stands out there depends on the recordings, as it always has.
+            match_clicks = self.normalizer is not None
+            combined_audio = AudioSegment.empty()
+            combined_audio = combined_audio.set_frame_rate(std_rate).set_channels(std_channels).set_sample_width(std_sample_width)
+            total = len(wav_files)
+            following = load(wav_files[0]) if wav_files else None   # one recording ahead
+            for i, file_path in enumerate(wav_files):
+                if self._cancel.is_set():
+                    raise _Canceled()
+                self.progress.emit("join", i, total, os.path.basename(file_path))
+                audio = following
+                following = load(wav_files[i + 1]) if i + 1 < total else None
                 combined_audio += audio
-                if i < len(wav_files) - 1:
-                    combined_audio += click_segment
+                if following is not None:
+                    if match_clicks:
+                        level = max(self.CLICK_FLOOR, min(self._peak_level(audio), self._peak_level(following)))
+                    else:
+                        level = self.CLICK_LEVEL
+                    combined_audio += self._click_segment(std_rate, level)
             if self._cancel.is_set():
                 raise _Canceled()
             self.progress.emit("write", total, total, os.path.basename(self.output_file))
