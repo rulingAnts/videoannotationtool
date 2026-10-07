@@ -287,6 +287,9 @@ LABELS_ALL = {
         "normalize_export_partial": "{count} recording(s) could not be normalized and were copied unchanged:",
         "normalize_export_cancelled": "Export cancelled. {done} of {total} files were written to {dir}.",
         "join_cancelled": "Export cancelled. No file was written.",
+        # Flat-folder check (vat/ui/app.py _warn_if_subfolders)
+        "subfolders_warning_title": "Subfolders Found",
+        "subfolders_warning_body": "This folder contains subfolders. The app expects every stimulus file (videos and images) and its recording directly in the folder you open; files inside subfolders may be ignored, exported incompletely, or matched to the wrong recording.\n\nKeep each stimulus set in one flat folder: move the files you need into this folder, remove the subfolders, or open the right folder.\n\nSubfolders found:",
     },
     "Bahasa Indonesia": {
         "language_name": "Bahasa Indonesia",
@@ -542,6 +545,9 @@ LABELS_ALL = {
         "normalize_export_partial": "{count} rekaman tidak dapat dinormalkan dan disalin tanpa perubahan:",
         "normalize_export_cancelled": "Ekspor dibatalkan. {done} dari {total} berkas telah ditulis ke {dir}.",
         "join_cancelled": "Ekspor dibatalkan. Tidak ada berkas yang ditulis.",
+        # Flat-folder check (vat/ui/app.py _warn_if_subfolders)
+        "subfolders_warning_title": "Ada Subfolder",
+        "subfolders_warning_body": "Folder ini berisi subfolder. Aplikasi mengharapkan semua berkas stimulus (video dan gambar) beserta rekamannya berada langsung di folder yang Anda buka; berkas di dalam subfolder bisa terabaikan, terekspor tidak lengkap, atau tertukar dengan rekaman lain.\n\nSimpan setiap set stimulus dalam satu folder datar: pindahkan berkas yang Anda perlukan ke folder ini, hapus subfoldernya, atau buka folder yang benar.\n\nSubfolder yang ditemukan:",
     },
     "한국어": {
         "language_name": "한국어",
@@ -796,6 +802,9 @@ LABELS_ALL = {
         "normalize_export_partial": "녹음 {count}개는 정규화할 수 없어 변경 없이 복사되었습니다:",
         "normalize_export_cancelled": "내보내기가 취소되었습니다. {total}개 중 {done}개 파일이 {dir}에 기록되었습니다.",
         "join_cancelled": "내보내기가 취소되었습니다. 파일이 기록되지 않았습니다.",
+        # Flat-folder check (vat/ui/app.py _warn_if_subfolders)
+        "subfolders_warning_title": "하위 폴더 발견",
+        "subfolders_warning_body": "이 폴더에는 하위 폴더가 있습니다. 앱은 모든 자극 파일(비디오와 이미지)과 그 녹음이 열어 둔 폴더 바로 안에 있다고 가정합니다. 하위 폴더 안의 파일은 무시되거나, 불완전하게 내보내지거나, 다른 녹음과 잘못 연결될 수 있습니다.\n\n각 자극 세트는 하위 폴더 없는 폴더 하나에 보관하세요. 필요한 파일을 이 폴더로 옮기고 하위 폴더를 제거하거나, 올바른 폴더를 여세요.\n\n발견된 하위 폴더:",
     },
     "Nederlands": {
         "language_name": "Nederlands",
@@ -1048,6 +1057,9 @@ LABELS_ALL = {
         "normalize_export_partial": "{count} opname(s) konden niet worden genormaliseerd en zijn ongewijzigd gekopieerd:",
         "normalize_export_cancelled": "Export geannuleerd. {done} van {total} bestanden zijn naar {dir} geschreven.",
         "join_cancelled": "Export geannuleerd. Er is geen bestand geschreven.",
+        # Flat-folder check (vat/ui/app.py _warn_if_subfolders)
+        "subfolders_warning_title": "Submappen gevonden",
+        "subfolders_warning_body": "Deze map bevat submappen. De app verwacht alle stimulusbestanden (video's en afbeeldingen) en hun opnames direct in de map die je opent; bestanden in submappen kunnen worden genegeerd, onvolledig worden geëxporteerd of aan de verkeerde opname worden gekoppeld.\n\nHoud elke stimulusset in één platte map: verplaats de bestanden die je nodig hebt naar deze map, verwijder de submappen, of open de juiste map.\n\nGevonden submappen:",
     },
     "Español (Latinoamérica)": {
         "language_name": "Español (Latinoamérica)",
@@ -1300,6 +1312,9 @@ LABELS_ALL = {
         "normalize_export_partial": "{count} grabación(es) no se pudieron normalizar y se copiaron sin cambios:",
         "normalize_export_cancelled": "Exportación cancelada. Se escribieron {done} de {total} archivos en {dir}.",
         "join_cancelled": "Exportación cancelada. No se escribió ningún archivo.",
+        # Flat-folder check (vat/ui/app.py _warn_if_subfolders)
+        "subfolders_warning_title": "Subcarpetas encontradas",
+        "subfolders_warning_body": "Esta carpeta contiene subcarpetas. La app espera que todos los archivos de estímulo (videos e imágenes) y sus grabaciones estén directamente en la carpeta que abres; los archivos dentro de subcarpetas pueden ignorarse, exportarse de forma incompleta o asociarse a la grabación equivocada.\n\nMantén cada conjunto de estímulos en una sola carpeta sin subcarpetas: mueve los archivos que necesites a esta carpeta, elimina las subcarpetas o abre la carpeta correcta.\n\nSubcarpetas encontradas:",
     },
     "Afrikaans": {
         "language_name": "Afrikaans",
@@ -1552,6 +1567,9 @@ LABELS_ALL = {
         "normalize_export_partial": "{count} opname(s) kon nie genormaliseer word nie en is onveranderd gekopieer:",
         "normalize_export_cancelled": "Uitvoer gekanselleer. {done} van {total} lêers is na {dir} geskryf.",
         "join_cancelled": "Uitvoer gekanselleer. Geen lêer is geskryf nie.",
+        # Flat-folder check (vat/ui/app.py _warn_if_subfolders)
+        "subfolders_warning_title": "Subgidse gevind",
+        "subfolders_warning_body": "Hierdie gids bevat subgidse. Die program verwag al die stimuluslêers (video's en prente) en hul opnames direk in die gids wat jy oopmaak; lêers in subgidse kan geïgnoreer word, onvolledig uitgevoer word, of aan die verkeerde opname gekoppel word.\n\nHou elke stimulusstel in een plat gids: skuif die lêers wat jy nodig het na hierdie gids, verwyder die subgidse, of maak die regte gids oop.\n\nSubgidse gevind:",
     },
     "Português (Brasil)": {
         "language_name": "Português (Brasil)",
@@ -1804,6 +1822,9 @@ LABELS_ALL = {
         "normalize_export_partial": "{count} gravação(ões) não puderam ser normalizadas e foram copiadas sem alterações:",
         "normalize_export_cancelled": "Exportação cancelada. {done} de {total} arquivos foram gravados em {dir}.",
         "join_cancelled": "Exportação cancelada. Nenhum arquivo foi gravado.",
+        # Flat-folder check (vat/ui/app.py _warn_if_subfolders)
+        "subfolders_warning_title": "Subpastas encontradas",
+        "subfolders_warning_body": "Esta pasta contém subpastas. O aplicativo espera que todos os arquivos de estímulo (vídeos e imagens) e suas gravações estejam diretamente na pasta que você abre; arquivos dentro de subpastas podem ser ignorados, exportados de forma incompleta ou associados à gravação errada.\n\nMantenha cada conjunto de estímulos em uma única pasta sem subpastas: mova os arquivos de que precisa para esta pasta, remova as subpastas ou abra a pasta correta.\n\nSubpastas encontradas:",
     },
     # Español (Latinoamérica), Afrikaans follow exactly as in vat/ui/app.py
 }

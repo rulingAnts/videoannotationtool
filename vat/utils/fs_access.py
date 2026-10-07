@@ -77,6 +77,48 @@ class FolderAccessManager(QObject):
             pass
         self._videos_cache = []
 
+    #: Folders operating systems create at the root of a drive; never part of a set.
+    _SYSTEM_DIRS = frozenset({"$recycle.bin", "system volume information"})
+
+    def list_subfolders(self, path: Optional[str] = None) -> List[str]:
+        """Names of the visible subfolders directly inside the folder.
+
+        A stimulus set is meant to be one flat folder, so the UI warns when
+        this is not empty. Hidden folders (dot-prefixed, or hidden/system on
+        Windows) and the folders operating systems keep on removable drives
+        are ignored; symlinks are not followed. Never raises.
+        """
+        folder = path or self.current_folder
+        if not folder or not os.path.isdir(folder):
+            return []
+        names: List[str] = []
+        try:
+            with os.scandir(folder) as it:
+                for entry in it:
+                    try:
+                        if not entry.is_dir(follow_symlinks=False):
+                            continue
+                    except OSError:
+                        continue
+                    if entry.name.startswith(".") or entry.name.lower() in self._SYSTEM_DIRS:
+                        continue
+                    if os.name == "nt" and self._windows_hidden(entry):
+                        continue
+                    names.append(entry.name)
+        except OSError:
+            return []
+        names.sort(key=str.lower)
+        return names
+
+    @staticmethod
+    def _windows_hidden(entry) -> bool:
+        """True for a directory entry with the Windows hidden or system attribute."""
+        try:
+            attrs = entry.stat(follow_symlinks=False).st_file_attributes
+        except (OSError, AttributeError):
+            return False
+        return bool(attrs & 0x2) or bool(attrs & 0x4)   # FILE_ATTRIBUTE_HIDDEN / FILE_ATTRIBUTE_SYSTEM
+
     def list_videos(self, path: Optional[str] = None) -> List[str]:
         folder = path or self.current_folder
         if not folder:

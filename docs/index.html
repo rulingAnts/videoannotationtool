@@ -59,6 +59,7 @@
         <h2 id="i18n-what-heading">What it does</h2>
         <ul>
           <li id="i18n-what-li1">Play videos and record native speaker descriptions of each.</li>
+          <li id="i18n-what-li1b">Work through videos and still images together in the All tab — one queue in stimulus-set order — or one type at a time in the Videos and Images tabs.</li>
           <li id="i18n-what-li2">Keep simple project info in a built‑in metadata editor.</li>
           <li id="i18n-what-li3">Export all your recordings (and metadata) in one step.</li>
           <li id="i18n-what-li4">Open recordings in Ocenaudio for trimming, normalizing, and fine‑tuning.</li>
@@ -106,9 +107,9 @@
     <section class="card" id="getting-started">
       <h2 id="i18n-quick-heading">Quick start</h2>
       <ol>
-        <li id="i18n-quick-li1">Prepare a folder with your video files (MP4, MOV, AVI, MKV, etc.).</li>
+        <li id="i18n-quick-li1">Prepare one folder with your stimulus files — videos (MP4, MOV, AVI, MKV, MPG) and still images (JPG, PNG, HEIC, etc.) — all directly in that folder, with no subfolders.</li>
         <li id="i18n-quick-li2">Open the app and click “Select Folder”. Pick your video folder.</li>
-        <li id="i18n-quick-li3">Select a video from the list to preview the first frame.</li>
+        <li id="i18n-quick-li3">Select an item from the list to preview it. The All tab lists videos and images together in order; the Videos and Images tabs show one type at a time.</li>
         <li id="i18n-quick-li4">Press “Record Audio” to capture your native-speaker description; press again to stop and save. The app saves a WAV with the same name as the video.</li>
         <li id="i18n-quick-li5">Use “Export Recorded Data” to copy all WAVs and metadata.txt to a folder of your choice.</li>
       </ol>
@@ -186,8 +187,9 @@
     <section class="card">
       <h2 id="i18n-working-heading">Working in a project</h2>
       <ul>
-        <li id="i18n-working-li1"><strong>Folder display:</strong> The app shows the current project folder at the top; hover to see the full path.</li>
+        <li id="i18n-working-li1"><strong>Folder display:</strong> The app shows the current project folder at the top; hover to see the full path. Keep each stimulus set in one flat folder — the app warns you if the folder you open contains subfolders.</li>
         <li id="i18n-working-li2"><strong>Video preview & playback:</strong> Pick a video to preview the first frame and play/stop as needed.</li>
+        <li id="i18n-working-li2b"><strong>All, Videos and Images tabs:</strong> The All tab is open at launch and lists every video and still image in one queue sorted by filename, so a mixed stimulus set runs in order without switching tabs; the Videos and Images tabs show one type at a time. <em>Export as Single Sound File</em> and <em>Open all Recordings in Ocenaudio</em> act on the open tab's items; <em>Export Recorded Data</em> always exports the whole folder.</li>
         <li id="i18n-working-li3"><strong>Audio notes:</strong> Record a short WAV per video. Recordings save automatically the moment they are captured — there is no separate save step. Recording again immediately overwrites any existing file. Use the delete button to remove a recording, or the edit button to open it in Ocenaudio.</li>
         <li id="i18n-working-li4"><strong>Metadata:</strong> Edit project info in the side panel; it’s saved to <code>metadata.txt</code> in your folder.</li>
         <li id="i18n-working-li5"><strong>Open in Ocenaudio:</strong> Bulk-open all WAVs from the current set in Ocenaudio for trimming, normalization, and volume adjustment. For simple level matching you no longer need an outside tool: see <em>Normalize on export</em> below.</li>
@@ -309,6 +311,7 @@
           'i18n-hero-tip-which': 'Tombol ini membuka halaman rilis terbaru, tempat Anda dapat memilih unduhan yang diinginkan. <b>Saat ini hanya untuk Windows.</b> <b>Installer</b> (<code>-setup.exe</code>) — memasang aplikasi, menambahkan pintasan di Start Menu, dan dapat dihapus secara normal; paling cocok jika komputer itu milik Anda. <b>Folder portabel</b> (<code>-portable-folder.zip</code>) — ekstrak sekali, lalu jalankan <code>.exe</code> di dalamnya; <b>jauh lebih cepat dimulai</b>, dan tetap bisa dijalankan dari flash disk. Jaga agar folder tetap utuh (folder <code>_internal</code> harus tetap berada di samping <code>.exe</code>). <b>Berkas tunggal</b> (<code>-portable.exe</code>) — tidak perlu diekstrak, tetapi <b>lambat dimulai</b> karena Windows membongkar seluruh program setiap kali dijalankan. Paling cocok untuk sekali pakai cepat.',
           'i18n-what-heading': 'Apa fungsinya',
           'i18n-what-li1': 'Memutar video dan merekam deskripsi setiap klip dari penutur asli.',
+          'i18n-what-li1b': 'Kerjakan video dan gambar diam bersama-sama di tab Semua — satu antrean dalam urutan set stimulus — atau satu jenis saja di tab Video dan Gambar.',
           'i18n-what-li2': 'Menyimpan informasi proyek sederhana dalam editor metadata bawaan.',
           'i18n-what-li3': 'Mengekspor semua rekaman (dan metadata) dalam satu langkah.',
           'i18n-what-li4': 'Membuka rekaman di Ocenaudio untuk pemotongan, normalisasi, dan penyempurnaan.',
@@ -320,9 +323,9 @@
           'i18n-carousel-cap3': 'Ekspor semua rekaman sebagai satu berkas WAV untuk diimpor ke SayMore atau ELAN. Klik otomatis menandai batas antar klip.',
           'i18n-carousel-cap4': 'Buka semua rekaman di Ocenaudio untuk pemotongan, normalisasi, dan pengeditan lanjutan.',
           'i18n-quick-heading': 'Mulai cepat',
-          'i18n-quick-li1': 'Siapkan satu folder berisi berkas video Anda (MP4, MOV, AVI, MKV, dll.).',
+          'i18n-quick-li1': 'Siapkan satu folder berisi berkas stimulus Anda — video (MP4, MOV, AVI, MKV, MPG) dan gambar diam (JPG, PNG, HEIC, dll.) — semuanya langsung di dalam folder itu, tanpa subfolder.',
           'i18n-quick-li2': 'Buka aplikasi lalu klik "Select Folder". Pilih folder video Anda.',
-          'i18n-quick-li3': 'Pilih sebuah video dari daftar untuk menampilkan bingkai pertama.',
+          'i18n-quick-li3': 'Pilih item dari daftar untuk melihat pratinjaunya. Tab Semua menampilkan video dan gambar bersama secara berurutan; tab Video dan Gambar menampilkan satu jenis saja.',
           'i18n-quick-li4': 'Tekan "Record Audio" untuk merekam deskripsi dari penutur asli; tekan lagi untuk berhenti dan menyimpan. Aplikasi menyimpan WAV dengan nama yang sama seperti video.',
           'i18n-quick-li5': 'Gunakan "Export Recorded Data" untuk menyalin semua WAV dan metadata.txt ke folder pilihan Anda.',
           'i18n-install-win-heading': 'Instal di Windows',
@@ -334,8 +337,9 @@
           'i18n-install-mac-li2': 'Pengguna tingkat lanjut dapat menjalankan alat ini langsung dari source dengan Python 3.11+; lihat README di GitHub untuk langkah penyiapan.',
           'i18n-install-mac-li3': 'Jika Anda membutuhkan dukungan macOS, harap buka isu di GitHub supaya kami bisa melacak kebutuhannya.',
           'i18n-working-heading': 'Bekerja dalam sebuah proyek',
-          'i18n-working-li1': '<strong>Tampilan folder:</strong> Aplikasi menampilkan folder proyek aktif di bagian atas; arahkan kursor untuk melihat jalur lengkap.',
+          'i18n-working-li1': '<strong>Tampilan folder:</strong> Aplikasi menampilkan folder proyek aktif di bagian atas; arahkan kursor untuk melihat jalur lengkap. Simpan setiap set stimulus dalam satu folder datar — aplikasi akan memperingatkan Anda jika folder yang dibuka berisi subfolder.',
           'i18n-working-li2': '<strong>Pratinjau & pemutaran video:</strong> Pilih video untuk melihat bingkai pertama dan putar/hentikan sesuai kebutuhan.',
+          'i18n-working-li2b': '<strong>Tab Semua, Video, dan Gambar:</strong> Tab Semua terbuka saat aplikasi dimulai dan menampilkan setiap video dan gambar diam dalam satu antrean yang diurutkan berdasarkan nama berkas, sehingga set stimulus campuran berjalan berurutan tanpa berpindah tab; tab Video dan Gambar menampilkan satu jenis saja. <em>Ekspor sebagai Satu Berkas Suara</em> dan <em>Buka semua rekaman di Ocenaudio</em> bekerja pada item di tab yang terbuka; <em>Ekspor Data Rekaman</em> selalu mengekspor seluruh folder.',
           'i18n-working-li3': '<strong>Catatan audio:</strong> Rekam satu berkas WAV per video. Rekaman tersimpan otomatis saat selesai direkam — tidak ada langkah simpan terpisah. Merekam ulang langsung menimpa berkas yang sudah ada. Gunakan tombol hapus untuk menghapus rekaman, atau tombol edit untuk membukanya di Ocenaudio.',
           'i18n-working-li4': '<strong>Metadata:</strong> Ubah informasi proyek di panel samping; datanya disimpan ke <code>metadata.txt</code> di folder Anda.',
           'i18n-working-li5': '<strong>Buka di Ocenaudio:</strong> Buka massal semua WAV dari set saat ini di Ocenaudio untuk pemotongan, normalisasi, dan penyesuaian volume. Untuk sekadar menyamakan tingkat suara Anda tidak lagi memerlukan alat luar: lihat <em>Normalkan saat mengekspor</em> di bawah.',
@@ -374,6 +378,7 @@
           'i18n-hero-tip-which': '이 버튼은 최신 릴리스 페이지를 엽니다. 거기서 원하는 다운로드를 고르세요. <b>현재 Windows 전용입니다.</b> <b>설치 프로그램</b>(<code>-setup.exe</code>) — 앱을 설치하고 시작 메뉴 바로가기를 추가하며 일반적인 방법으로 제거할 수 있습니다. 본인 컴퓨터라면 가장 좋습니다. <b>휴대용 폴더</b>(<code>-portable-folder.zip</code>) — 한 번 압축을 풀고 안에 있는 <code>.exe</code>를 실행합니다. <b>훨씬 빨리 시작</b>되며 USB 드라이브에서도 실행됩니다. 폴더를 그대로 유지하세요(<code>_internal</code> 폴더가 <code>.exe</code> 옆에 있어야 합니다). <b>단일 파일</b>(<code>-portable.exe</code>) — 압축을 풀 필요는 없지만, 실행할 때마다 Windows가 프로그램 전체를 풀기 때문에 <b>시작이 느립니다</b>. 한 번만 빠르게 써 볼 때 적합합니다.',
           'i18n-what-heading': '무엇을 할 수 있나요',
           'i18n-what-li1': '비디오를 재생하면서 각 클립에 대한 모국어 화자의 설명을 녹음합니다.',
+          'i18n-what-li1b': '전체 탭에서 비디오와 정지 이미지를 함께 — 자극 세트 순서대로 하나의 대기열로 — 진행하거나, 비디오 탭과 이미지 탭에서 한 종류씩 진행하세요.',
           'i18n-what-li2': '내장된 메타데이터 편집기에서 간단한 프로젝트 정보를 관리합니다.',
           'i18n-what-li3': '모든 녹음(및 메타데이터)을 한 번에 내보냅니다.',
           'i18n-what-li4': 'Ocenaudio에서 녹음을 열어 자르기, 정규화, 세부 편집을 할 수 있습니다.',
@@ -385,9 +390,9 @@
           'i18n-carousel-cap3': '모든 녹음을 하나의 WAV 파일로 내보내 SayMore나 ELAN에 쉽게 가져올 수 있습니다. 자동 클릭 소리가 클립 경계를 눈과 귀로 표시해 줍니다.',
           'i18n-carousel-cap4': '모든 녹음을 Ocenaudio에서 열어 자르기, 정규화 및 추가 편집을 합니다.',
           'i18n-quick-heading': '빠른 시작',
-          'i18n-quick-li1': '비디오 파일(MP4, MOV, AVI, MKV 등)이 들어 있는 폴더를 준비합니다.',
+          'i18n-quick-li1': '자극 파일 — 비디오(MP4, MOV, AVI, MKV, MPG)와 정지 이미지(JPG, PNG, HEIC 등) — 를 하나의 폴더에 준비하세요. 모두 그 폴더 바로 안에 두고 하위 폴더는 만들지 마세요.',
           'i18n-quick-li2': '앱을 열고 "Select Folder"를 클릭한 뒤 비디오 폴더를 선택합니다.',
-          'i18n-quick-li3': '목록에서 비디오를 선택하여 첫 번째 프레임을 미리 봅니다.',
+          'i18n-quick-li3': '목록에서 항목을 선택하면 미리 보기가 표시됩니다. 전체 탭은 비디오와 이미지를 순서대로 함께 보여 주고, 비디오 탭과 이미지 탭은 한 종류씩 보여 줍니다.',
           'i18n-quick-li4': '"Record Audio"를 눌러 화자의 설명을 녹음하고, 다시 눌러 중지 및 저장합니다. 앱은 비디오와 같은 이름의 WAV를 만듭니다.',
           'i18n-quick-li5': '"Export Recorded Data"를 사용해 모든 WAV와 metadata.txt를 원하는 폴더로 복사합니다.',
           'i18n-install-win-heading': 'Windows에 설치',
@@ -399,8 +404,9 @@
           'i18n-install-mac-li2': '고급 사용자는 Python 3.11+ 환경에서 소스 코드로 직접 실행할 수 있습니다. 설정 단계는 GitHub의 README를 참고하세요.',
           'i18n-install-mac-li3': 'macOS 지원이 필요하다면 GitHub에 이슈를 열어 수요를 알려 주세요.',
           'i18n-working-heading': '프로젝트에서 작업하기',
-          'i18n-working-li1': '<strong>폴더 표시:</strong> 현재 프로젝트 폴더가 상단에 표시되며, 마우스를 올리면 전체 경로를 볼 수 있습니다.',
+          'i18n-working-li1': '<strong>폴더 표시:</strong> 현재 프로젝트 폴더가 상단에 표시되며, 마우스를 올리면 전체 경로를 볼 수 있습니다. 각 자극 세트는 하위 폴더 없는 폴더 하나에 보관하세요 — 열어 둔 폴더에 하위 폴더가 있으면 앱이 경고합니다.',
           'i18n-working-li2': '<strong>비디오 미리 보기 및 재생:</strong> 비디오를 선택해 첫 프레임을 보고 필요할 때 재생/중지합니다.',
+          'i18n-working-li2b': '<strong>전체, 비디오, 이미지 탭:</strong> 전체 탭은 앱을 시작하면 열려 있으며 모든 비디오와 정지 이미지를 파일 이름순으로 정렬된 하나의 대기열로 보여 주므로, 혼합된 자극 세트를 탭 전환 없이 순서대로 진행할 수 있습니다. 비디오 탭과 이미지 탭은 한 종류씩 보여 줍니다. <em>하나의 오디오 파일로 내보내기</em>와 <em>모든 녹음을 Ocenaudio에서 열기</em>는 열려 있는 탭의 항목에 적용되고, <em>녹음 데이터 내보내기</em>는 항상 폴더 전체를 내보냅니다.',
           'i18n-working-li3': '<strong>오디오 노트:</strong> 비디오마다 짧은 WAV를 한 개씩 녹음합니다. 녹음은 캡처되는 즉시 자동으로 저장되며 별도의 저장 단계가 없습니다. 다시 녹음하면 기존 파일이 즉시 덮어씌워집니다. 삭제 버튼으로 녹음을 제거하거나, 편집 버튼으로 Ocenaudio에서 열 수 있습니다.',
           'i18n-working-li4': '<strong>메타데이터:</strong> 옆 패널에서 프로젝트 정보를 편집하면, 내용이 폴더 안의 <code>metadata.txt</code>에 저장됩니다.',
           'i18n-working-li5': '<strong>Ocenaudio에서 열기:</strong> 현재 세트의 모든 WAV를 Ocenaudio에서 일괄 열어 트리밍, 정규화, 음량 조절을 할 수 있습니다. 단순히 음량을 맞추는 데는 더 이상 외부 도구가 필요 없습니다. 아래 <em>내보낼 때 정규화</em>를 참고하세요.',
@@ -439,6 +445,7 @@
           'i18n-hero-tip-which': 'De knop opent de pagina van de nieuwste release, waar je de gewenste download kiest. <b>Momenteel alleen voor Windows.</b> <b>Installer</b> (<code>-setup.exe</code>) — installeert de app, voegt een snelkoppeling in het Startmenu toe en kan normaal worden verwijderd; het beste als de computer van jou is. <b>Draagbare map</b> (<code>-portable-folder.zip</code>) — eenmaal uitpakken en daarna de <code>.exe</code> erin starten; <b>start veel sneller</b> en werkt nog steeds vanaf een USB-stick. Houd de map bij elkaar (de map <code>_internal</code> moet naast de <code>.exe</code> blijven staan). <b>Enkel bestand</b> (<code>-portable.exe</code>) — niets uit te pakken, maar het <b>start traag</b> omdat Windows bij elke start het hele programma uitpakt. Het beste voor een snelle eenmalige run.',
           'i18n-what-heading': 'Wat het doet',
           'i18n-what-li1': 'Speel video’s af en neem de beschrijvingen van moedertaalsprekers per clip op.',
+          'i18n-what-li1b': 'Werk video\'s en stilstaande beelden samen door in het tabblad Alles — één wachtrij in de volgorde van de stimulusset — of één type tegelijk in de tabbladen Video\'s en Afbeeldingen.',
           'i18n-what-li2': 'Bewaar eenvoudige projectinformatie in een ingebouwde metadata-editor.',
           'i18n-what-li3': 'Exporteer al je opnames (en metadata) in één stap.',
           'i18n-what-li4': 'Open opnames in Ocenaudio om ze bij te snijden, te normaliseren en fijn af te stellen.',
@@ -450,9 +457,9 @@
           'i18n-carousel-cap3': 'Exporteer alle opnames als één WAV-bestand om ze eenvoudig in SayMore of ELAN te importeren. Automatische klikjes markeren hoorbaar en zichtbaar de grenzen tussen clips.',
           'i18n-carousel-cap4': 'Open alle opnames in Ocenaudio voor bijsnijden, normaliseren en verdere bewerking.',
           'i18n-quick-heading': 'Snel aan de slag',
-          'i18n-quick-li1': 'Maak een map met je videobestanden (MP4, MOV, AVI, MKV, enz.).',
+          'i18n-quick-li1': 'Maak één map met je stimulusbestanden — video\'s (MP4, MOV, AVI, MKV, MPG) en afbeeldingen (JPG, PNG, HEIC, enz.) — allemaal direct in die map, zonder submappen.',
           'i18n-quick-li2': 'Open de app en klik op "Select Folder". Kies je videomap.',
-          'i18n-quick-li3': 'Selecteer een video uit de lijst om de eerste frame te bekijken.',
+          'i18n-quick-li3': 'Selecteer een item in de lijst om het te bekijken. Het tabblad Alles toont video\'s en afbeeldingen samen op volgorde; de tabbladen Video\'s en Afbeeldingen tonen één type tegelijk.',
           'i18n-quick-li4': 'Druk op "Record Audio" om de beschrijving van de spreker op te nemen; druk nogmaals om te stoppen en op te slaan. De app slaat een WAV op met dezelfde naam als de video.',
           'i18n-quick-li5': 'Gebruik "Export Recorded Data" om alle WAV-bestanden en metadata.txt naar een map naar keuze te kopiëren.',
           'i18n-install-win-heading': 'Installeren op Windows',
@@ -464,8 +471,9 @@
           'i18n-install-mac-li2': 'Gevorderde gebruikers kunnen de tool vanaf de bron draaien met Python 3.11+; zie de README op GitHub voor de installatie‑stappen.',
           'i18n-install-mac-li3': 'Heb je macOS‑ondersteuning nodig, open dan een issue op GitHub zodat we de vraag kunnen volgen.',
           'i18n-working-heading': 'Werken binnen een project',
-          'i18n-working-li1': '<strong>Mapweergave:</strong> De app toont de huidige projectmap bovenaan; zweef erover om het volledige pad te zien.',
+          'i18n-working-li1': '<strong>Mapweergave:</strong> De app toont de huidige projectmap bovenaan; zweef erover om het volledige pad te zien. Houd elke stimulusset in één platte map — de app waarschuwt je als de map die je opent submappen bevat.',
           'i18n-working-li2': '<strong>Videovoorbeeld & afspelen:</strong> Kies een video om de eerste frame te bekijken en speel/stop naar behoefte.',
+          'i18n-working-li2b': '<strong>Tabbladen Alles, Video\'s en Afbeeldingen:</strong> Het tabblad Alles staat open bij het starten en toont elke video en afbeelding in één wachtrij, gesorteerd op bestandsnaam, zodat een gemengde stimulusset op volgorde verloopt zonder van tabblad te wisselen; de tabbladen Video\'s en Afbeeldingen tonen één type tegelijk. <em>Exporteren als Enkel Geluidsbestand</em> en <em>Open alle opnamen in Ocenaudio</em> werken op de items van het open tabblad; <em>Opgenomen Data Exporteren</em> exporteert altijd de hele map.',
           'i18n-working-li3': '<strong>Audionotities:</strong> Neem één kort WAV-bestand per video op. Opnames worden automatisch opgeslagen op het moment dat ze worden vastgelegd — er is geen aparte opslagstap. Opnieuw opnemen overschrijft onmiddellijk het bestaande bestand. Gebruik de verwijderknop om een opname te wissen, of de bewerkknop om het in Ocenaudio te openen.',
           'i18n-working-li4': '<strong>Metadata:</strong> Bewerk projectinformatie in het zijpaneel; deze wordt opgeslagen in <code>metadata.txt</code> in je map.',
           'i18n-working-li5': '<strong>Open in Ocenaudio:</strong> Open alle WAV-bestanden uit de huidige set in bulk in Ocenaudio voor bijsnijden, normalisatie en volume-aanpassing. Voor het simpelweg gelijktrekken van het niveau heb je geen extern programma meer nodig: zie <em>Normaliseren bij exporteren</em> hieronder.',
@@ -504,6 +512,7 @@
           'i18n-hero-tip-which': 'O botão abre a página da versão mais recente, onde você escolhe o download desejado. <b>Atualmente apenas para Windows.</b> <b>Instalador</b> (<code>-setup.exe</code>) — instala o aplicativo, adiciona um atalho no Menu Iniciar e pode ser desinstalado normalmente; ideal se o computador for seu. <b>Pasta portátil</b> (<code>-portable-folder.zip</code>) — extraia uma vez e execute o <code>.exe</code> que está dentro; <b>abre muito mais rápido</b> e ainda roda de um pendrive. Mantenha a pasta inteira (a pasta <code>_internal</code> precisa ficar ao lado do <code>.exe</code>). <b>Arquivo único</b> (<code>-portable.exe</code>) — nada para extrair, mas <b>demora para abrir</b>, porque o Windows descompacta o programa inteiro a cada execução. Ideal para um uso rápido e pontual.',
           'i18n-what-heading': 'O que ele faz',
           'i18n-what-li1': 'Reproduz vídeos e grava descrições de cada um feitas por falantes nativos.',
+          'i18n-what-li1b': 'Percorra vídeos e imagens estáticas juntos na aba Todos — uma única fila na ordem do conjunto de estímulos — ou um tipo de cada vez nas abas Vídeos e Imagens.',
           'i18n-what-li2': 'Mantém informações simples do projeto em um editor de metadados integrado.',
           'i18n-what-li3': 'Exporta todas as gravações (e metadados) em uma única etapa.',
           'i18n-what-li4': 'Abre as gravações no Ocenaudio para corte, normalização e ajustes finos.',
@@ -515,9 +524,9 @@
           'i18n-carousel-cap3': 'Exporte todas as gravações como um único arquivo WAV para importar facilmente no SayMore ou ELAN. Cliques automáticos marcam, visual e sonoramente, os limites entre os clipes.',
           'i18n-carousel-cap4': 'Abra todas as gravações no Ocenaudio para corte, normalização e edição adicional.',
           'i18n-quick-heading': 'Guia rápido',
-          'i18n-quick-li1': 'Prepare uma pasta com seus arquivos de vídeo (MP4, MOV, AVI, MKV etc.).',
+          'i18n-quick-li1': 'Prepare uma pasta com seus arquivos de estímulo — vídeos (MP4, MOV, AVI, MKV, MPG) e imagens estáticas (JPG, PNG, HEIC etc.) — todos diretamente nessa pasta, sem subpastas.',
           'i18n-quick-li2': 'Abra o aplicativo e clique em "Select Folder". Escolha a pasta de vídeos.',
-          'i18n-quick-li3': 'Selecione um vídeo na lista para visualizar o primeiro quadro.',
+          'i18n-quick-li3': 'Selecione um item da lista para visualizá-lo. A aba Todos lista vídeos e imagens juntos, em ordem; as abas Vídeos e Imagens mostram um tipo de cada vez.',
           'i18n-quick-li4': 'Pressione "Record Audio" para gravar a descrição do falante nativo; pressione novamente para parar e salvar. O aplicativo salva um WAV com o mesmo nome do vídeo.',
           'i18n-quick-li5': 'Use "Export Recorded Data" para copiar todos os WAVs e o metadata.txt para uma pasta de sua escolha.',
           'i18n-install-win-heading': 'Instalar no Windows',
@@ -529,8 +538,9 @@
           'i18n-install-mac-li2': 'Usuários avançados podem executar a ferramenta a partir do código‑fonte com Python 3.11+; consulte o README no GitHub para ver as etapas de configuração.',
           'i18n-install-mac-li3': 'Se você precisa de suporte para macOS, abra uma issue no GitHub para que possamos acompanhar essa demanda.',
           'i18n-working-heading': 'Trabalhando em um projeto',
-          'i18n-working-li1': '<strong>Exibição da pasta:</strong> O aplicativo mostra a pasta de projeto atual no topo; passe o mouse para ver o caminho completo.',
+          'i18n-working-li1': '<strong>Exibição da pasta:</strong> O aplicativo mostra a pasta de projeto atual no topo; passe o mouse para ver o caminho completo. Mantenha cada conjunto de estímulos em uma única pasta sem subpastas — o aplicativo avisa se a pasta que você abre contiver subpastas.',
           'i18n-working-li2': '<strong>Pré-visualização e reprodução de vídeo:</strong> Escolha um vídeo para ver o primeiro quadro e reproduza/pare conforme necessário.',
+          'i18n-working-li2b': '<strong>Abas Todos, Vídeos e Imagens:</strong> A aba Todos fica aberta ao iniciar e lista todos os vídeos e imagens estáticas em uma única fila ordenada pelo nome do arquivo, de modo que um conjunto de estímulos misto segue em ordem sem trocar de aba; as abas Vídeos e Imagens mostram um tipo de cada vez. <em>Exportar como Arquivo Único de Áudio</em> e <em>Abrir todas as gravações no Ocenaudio</em> atuam sobre os itens da aba aberta; <em>Exportar Dados Gravados</em> sempre exporta a pasta inteira.',
           'i18n-working-li3': '<strong>Notas de áudio:</strong> Grave um pequeno WAV para cada vídeo. As gravações são salvas automaticamente no momento em que são capturadas — não há etapa de salvar separada. Gravar novamente sobrescreve imediatamente qualquer arquivo existente. Use o botão excluir para remover uma gravação, ou o botão editar para abri-la no Ocenaudio.',
           'i18n-working-li4': '<strong>Metadados:</strong> Edite as informações do projeto no painel lateral; elas são salvas em <code>metadata.txt</code> na sua pasta.',
           'i18n-working-li5': '<strong>Abrir no Ocenaudio:</strong> Abra em massa todos os WAVs do conjunto atual no Ocenaudio para corte, normalização e ajuste de volume. Para simplesmente igualar o nível você não precisa mais de uma ferramenta externa: veja <em>Normalizar ao exportar</em> abaixo.',
@@ -569,6 +579,7 @@
           'i18n-hero-tip-which': 'El botón abre la página de la versión más reciente, donde eliges la descarga que quieras. <b>Por ahora solo para Windows.</b> <b>Instalador</b> (<code>-setup.exe</code>) — instala la app, agrega un acceso directo al menú Inicio y se puede desinstalar normalmente; ideal si la computadora es tuya. <b>Carpeta portátil</b> (<code>-portable-folder.zip</code>) — extrae una vez y luego ejecuta el <code>.exe</code> que está adentro; <b>arranca mucho más rápido</b> y sigue funcionando desde una memoria USB. Mantén la carpeta completa (la carpeta <code>_internal</code> debe quedar junto al <code>.exe</code>). <b>Archivo único</b> (<code>-portable.exe</code>) — no hay nada que extraer, pero <b>arranca lento</b> porque Windows descomprime todo el programa cada vez que lo abres. Ideal para un uso rápido y puntual.',
           'i18n-what-heading': 'Qué hace',
           'i18n-what-li1': 'Reproduce videos y graba descripciones de cada clip hechas por hablantes nativos.',
+          'i18n-what-li1b': 'Recorre videos e imágenes fijas juntos en la pestaña Todos — una sola cola en el orden del kit de estímulos — o un tipo a la vez en las pestañas Videos e Imágenes.',
           'i18n-what-li2': 'Mantiene información sencilla del proyecto en un editor de metadatos integrado.',
           'i18n-what-li3': 'Exporta todas tus grabaciones (y metadatos) en un solo paso.',
           'i18n-what-li4': 'Abre las grabaciones en Ocenaudio para recortar, normalizar y hacer ajustes finos.',
@@ -580,9 +591,9 @@
           'i18n-carousel-cap3': 'Exporta todas las grabaciones como un solo archivo WAV para importarlas fácilmente en SayMore o ELAN. Clics automáticos marcan, de forma visible y audible, los límites entre clips.',
           'i18n-carousel-cap4': 'Abre todas las grabaciones en Ocenaudio para recortar, normalizar y editarlas más a fondo.',
           'i18n-quick-heading': 'Inicio rápido',
-          'i18n-quick-li1': 'Prepara una carpeta con tus archivos de video (MP4, MOV, AVI, MKV, etc.).',
+          'i18n-quick-li1': 'Prepara una carpeta con tus archivos de estímulo — videos (MP4, MOV, AVI, MKV, MPG) e imágenes fijas (JPG, PNG, HEIC, etc.) — todos directamente en esa carpeta, sin subcarpetas.',
           'i18n-quick-li2': 'Abre la aplicación y haz clic en "Select Folder". Elige tu carpeta de videos.',
-          'i18n-quick-li3': 'Selecciona un video de la lista para previsualizar el primer cuadro.',
+          'i18n-quick-li3': 'Selecciona un elemento de la lista para previsualizarlo. La pestaña Todos muestra videos e imágenes juntos en orden; las pestañas Videos e Imágenes muestran un tipo a la vez.',
           'i18n-quick-li4': 'Pulsa "Record Audio" para grabar la descripción del hablante nativo; pulsa de nuevo para detener y guardar. La aplicación guarda un WAV con el mismo nombre que el video.',
           'i18n-quick-li5': 'Usa "Export Recorded Data" para copiar todos los WAV y el metadata.txt a una carpeta de tu elección.',
           'i18n-install-win-heading': 'Instalar en Windows',
@@ -594,8 +605,9 @@
           'i18n-install-mac-li2': 'Las personas con experiencia pueden ejecutar la herramienta desde el código fuente usando Python 3.11+; consulta el README en GitHub para ver los pasos de configuración.',
           'i18n-install-mac-li3': 'Si necesitas soporte para macOS, abre un issue en GitHub para que podamos registrar esa necesidad.',
           'i18n-working-heading': 'Trabajar dentro de un proyecto',
-          'i18n-working-li1': '<strong>Carpeta del proyecto:</strong> La app muestra la carpeta de proyecto activa en la parte superior; pasa el mouse para ver la ruta completa.',
+          'i18n-working-li1': '<strong>Carpeta del proyecto:</strong> La app muestra la carpeta de proyecto activa en la parte superior; pasa el mouse para ver la ruta completa. Mantén cada conjunto de estímulos en una sola carpeta sin subcarpetas — la app te avisa si la carpeta que abres contiene subcarpetas.',
           'i18n-working-li2': '<strong>Vista previa y reproducción de video:</strong> Elige un video para ver el primer cuadro y reprodúcelo/deténlo según lo necesites.',
+          'i18n-working-li2b': '<strong>Pestañas Todos, Videos e Imágenes:</strong> La pestaña Todos está abierta al iniciar y muestra todos los videos e imágenes fijas en una sola cola ordenada por nombre de archivo, así que un conjunto de estímulos mixto avanza en orden sin cambiar de pestaña; las pestañas Videos e Imágenes muestran un tipo a la vez. <em>Exportar como Archivo Único de Audio</em> y <em>Abrir todas las grabaciones en Ocenaudio</em> actúan sobre los elementos de la pestaña abierta; <em>Exportar Datos Grabados</em> siempre exporta la carpeta completa.',
           'i18n-working-li3': '<strong>Notas de audio:</strong> Graba un archivo WAV corto por video. Las grabaciones se guardan automáticamente en el momento en que se capturan — no hay un paso de guardado separado. Volver a grabar sobreescribe de inmediato el archivo existente. Usa el botón de eliminar para borrar una grabación, o el botón de editar para abrirla en Ocenaudio.',
           'i18n-working-li4': '<strong>Metadatos:</strong> Edita la información del proyecto en el panel lateral; se guarda en <code>metadata.txt</code> dentro de tu carpeta.',
           'i18n-working-li5': '<strong>Abrir en Ocenaudio:</strong> Abre en lote todos los WAV del conjunto actual en Ocenaudio para recortar, normalizar y ajustar el volumen. Para simplemente igualar el nivel ya no necesitas una herramienta externa: mira <em>Normalizar al exportar</em> más abajo.',
@@ -634,6 +646,7 @@
           'i18n-hero-tip-which': 'Die knoppie maak die bladsy van die nuutste vrystelling oop, waar jy die aflaai kies wat jy wil hê. <b>Tans slegs vir Windows.</b> <b>Installeerder</b> (<code>-setup.exe</code>) — installeer die program, voeg ’n Start-kieslys-kortpad by en kan normaal verwyder word; die beste as die rekenaar joune is. <b>Draagbare gids</b> (<code>-portable-folder.zip</code>) — pak een keer uit en laat loop dan die <code>.exe</code> daarin; <b>begin baie vinniger</b> en werk steeds vanaf ’n USB-stokkie. Hou die gids bymekaar (die <code>_internal</code>-gids moet langs die <code>.exe</code> bly). <b>Enkele lêer</b> (<code>-portable.exe</code>) — niks om uit te pak nie, maar dit <b>begin stadig</b> omdat Windows elke keer die hele program uitpak. Die beste vir ’n vinnige eenmalige gebruik.',
           'i18n-what-heading': 'Wat dit doen',
           'i18n-what-li1': 'Speel video’s af en neem moedertaalsprekers se beskrywings van elke klankie op.',
+          'i18n-what-li1b': 'Werk deur video\'s en stilbeelde saam in die Alles-oortjie — een tou in die volgorde van die stimulusstel — of een tipe op \'n slag in die Video\'s- en Prente-oortjies.',
           'i18n-what-li2': 'Hou eenvoudige projekinligting in ’n ingeboude metadata‑redigeerder.',
           'i18n-what-li3': 'Voer al jou opnames (en metadata) in een stap uit.',
           'i18n-what-li4': 'Open opnames in Ocenaudio om dit te snoei, normaliseer en fyn aan te pas.',
@@ -645,9 +658,9 @@
           'i18n-carousel-cap3': 'Voer alle opnames as een WAV‑lêer uit om dit maklik in SayMore of ELAN in te voer. Outomatiese klikke wys hoorbaar en sigbaar waar die klankies skei.',
           'i18n-carousel-cap4': 'Open alle opnames in Ocenaudio vir snoei, normalisering en verdere redigering.',
           'i18n-quick-heading': 'Vinnige begin',
-          'i18n-quick-li1': 'Berei ’n gids voor met jou videolêers (MP4, MOV, AVI, MKV, ens.).',
+          'i18n-quick-li1': 'Berei een gids voor met jou stimuluslêers — video\'s (MP4, MOV, AVI, MKV, MPG) en stilbeelde (JPG, PNG, HEIC, ens.) — alles direk in daardie gids, sonder subgidse.',
           'i18n-quick-li2': 'Maak die toepassing oop en klik "Select Folder". Kies jou videogids.',
-          'i18n-quick-li3': 'Kies ’n video uit die lys om die eerste raam te sien.',
+          'i18n-quick-li3': 'Kies \'n item in die lys om dit te bekyk. Die Alles-oortjie wys video\'s en prente saam in volgorde; die Video\'s- en Prente-oortjies wys een tipe op \'n slag.',
           'i18n-quick-li4': 'Druk "Record Audio" om die moedertaalspreker se beskrywing op te neem; druk weer om te stop en te stoor. Die toepassing stoor ’n WAV met dieselfde naam as die video.',
           'i18n-quick-li5': 'Gebruik "Export Recorded Data" om alle WAV’s en metadata.txt na ’n gids van jou keuse te kopieer.',
           'i18n-install-win-heading': 'Installeer op Windows',
@@ -659,8 +672,9 @@
           'i18n-install-mac-li2': 'Gevorderde gebruikers kan die hulpmiddel vanaf die bronkode met Python 3.11+ laat loop; sien die README op GitHub vir die opstelstappe.',
           'i18n-install-mac-li3': 'As jy macOS‑ondersteuning nodig het, open asseblief ’n issue op GitHub sodat ons die aanvraag kan dophou.',
           'i18n-working-heading': 'Werk binne ’n projek',
-          'i18n-working-li1': '<strong>Gidsvertoning:</strong> Die toepassing wys die huidige projekgids bo‑aan; hou jou muis daaroor om die volle pad te sien.',
+          'i18n-working-li1': '<strong>Gidsvertoning:</strong> Die toepassing wys die huidige projekgids bo‑aan; hou jou muis daaroor om die volle pad te sien. Hou elke stimulusstel in een plat gids — die program waarsku jou as die gids wat jy oopmaak subgidse bevat.',
           'i18n-working-li2': '<strong>Videovoorskou & afspeel:</strong> Kies ’n video om die eerste raam te sien en speel/stop soos nodig.',
+          'i18n-working-li2b': '<strong>Alles-, Video\'s- en Prente-oortjies:</strong> Die Alles-oortjie is oop wanneer die program begin en wys elke video en stilbeeld in een tou, gesorteer volgens lêernaam, sodat \'n gemengde stimulusstel in volgorde verloop sonder om van oortjie te wissel; die Video\'s- en Prente-oortjies wys een tipe op \'n slag. <em>Voer uit as Enkel Klanklêer</em> en <em>Maak alle Opnames in Ocenaudio oop</em> werk op die items van die oop oortjie; <em>Voer Opname Data Uit</em> voer altyd die hele gids uit.',
           'i18n-working-li3': '<strong>Oudionotas:</strong> Neem een kort WAV‑lêer per video op. Opnames word outomaties gestoor die oomblik wat dit vasgevang word — daar is geen afsonderlike stoarstap nie. Om weer op te neem, oorskryf onmiddellik enige bestaande lêer. Gebruik die skrapknoppie om ’n opname te verwyder, of die redigeerknoppie om dit in Ocenaudio oop te maak.',
           'i18n-working-li4': '<strong>Metadata:</strong> Redigeer projekinligting in die sypaneel; dit word in <code>metadata.txt</code> in jou gids gestoor.',
           'i18n-working-li5': '<strong>Open in Ocenaudio:</strong> Maak alle WAV‑lêers van die huidige stel in Ocenaudio oop vir snoei, normalisering en volume-aanpassing. Om bloot die vlakke gelyk te maak het jy nie meer ’n eksterne program nodig nie: sien <em>Normaliseer by uitvoer</em> hieronder.',

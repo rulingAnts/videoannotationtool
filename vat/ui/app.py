@@ -1405,9 +1405,10 @@ class VideoAnnotationApp(QMainWindow):
                     self.load_video_files()
                 except Exception:
                     pass
-        # Show a short welcome/best-practices message once on startup
+        # Show a short welcome/best-practices message once on startup, then
+        # the flat-folder check for the folder restored from the last session.
         try:
-            QTimer.singleShot(0, self._show_welcome_dialog)
+            QTimer.singleShot(0, self._startup_checks)
         except Exception:
             pass
         # After the first population/layout pass, warm the cache for the
@@ -1862,6 +1863,7 @@ class VideoAnnotationApp(QMainWindow):
                     QMessageBox.warning(self, self.LABELS["cleanup_errors_title"], "Some hidden files could not be deleted:\n" + "\n".join(errors))
             except Exception:
                 pass
+            self._warn_if_subfolders(folder)
             self.export_wavs_button.setEnabled(True)
             self.clear_wavs_button.setEnabled(True)
             self.import_wavs_button.setEnabled(True)
@@ -4607,6 +4609,43 @@ class VideoAnnotationApp(QMainWindow):
                 pass
         except Exception:
             pass
+
+    def _startup_checks(self):
+        """First event-loop pass after the window is built: the welcome dialog,
+        then the subfolder warning for the folder restored from the last run
+        (load_settings() restores it before the UI exists, so select_folder's
+        check never sees it)."""
+        try:
+            self._show_welcome_dialog()
+        except Exception:
+            pass
+        try:
+            if self.fs.current_folder:
+                self._warn_if_subfolders(self.fs.current_folder)
+        except Exception:
+            pass
+
+    def _warn_if_subfolders(self, folder: str) -> bool:
+        """A stimulus set must be one flat folder: warn when the folder being
+        opened contains visible subfolders (files in them are skipped by the
+        lists and exports). The folder still opens. Returns True if warned."""
+        try:
+            names = self.fs.list_subfolders(folder)
+        except Exception:
+            names = []
+        if not names:
+            return False
+        shown = names[:12]
+        listing = "\n".join(f"  • {n}" for n in shown)
+        if len(names) > len(shown):
+            listing += f"\n  … (+{len(names) - len(shown)})"
+        english = LABELS_ALL["English"]
+        QMessageBox.warning(
+            self,
+            self.LABELS.get("subfolders_warning_title", english["subfolders_warning_title"]),
+            self.LABELS.get("subfolders_warning_body", english["subfolders_warning_body"]) + "\n" + listing,
+        )
+        return True
 
     def _show_welcome_dialog(self):
         """Display a brief purpose + best-practices message on startup."""

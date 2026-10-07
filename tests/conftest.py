@@ -87,15 +87,26 @@ def fs(media_folder):
 
 
 @pytest.fixture
-def app_window(qapp, media_folder, tmp_path, monkeypatch):
-    """A real VideoAnnotationApp pointed at media_folder, with isolated settings."""
-    monkeypatch.setenv("HOME", str(tmp_path / "home"))
-    os.makedirs(str(tmp_path / "home"), exist_ok=True)
+def app_window(qapp, media_folder, tmp_path_factory, monkeypatch):
+    """A real VideoAnnotationApp pointed at media_folder, with isolated settings.
+
+    HOME lives outside media_folder: a stimulus folder is meant to be flat, and
+    the app warns about subfolders, so the settings dir must not sit inside it.
+    """
+    monkeypatch.setenv("HOME", str(tmp_path_factory.mktemp("home")))
     from vat.ui.app import VideoAnnotationApp
     # The startup welcome dialog is modal (exec); it would block any test
     # that spins the event loop while waiting for a background worker.
     monkeypatch.setattr(VideoAnnotationApp, "_show_welcome_dialog", lambda self: None)
     w = VideoAnnotationApp()
+    # Fire the deferred startup checks (QTimer.singleShot(0, ...)) now, while
+    # no folder is set, so they cannot pop a "Subfolders Found" warning into a
+    # test that later creates an export dir under tmp_path (= media_folder).
+    import time
+    t0 = time.time()
+    while time.time() - t0 < 0.2:
+        qapp.processEvents()
+        time.sleep(0.01)
     w.fs.set_folder(media_folder)
     w.load_video_files()
     try:

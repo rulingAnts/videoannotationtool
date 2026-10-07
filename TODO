@@ -60,6 +60,20 @@
     New i18n IDs, English only currently: i18n-faq-arch-heading, i18n-faq-arch-q1, i18n-faq-arch-a1, i18n-faq-arch-a1b, i18n-faq-arch-q2, i18n-faq-arch-a2, i18n-faq-arch-q3, i18n-faq-arch-a3. (These fall back to English until translated, so the page renders fine meanwhile.)
     NOTE (2026-10-07): the section's new Q4/A4 (normalize-on-export) IS translated in all 6 languages; only the
     pre-existing Q1-Q3 above are still English-only.
+[x] Document the "All" tab and the flat-folder rule on the website, in all 7 languages (2026-10-07):
+    docs/index.html i18n-what-li1b (new), i18n-quick-li1 + i18n-quick-li3 (reworded: images + no subfolders,
+    All tab), i18n-working-li1 (flat-folder sentence), i18n-working-li2b (new: All/Videos/Images tabs and
+    which buttons follow the open tab); docs/faq File Organization Q3/A3 (no subfolders). Also corrected
+    the FAQ answers for "Export as single WAV" (tab-aware incl. All/Review), still images (All tab) and
+    speaker rotation (follow the stimulus kit's instructions). README Key Features got the same bullet.
+
+# Flat stimulus folders
+[x] Warn when the folder being opened contains subfolders (a stimulus set must be one flat folder; files in
+    subfolders are skipped by the lists/exports). FolderAccessManager.list_subfolders() (ignores dot-dirs,
+    Windows hidden/system dirs, $RECYCLE.BIN, System Volume Information) + VideoAnnotationApp._warn_if_subfolders(),
+    called from select_folder() and from the deferred _startup_checks() for the folder restored at launch.
+    The folder still opens. Labels subfolders_warning_title/_body in all 7 languages; tests/test_subfolder_warning.py.
+    NOTE: load_settings() restores last_folder before the UI exists, hence the deferred startup check. (2026-10-07)
 
 # Windows Installer
 FIELD TEST RESULT (v2.3.3): scope page display FIXED [YES]; install AND uninstall work correctly on BOTH
