@@ -46,9 +46,11 @@
     - i18n-trouble-li4 (getting help: added experienced-users note)
     - i18n-install-mac-heading (reworded to "macOS (interpreted mode only)")
     NOTE: Completed 2026-05-18. All 6 strings updated across all 6 languages (id, ko, nl, pt-BR, es, af).
-[ ] Translate the simplified download strings in docs/index.html into all 6 non-English languages:
+[x] Translate the simplified download strings in docs/index.html into all 6 non-English languages:
     i18n-btn-download ("Download for Windows") and i18n-hero-tip-which (which-download-should-I-get).
-    English only currently; they render in English until translated. NOTE (2026-07): the multi-button
+    NOTE (2026-10-07): done. The whole i18n script had been dropped from docs/index.html in commit 4ba8238
+    (the language selector rendered empty); restored it from 8c9fd35, pruned the stale keys for the
+    removed download UI, and translated these two IDs. NOTE (2026-07): the multi-button
     download UI and the stable/pre-release chooser modal were REMOVED - the buttons were not working in
     the field and depended on unauthenticated GitHub API calls (60 req/hour/IP) plus asset-name matching.
     The page now has ONE button pointing at the releases page, which is inherently robust. Stale
@@ -56,6 +58,8 @@
     could be cleaned up.
 [ ] Translate the new "Archiving & Audio Format" FAQ section (docs/faq/index.html) into all 6 non-English languages (id, ko, nl, pt-BR, es, af).
     New i18n IDs, English only currently: i18n-faq-arch-heading, i18n-faq-arch-q1, i18n-faq-arch-a1, i18n-faq-arch-a1b, i18n-faq-arch-q2, i18n-faq-arch-a2, i18n-faq-arch-q3, i18n-faq-arch-a3. (These fall back to English until translated, so the page renders fine meanwhile.)
+    NOTE (2026-10-07): the section's new Q4/A4 (normalize-on-export) IS translated in all 6 languages; only the
+    pre-existing Q1-Q3 above are still English-only.
 
 # Windows Installer
 FIELD TEST RESULT (v2.3.3): scope page display FIXED [YES]; install AND uninstall work correctly on BOTH
@@ -164,8 +168,11 @@ releases. Two follow-ups below (3a/3b) are for the release AFTER the refactor/mo
     speech; a plain join keeps the fixed -6 dBFS click (JoinWavsWorker.CLICK_LEVEL / CLICK_FLOOR). (v2.4.3)
 [ ] Offer the same option in Review -> Export Sets (vat/review/review_tab.py _on_export_sets /
     GroupedExporter.export_sessions): the Normalizer is reusable; only the copy step needs a normalize path.
-[ ] Website + FAQ: document normalize-on-export (docs/index.html i18n-working-li5 still says a separate
+[x] Website + FAQ: document normalize-on-export (docs/index.html i18n-working-li5 still says a separate
     normalizer utility is "available from the developer"; docs/faq archiving section) in all 7 languages.
+    NOTE (2026-10-07): docs/index.html gets a "What it does" bullet (i18n-what-li5b), a "Normalize on export"
+    how-to bullet (i18n-working-li7b) and a reworded Ocenaudio bullet; docs/faq gets Q4/A4 in the Archiving
+    section. All in English + id/ko/nl/pt-BR/es/af; language switching verified headless on both pages.
 
 # "All" tab — unified video + image queue (feature/redesign)
 PRIORITY: Do this BEFORE the pywebview re-platform and before the optional true-24-bit join work (both below).

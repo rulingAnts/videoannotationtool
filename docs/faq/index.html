@@ -79,6 +79,9 @@
 
       <h3 id="i18n-faq-arch-q3">How can I check the format of a recording myself?</h3>
       <p id="i18n-faq-arch-a3">Open any recording in Ocenaudio (the edit button next to it) or another audio editor and check its properties — you should see <code>48000&nbsp;Hz</code> and <code>24-bit</code> (or <code>16-bit</code> if your device fell back). On Windows you can also right-click the <code>.wav</code> file in File Explorer and choose <strong>Properties&nbsp;→&nbsp;Details</strong>.</p>
+
+      <h3 id="i18n-faq-arch-q4">What does “Normalize audio when exporting” do, and does it change my recordings?</h3>
+      <p id="i18n-faq-arch-a4">It levels the audio of each exported copy — the same processing as the companion <strong>Bulk Audio Normalizer</strong> — while leaving your original recordings exactly as they are. With the box ticked, <strong>Export Recorded Data</strong> writes a normalized copy of every WAV, and <strong>Export as single WAV</strong> normalizes each recording <em>before</em> joining them, scaling each click to the quieter recording beside it. The default is peak normalization to −2 dBFS, which keeps the amplitude relationships that acoustic analysis (for example in Praat) relies on; the Settings button offers LUFS loudness with a limiter for listening material, optional trimming of leading and trailing silence, and a choice of bit depth (the recording's own by default, so 24-bit masters stay 24-bit). For an archival deposit, still submit the untouched originals.</p>
     </section>
 
     <section class="card" id="audio-input">
@@ -200,6 +203,10 @@
           // Footer
           'i18n-faq-footer': '<a href="../index.html">← Kembali ke halaman utama</a> · Rilis terbaru: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → Rilis</a>',
           'i18n-faq-footer-back': '← Kembali ke halaman utama',
+
+          // Archiving & Audio Format
+          'i18n-faq-arch-q4': 'Apa yang dilakukan “Normalkan audio saat mengekspor”, dan apakah rekaman saya berubah?',
+          'i18n-faq-arch-a4': 'Opsi ini menyamakan tingkat suara setiap salinan yang diekspor — pemrosesan yang sama dengan <strong>Bulk Audio Normalizer</strong> — sementara rekaman asli Anda dibiarkan persis apa adanya. Jika kotak dicentang, <strong>Ekspor Data Rekaman</strong> menulis salinan ternormalisasi dari setiap WAV, dan <strong>Ekspor sebagai Satu Berkas Suara</strong> menormalkan setiap rekaman <em>sebelum</em> menggabungkannya, dengan setiap klik disesuaikan ke rekaman yang lebih pelan di sebelahnya. Bawaannya adalah normalisasi puncak ke −2 dBFS, yang mempertahankan hubungan amplitudo yang diandalkan analisis akustik (misalnya di Praat); tombol Pengaturan menawarkan kenyaringan LUFS dengan limiter untuk materi dengar, pemangkasan keheningan di awal dan akhir, serta pilihan kedalaman bit (bawaannya kedalaman bit rekaman itu sendiri, sehingga master 24-bit tetap 24-bit). Untuk deposit arsip, tetap serahkan rekaman asli yang tidak diubah.',
         },
 
         // ── 한국어 ────────────────────────────────────────────────────────────
@@ -264,6 +271,10 @@
           // Footer
           'i18n-faq-footer': '<a href="../index.html">← 메인 페이지로 돌아가기</a> · 최신 릴리스: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → 릴리스</a>',
           'i18n-faq-footer-back': '← 메인 페이지로 돌아가기',
+
+          // Archiving & Audio Format
+          'i18n-faq-arch-q4': '“내보낼 때 오디오 정규화”는 무엇을 하며, 제 녹음이 바뀌나요?',
+          'i18n-faq-arch-a4': '내보내는 각 복사본의 음량을 맞춥니다 — 함께 제공되는 <strong>Bulk Audio Normalizer</strong>와 동일한 처리 — 원본 녹음은 그대로 둡니다. 선택하면 <strong>녹음 데이터 내보내기</strong>는 모든 WAV의 정규화된 복사본을 쓰고, <strong>하나의 오디오 파일로 내보내기</strong>는 각 녹음을 결합하기 <em>전에</em> 정규화하며, 각 클릭은 옆에 있는 더 조용한 녹음에 맞춰 조절됩니다. 기본값은 −2 dBFS로의 피크 정규화로, 음향 분석(예: Praat)이 의존하는 진폭 관계를 유지합니다. 설정 버튼에서는 청취용 자료를 위한 리미터 포함 LUFS 라우드니스, 앞뒤 무음 잘라내기, 비트 심도 선택(기본은 녹음 자체의 비트 심도이므로 24비트 마스터는 24비트로 유지)을 제공합니다. 아카이브에 기탁할 때는 여전히 변경되지 않은 원본을 제출하세요.',
         },
 
         // ── Nederlands ───────────────────────────────────────────────────────
@@ -328,6 +339,10 @@
           // Footer
           'i18n-faq-footer': '<a href="../index.html">← Terug naar de hoofdpagina</a> · Laatste release: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → Releases</a>',
           'i18n-faq-footer-back': '← Terug naar de hoofdpagina',
+
+          // Archiving & Audio Format
+          'i18n-faq-arch-q4': 'Wat doet “Audio normaliseren bij exporteren”, en verandert het mijn opnames?',
+          'i18n-faq-arch-a4': 'Het brengt het geluid van elke geëxporteerde kopie op niveau — dezelfde bewerking als de bijbehorende <strong>Bulk Audio Normalizer</strong> — terwijl uw originele opnames precies blijven zoals ze zijn. Met het vinkje aan schrijft <strong>Opgenomen Data Exporteren</strong> van elke WAV een genormaliseerde kopie, en normaliseert <strong>Exporteren als Enkel Geluidsbestand</strong> elke opname <em>voordat</em> ze worden samengevoegd, waarbij elk klikje wordt afgestemd op de zachtere opname ernaast. De standaardinstelling is pieknormalisatie naar −2 dBFS, die de amplitudeverhoudingen behoudt waarop akoestische analyse (bijvoorbeeld in Praat) steunt; de knop Instellingen biedt LUFS-luidheid met een limiter voor luistermateriaal, optioneel wegknippen van stilte aan begin en einde, en een keuze van bitdiepte (standaard die van de opname zelf, zodat 24-bit masters 24-bit blijven). Lever voor een archiefdepot nog steeds de onaangetaste originelen in.',
         },
 
         // ── Português Brasil ─────────────────────────────────────────────────
@@ -392,6 +407,10 @@
           // Footer
           'i18n-faq-footer': '<a href="../index.html">← Voltar à página principal</a> · Última versão: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → Releases</a>',
           'i18n-faq-footer-back': '← Voltar à página principal',
+
+          // Archiving & Audio Format
+          'i18n-faq-arch-q4': 'O que faz “Normalizar o áudio ao exportar” e isso altera minhas gravações?',
+          'i18n-faq-arch-a4': 'Ele nivela o áudio de cada cópia exportada — o mesmo processamento do <strong>Bulk Audio Normalizer</strong> que o acompanha — deixando suas gravações originais exatamente como estão. Com a caixa marcada, <strong>Exportar Dados Gravados</strong> grava uma cópia normalizada de cada WAV, e <strong>Exportar como Arquivo Único de Áudio</strong> normaliza cada gravação <em>antes</em> de uni-las, ajustando cada clique à gravação mais baixa ao lado dele. O padrão é a normalização de pico para −2 dBFS, que preserva as relações de amplitude das quais a análise acústica (por exemplo, no Praat) depende; o botão Configurações oferece loudness LUFS com limitador para material de escuta, corte opcional do silêncio inicial e final e a escolha da profundidade de bits (por padrão a da própria gravação, de modo que masters de 24 bits continuam em 24 bits). Para um depósito em arquivo, continue enviando os originais intactos.',
         },
 
         // ── Español Latinoamérica ─────────────────────────────────────────────
@@ -456,6 +475,10 @@
           // Footer
           'i18n-faq-footer': '<a href="../index.html">← Volver a la página principal</a> · Última versión: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → Lanzamientos</a>',
           'i18n-faq-footer-back': '← Volver a la página principal',
+
+          // Archiving & Audio Format
+          'i18n-faq-arch-q4': '¿Qué hace “Normalizar el audio al exportar” y cambia mis grabaciones?',
+          'i18n-faq-arch-a4': 'Nivela el audio de cada copia exportada — el mismo procesamiento que el <strong>Bulk Audio Normalizer</strong> complementario — y deja tus grabaciones originales exactamente como están. Con la casilla marcada, <strong>Exportar Datos Grabados</strong> escribe una copia normalizada de cada WAV, y <strong>Exportar como Archivo Único de Audio</strong> normaliza cada grabación <em>antes</em> de unirlas, ajustando cada clic a la grabación más baja que tiene al lado. Lo predeterminado es la normalización de pico a −2 dBFS, que conserva las relaciones de amplitud en las que se apoya el análisis acústico (por ejemplo en Praat); el botón Configuración ofrece sonoridad LUFS con limitador para material de escucha, recorte opcional del silencio inicial y final, y la elección de la profundidad de bits (por defecto la de la propia grabación, así que los másteres de 24 bits siguen siendo de 24 bits). Para un depósito en archivo, entrega igualmente los originales intactos.',
         },
 
         // ── Afrikaans ─────────────────────────────────────────────────────────
@@ -520,6 +543,10 @@
           // Footer
           'i18n-faq-footer': '<a href="../index.html">← Terug na die hoofbladsy</a> · Nuutste vrystelling: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → Vrystellings</a>',
           'i18n-faq-footer-back': '← Terug na die hoofbladsy',
+
+          // Archiving & Audio Format
+          'i18n-faq-arch-q4': 'Wat doen “Normaliseer oudio wanneer uitgevoer word”, en verander dit my opnames?',
+          'i18n-faq-arch-a4': 'Dit bring die klank van elke uitgevoerde kopie op vlak — dieselfde verwerking as die meegaande <strong>Bulk Audio Normalizer</strong> — terwyl jou oorspronklike opnames presies bly soos hulle is. Met die blokkie gemerk skryf <strong>Voer Opname Data Uit</strong> ’n genormaliseerde kopie van elke WAV, en <strong>Voer uit as Enkel Klanklêer</strong> normaliseer elke opname <em>voordat</em> hulle saamgevoeg word, met elke klik aangepas by die sagter opname langs dit. Die verstek is pieknormalisering na −2 dBFS, wat die amplitudeverhoudings behou waarop akoestiese analise (byvoorbeeld in Praat) staatmaak; die Instellings-knoppie bied LUFS-luidheid met ’n begrenser vir luistermateriaal, opsionele afknip van stilte aan die begin en einde, en ’n keuse van bisdiepte (by verstek dié van die opname self, sodat 24-bis-meesters 24-bis bly). Vir ’n argiefdeponering, dien steeds die onaangeraakte oorspronklikes in.',
         },
       };
 

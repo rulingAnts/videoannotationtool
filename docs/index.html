@@ -63,6 +63,7 @@
           <li id="i18n-what-li3">Export all your recordings (and metadata) in one step.</li>
           <li id="i18n-what-li4">Open recordings in Ocenaudio for trimming, normalizing, and fine‑tuning.</li>
           <li id="i18n-what-li5">Combine all WAV files into a single audio file with subtle click markers between items.</li>
+          <li id="i18n-what-li5b">Normalize every recording on export with one checkbox — peak level for acoustic analysis or LUFS for listening — while your originals stay untouched.</li>
           <li id="i18n-what-li6">Choose your language for the interface.</li>
         </ul>
       </div>
@@ -189,9 +190,10 @@
         <li id="i18n-working-li2"><strong>Video preview & playback:</strong> Pick a video to preview the first frame and play/stop as needed.</li>
         <li id="i18n-working-li3"><strong>Audio notes:</strong> Record a short WAV per video. Recordings save automatically the moment they are captured — there is no separate save step. Recording again immediately overwrites any existing file. Use the delete button to remove a recording, or the edit button to open it in Ocenaudio.</li>
         <li id="i18n-working-li4"><strong>Metadata:</strong> Edit project info in the side panel; it’s saved to <code>metadata.txt</code> in your folder.</li>
-        <li id="i18n-working-li5"><strong>Open in Ocenaudio:</strong> Bulk-open all WAVs from the current set in Ocenaudio for trimming, normalization, and volume adjustment. A separate bulk normalizer utility is also available (ask the developer) that raises all files to maximum volume without clipping.</li>
+        <li id="i18n-working-li5"><strong>Open in Ocenaudio:</strong> Bulk-open all WAVs from the current set in Ocenaudio for trimming, normalization, and volume adjustment. For simple level matching you no longer need an outside tool: see <em>Normalize on export</em> below.</li>
         <li id="i18n-working-li6"><strong>Export / Import:</strong> Export all WAVs + metadata, or import WAVs that match your video names.</li>
         <li id="i18n-working-li7"><strong>Join WAVs:</strong> Make a single WAV of all items, with subtle click separators between each clip.</li>
+        <li id="i18n-working-li7b"><strong>Normalize on export:</strong> Tick <em>Normalize audio when exporting</em> and both <em>Export Recorded Data</em> and <em>Export as Single Sound File</em> level every recording on the way out, in one step — the same processing as the Bulk Audio Normalizer. Choose peak level (for Praat and acoustic analysis) or LUFS with a limiter (for listening), optionally trim silence, and keep or change the bit depth. In the single file, each recording is normalized before the clicks are added, and each click is scaled to the quieter recording beside it. Your original recordings are never modified.</li>
         <li id="i18n-working-li8"><strong>Languages:</strong> Use the top dropdown to switch the interface language.</li>
       </ul>
     </section>
@@ -281,6 +283,499 @@
     </p>
   </div>
 
+  <script>
+    // Simple client-side localization with auto-detected browser language
+    (function() {
+      const LANGS = {
+        en: { label: 'English' },
+        id: { label: 'Bahasa Indonesia' },
+        ko: { label: '한국어' },
+        nl: { label: 'Nederlands' },
+        'pt-BR': { label: 'Português (Brasil)' },
+        es: { label: 'Español (Latinoamérica)' },
+        af: { label: 'Afrikaans' },
+      };
+
+      // Store original English HTML for all translatable elements so we can
+      // restore it when switching back to English after another language.
+      const ORIGINAL_HTML = {};
+
+      const TRANSLATIONS = {
+        id: {
+          'i18n-brand-title': 'Alat Stimulus Visual',
+          'i18n-badge': 'Gratis • Sumber Terbuka',
+          'i18n-hero-download-label': 'Unduh',
+          'i18n-btn-download': 'Unduh',
+          'i18n-hero-tip-which': 'Tombol ini membuka halaman rilis terbaru, tempat Anda dapat memilih unduhan yang diinginkan. <b>Saat ini hanya untuk Windows.</b> <b>Installer</b> (<code>-setup.exe</code>) — memasang aplikasi, menambahkan pintasan di Start Menu, dan dapat dihapus secara normal; paling cocok jika komputer itu milik Anda. <b>Folder portabel</b> (<code>-portable-folder.zip</code>) — ekstrak sekali, lalu jalankan <code>.exe</code> di dalamnya; <b>jauh lebih cepat dimulai</b>, dan tetap bisa dijalankan dari flash disk. Jaga agar folder tetap utuh (folder <code>_internal</code> harus tetap berada di samping <code>.exe</code>). <b>Berkas tunggal</b> (<code>-portable.exe</code>) — tidak perlu diekstrak, tetapi <b>lambat dimulai</b> karena Windows membongkar seluruh program setiap kali dijalankan. Paling cocok untuk sekali pakai cepat.',
+          'i18n-what-heading': 'Apa fungsinya',
+          'i18n-what-li1': 'Memutar video dan merekam deskripsi setiap klip dari penutur asli.',
+          'i18n-what-li2': 'Menyimpan informasi proyek sederhana dalam editor metadata bawaan.',
+          'i18n-what-li3': 'Mengekspor semua rekaman (dan metadata) dalam satu langkah.',
+          'i18n-what-li4': 'Membuka rekaman di Ocenaudio untuk pemotongan, normalisasi, dan penyempurnaan.',
+          'i18n-what-li5': 'Menggabungkan semua berkas WAV menjadi satu berkas audio dengan bunyi klik halus di antara item.',
+          'i18n-what-li5b': 'Normalkan setiap rekaman saat mengekspor dengan satu kotak centang — tingkat puncak untuk analisis akustik atau LUFS untuk mendengarkan — sementara rekaman asli Anda tetap utuh.',
+          'i18n-what-li6': 'Memilih bahasa antarmuka yang ingin Anda gunakan.',
+          'i18n-carousel-cap1': 'Tampilan Anotasi Video utama: rekam deskripsi video satu per satu.',
+          'i18n-carousel-cap2': 'Tampilan Anotasi Gambar: jelaskan gambar diam dalam folder yang sama.',
+          'i18n-carousel-cap3': 'Ekspor semua rekaman sebagai satu berkas WAV untuk diimpor ke SayMore atau ELAN. Klik otomatis menandai batas antar klip.',
+          'i18n-carousel-cap4': 'Buka semua rekaman di Ocenaudio untuk pemotongan, normalisasi, dan pengeditan lanjutan.',
+          'i18n-quick-heading': 'Mulai cepat',
+          'i18n-quick-li1': 'Siapkan satu folder berisi berkas video Anda (MP4, MOV, AVI, MKV, dll.).',
+          'i18n-quick-li2': 'Buka aplikasi lalu klik "Select Folder". Pilih folder video Anda.',
+          'i18n-quick-li3': 'Pilih sebuah video dari daftar untuk menampilkan bingkai pertama.',
+          'i18n-quick-li4': 'Tekan "Record Audio" untuk merekam deskripsi dari penutur asli; tekan lagi untuk berhenti dan menyimpan. Aplikasi menyimpan WAV dengan nama yang sama seperti video.',
+          'i18n-quick-li5': 'Gunakan "Export Recorded Data" untuk menyalin semua WAV dan metadata.txt ke folder pilihan Anda.',
+          'i18n-install-win-heading': 'Instal di Windows',
+          'i18n-install-win-li1': 'Unduh berkas <strong>.exe</strong> di atas.',
+          'i18n-install-win-li2': 'Klik dua kali untuk menjalankan. Jika SmartScreen muncul, pilih "More info" → "Run anyway".',
+          'i18n-install-win-li3': 'Tidak diperlukan instalasi terpisah.',
+          'i18n-install-mac-heading': 'macOS (mode tafsir saja)',
+          'i18n-install-mac-li1': 'Saat ini tidak ada installer resmi untuk macOS.',
+          'i18n-install-mac-li2': 'Pengguna tingkat lanjut dapat menjalankan alat ini langsung dari source dengan Python 3.11+; lihat README di GitHub untuk langkah penyiapan.',
+          'i18n-install-mac-li3': 'Jika Anda membutuhkan dukungan macOS, harap buka isu di GitHub supaya kami bisa melacak kebutuhannya.',
+          'i18n-working-heading': 'Bekerja dalam sebuah proyek',
+          'i18n-working-li1': '<strong>Tampilan folder:</strong> Aplikasi menampilkan folder proyek aktif di bagian atas; arahkan kursor untuk melihat jalur lengkap.',
+          'i18n-working-li2': '<strong>Pratinjau & pemutaran video:</strong> Pilih video untuk melihat bingkai pertama dan putar/hentikan sesuai kebutuhan.',
+          'i18n-working-li3': '<strong>Catatan audio:</strong> Rekam satu berkas WAV per video. Rekaman tersimpan otomatis saat selesai direkam — tidak ada langkah simpan terpisah. Merekam ulang langsung menimpa berkas yang sudah ada. Gunakan tombol hapus untuk menghapus rekaman, atau tombol edit untuk membukanya di Ocenaudio.',
+          'i18n-working-li4': '<strong>Metadata:</strong> Ubah informasi proyek di panel samping; datanya disimpan ke <code>metadata.txt</code> di folder Anda.',
+          'i18n-working-li5': '<strong>Buka di Ocenaudio:</strong> Buka massal semua WAV dari set saat ini di Ocenaudio untuk pemotongan, normalisasi, dan penyesuaian volume. Untuk sekadar menyamakan tingkat suara Anda tidak lagi memerlukan alat luar: lihat <em>Normalkan saat mengekspor</em> di bawah.',
+          'i18n-working-li6': '<strong>Ekspor / Impor:</strong> Ekspor semua WAV + metadata, atau impor WAV yang namanya cocok dengan video Anda.',
+          'i18n-working-li7': '<strong>Gabung WAV:</strong> Membuat satu berkas WAV berisi semua item, dengan pemisah klik halus di antara klip.',
+          'i18n-working-li7b': '<strong>Normalkan saat mengekspor:</strong> Centang <em>Normalkan audio saat mengekspor</em>, maka <em>Ekspor Data Rekaman</em> dan <em>Ekspor sebagai Satu Berkas Suara</em> akan menyamakan tingkat setiap rekaman saat diekspor, dalam satu langkah — pemrosesan yang sama dengan Bulk Audio Normalizer. Pilih tingkat puncak (untuk Praat dan analisis akustik) atau LUFS dengan limiter (untuk mendengarkan), pangkas keheningan bila perlu, dan pertahankan atau ubah kedalaman bit. Pada berkas tunggal, setiap rekaman dinormalkan sebelum bunyi klik ditambahkan, dan setiap klik disesuaikan dengan rekaman yang lebih pelan di sebelahnya. Rekaman asli Anda tidak pernah diubah.',
+          'i18n-working-li8': '<strong>Bahasa:</strong> Gunakan menu tarik‑turun di atas untuk mengganti bahasa antarmuka.',
+          'i18n-usage-heading': 'Penggunaan dan paket stimulus yang direkomendasikan',
+          'i18n-usage-p1': 'Alat ini dirancang untuk kerja lapangan linguistik. Anda memutar klip video pendek (atau menampilkan gambar diam) dan meminta penutur asli menjelaskan apa yang terjadi. Aplikasi merekam satu berkas audio per klip sehingga Anda dapat menganalisis tata bahasa, makna, dan wacana nanti.',
+          'i18n-usage-p2': 'Cara sederhana untuk mulai adalah menggunakan paket stimulus yang sudah ada dan telah diuji dalam banyak bahasa. Unduh satu paket, letakkan berkas videonya dalam satu folder, lalu pilih folder tersebut di aplikasi. Ikuti petunjuk paket sedekat mungkin agar hasil Anda dapat dibandingkan dengan studi lain.',
+          'stimulus-kits': 'Paket stimulus umum (Max Planck Institute)',
+          'i18n-stimulus-mpi-desc': 'Kumpulan besar manual dan stimulus (termasuk banyak set video) untuk memancing deskripsi lisan dan jenis data kebahasaan lainnya.',
+          'i18n-stimulus-mpi-link': 'Lihat manual dan stimulus MPI',
+          'i18n-stimulus-staged-desc': 'Rangkaian kejadian yang diperagakan untuk mempelajari bagaimana bahasa membicarakan tindakan, konstruksi multi‑verba, dan struktur peristiwa (sangat berguna untuk verba seri dan rantai klausa).',
+          'i18n-stimulus-staged-link': 'Set video peristiwa yang diperagakan',
+          'i18n-stimulus-pear-desc': 'Film bisu berdurasi sekitar 6 menit untuk memancing narasi. Sering dipakai untuk mengkaji tata bahasa, struktur naratif, dan pelacakan referensi.',
+          'i18n-stimulus-pear-link': 'Unduh video Pear Story',
+          'i18n-stimulus-ref-heading': 'Paket untuk referensi peserta dan penjajaran kasus',
+          'i18n-stimulus-cut-desc': 'Klip sangat pendek yang menampilkan kegiatan memotong, mematahkan, dan kejadian terkait. Berguna untuk menelaah bagaimana bahasa Anda menangani struktur argumen, penandaan kasus, dan pola penjajaran.',
+          'i18n-stimulus-cut-link': 'Paket stimulus Cut and Break',
+          'i18n-stimulus-caused-desc': 'Klip gerak sebab‑akibat dan peristiwa penempatan, membantu mengkaji transitivitas dan bagaimana penutur membicarakan kegiatan memindah atau menaruh benda.',
+          'i18n-stimulus-caused-link': 'Paket stimulus Caused Positions',
+          'i18n-usage-summary': 'Sumber-sumber ini sangat cocok untuk mahasiswa linguistik pemula atau peneliti lapangan yang menginginkan materi siap pakai yang ramah teori, tanpa harus merancang klip sendiri dari nol.',
+          'i18n-troubleshooting-heading': 'Pemecahan masalah',
+          'i18n-trouble-li1': '<strong>Mikrofon tidak berfungsi (Windows):</strong> Jika rekaman hening atau gagal, periksa apakah mikrofon Anda sudah diatur sebagai perangkat rekaman default di Pengaturan Suara Windows, dan bahwa aplikasi memiliki akses mikrofon di Pengaturan Windows → Privasi &amp; Keamanan → Mikrofon. Kemudian mulai ulang aplikasi.',
+          'i18n-trouble-li2': '<strong>macOS (mode tafsir):</strong> Jika menjalankan dari source dan macOS memblokir terminal, izinkan di Pengaturan Sistem → Privasi &amp; Keamanan.',
+          'i18n-trouble-li3': '<strong>Tidak ada video yang ditampilkan:</strong> Pastikan folder berisi berkas video yang didukung (misalnya .mp4, .mov).',
+          'i18n-trouble-li4': '<strong>Butuh bantuan?</strong> Kunjungi <a href="https://github.com/rulingAnts/videoannotationtool/issues" target="_blank" rel="noopener">pelacak isu</a>. Jika pengembang tidak tersedia, pengguna berpengalaman lainnya mungkin juga bisa membantu — coba tanyakan.',
+          'i18n-footer': 'Rilis terbaru: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → Rilis</a> · Kode sumber: <a href="https://github.com/rulingAnts/videoannotationtool" target="_blank" rel="noopener">GitHub</a>',
+        },
+        ko: {
+          'i18n-brand-title': '시각 자극 키트 도구',
+          'i18n-badge': '무료 • 오픈 소스',
+          'i18n-hero-download-label': '다운로드',
+          'i18n-btn-download': '다운로드',
+          'i18n-hero-tip-which': '이 버튼은 최신 릴리스 페이지를 엽니다. 거기서 원하는 다운로드를 고르세요. <b>현재 Windows 전용입니다.</b> <b>설치 프로그램</b>(<code>-setup.exe</code>) — 앱을 설치하고 시작 메뉴 바로가기를 추가하며 일반적인 방법으로 제거할 수 있습니다. 본인 컴퓨터라면 가장 좋습니다. <b>휴대용 폴더</b>(<code>-portable-folder.zip</code>) — 한 번 압축을 풀고 안에 있는 <code>.exe</code>를 실행합니다. <b>훨씬 빨리 시작</b>되며 USB 드라이브에서도 실행됩니다. 폴더를 그대로 유지하세요(<code>_internal</code> 폴더가 <code>.exe</code> 옆에 있어야 합니다). <b>단일 파일</b>(<code>-portable.exe</code>) — 압축을 풀 필요는 없지만, 실행할 때마다 Windows가 프로그램 전체를 풀기 때문에 <b>시작이 느립니다</b>. 한 번만 빠르게 써 볼 때 적합합니다.',
+          'i18n-what-heading': '무엇을 할 수 있나요',
+          'i18n-what-li1': '비디오를 재생하면서 각 클립에 대한 모국어 화자의 설명을 녹음합니다.',
+          'i18n-what-li2': '내장된 메타데이터 편집기에서 간단한 프로젝트 정보를 관리합니다.',
+          'i18n-what-li3': '모든 녹음(및 메타데이터)을 한 번에 내보냅니다.',
+          'i18n-what-li4': 'Ocenaudio에서 녹음을 열어 자르기, 정규화, 세부 편집을 할 수 있습니다.',
+          'i18n-what-li5': '모든 WAV 파일을 하나의 오디오 파일로 합치고, 항목 사이에 잔잔한 클릭 소리로 경계를 표시합니다.',
+          'i18n-what-li5b': '체크박스 하나로 내보낼 때 모든 녹음을 정규화합니다 — 음향 분석용 피크 레벨 또는 청취용 LUFS — 원본 녹음은 그대로 유지됩니다.',
+          'i18n-what-li6': '인터페이스에 사용할 언어를 선택합니다.',
+          'i18n-carousel-cap1': '기본 비디오 주석 화면: 영상을 하나씩 보면서 설명을 녹음합니다.',
+          'i18n-carousel-cap2': '이미지 주석 화면: 같은 폴더에 있는 정지 이미지를 설명합니다.',
+          'i18n-carousel-cap3': '모든 녹음을 하나의 WAV 파일로 내보내 SayMore나 ELAN에 쉽게 가져올 수 있습니다. 자동 클릭 소리가 클립 경계를 눈과 귀로 표시해 줍니다.',
+          'i18n-carousel-cap4': '모든 녹음을 Ocenaudio에서 열어 자르기, 정규화 및 추가 편집을 합니다.',
+          'i18n-quick-heading': '빠른 시작',
+          'i18n-quick-li1': '비디오 파일(MP4, MOV, AVI, MKV 등)이 들어 있는 폴더를 준비합니다.',
+          'i18n-quick-li2': '앱을 열고 "Select Folder"를 클릭한 뒤 비디오 폴더를 선택합니다.',
+          'i18n-quick-li3': '목록에서 비디오를 선택하여 첫 번째 프레임을 미리 봅니다.',
+          'i18n-quick-li4': '"Record Audio"를 눌러 화자의 설명을 녹음하고, 다시 눌러 중지 및 저장합니다. 앱은 비디오와 같은 이름의 WAV를 만듭니다.',
+          'i18n-quick-li5': '"Export Recorded Data"를 사용해 모든 WAV와 metadata.txt를 원하는 폴더로 복사합니다.',
+          'i18n-install-win-heading': 'Windows에 설치',
+          'i18n-install-win-li1': '위의 <strong>.exe</strong> 파일을 다운로드합니다.',
+          'i18n-install-win-li2': '더블 클릭하여 실행합니다. SmartScreen 경고가 뜨면 "More info" → "Run anyway"를 선택합니다.',
+          'i18n-install-win-li3': '별도의 추가 설치 과정은 필요하지 않습니다.',
+          'i18n-install-mac-heading': 'macOS (인터프리터 모드 전용)',
+          'i18n-install-mac-li1': '현재 macOS용 공식 설치 프로그램은 제공되지 않습니다.',
+          'i18n-install-mac-li2': '고급 사용자는 Python 3.11+ 환경에서 소스 코드로 직접 실행할 수 있습니다. 설정 단계는 GitHub의 README를 참고하세요.',
+          'i18n-install-mac-li3': 'macOS 지원이 필요하다면 GitHub에 이슈를 열어 수요를 알려 주세요.',
+          'i18n-working-heading': '프로젝트에서 작업하기',
+          'i18n-working-li1': '<strong>폴더 표시:</strong> 현재 프로젝트 폴더가 상단에 표시되며, 마우스를 올리면 전체 경로를 볼 수 있습니다.',
+          'i18n-working-li2': '<strong>비디오 미리 보기 및 재생:</strong> 비디오를 선택해 첫 프레임을 보고 필요할 때 재생/중지합니다.',
+          'i18n-working-li3': '<strong>오디오 노트:</strong> 비디오마다 짧은 WAV를 한 개씩 녹음합니다. 녹음은 캡처되는 즉시 자동으로 저장되며 별도의 저장 단계가 없습니다. 다시 녹음하면 기존 파일이 즉시 덮어씌워집니다. 삭제 버튼으로 녹음을 제거하거나, 편집 버튼으로 Ocenaudio에서 열 수 있습니다.',
+          'i18n-working-li4': '<strong>메타데이터:</strong> 옆 패널에서 프로젝트 정보를 편집하면, 내용이 폴더 안의 <code>metadata.txt</code>에 저장됩니다.',
+          'i18n-working-li5': '<strong>Ocenaudio에서 열기:</strong> 현재 세트의 모든 WAV를 Ocenaudio에서 일괄 열어 트리밍, 정규화, 음량 조절을 할 수 있습니다. 단순히 음량을 맞추는 데는 더 이상 외부 도구가 필요 없습니다. 아래 <em>내보낼 때 정규화</em>를 참고하세요.',
+          'i18n-working-li6': '<strong>내보내기 / 가져오기:</strong> 모든 WAV와 메타데이터를 내보내거나, 비디오 이름과 일치하는 WAV를 가져옵니다.',
+          'i18n-working-li7': '<strong>WAV 결합:</strong> 모든 항목을 하나의 WAV로 합치고, 각 클립 사이에 잔잔한 클릭 소리로 경계를 표시합니다.',
+          'i18n-working-li7b': '<strong>내보낼 때 정규화:</strong> <em>내보낼 때 오디오 정규화</em>를 선택하면 <em>녹음 데이터 내보내기</em>와 <em>하나의 오디오 파일로 내보내기</em>가 내보내는 모든 녹음의 음량을 한 번에 맞춥니다 — Bulk Audio Normalizer와 동일한 처리입니다. 피크 레벨(Praat 및 음향 분석용) 또는 리미터가 있는 LUFS(청취용)를 선택하고, 필요하면 무음을 잘라내고, 비트 심도를 유지하거나 변경할 수 있습니다. 하나의 파일에서는 각 녹음이 클릭이 추가되기 전에 정규화되고, 각 클릭은 옆에 있는 더 조용한 녹음에 맞춰 조절됩니다. 원본 녹음은 절대 수정되지 않습니다.',
+          'i18n-working-li8': '<strong>언어:</strong> 상단 드롭다운을 사용해 인터페이스 언어를 바꿉니다.',
+          'i18n-usage-heading': '사용법과 추천 자극 자료',
+          'i18n-usage-p1': '이 도구는 언어학 현지조사를 위해 설계되었습니다. 짧은 비디오 클립(또는 정지 이미지)을 보여 주고, 화자에게 무슨 일이 일어나는지 설명해 달라고 요청합니다. 앱은 클립마다 하나의 오디오 파일을 녹음하여, 나중에 문법, 의미, 담화를 분석할 수 있게 해 줍니다.',
+          'i18n-usage-p2': '간단하게 시작하는 방법은 이미 여러 언어에서 사용해 본 자극 자료 패키지를 활용하는 것입니다. 패키지를 다운로드하고, 비디오 파일을 한 폴더에 넣은 다음, 앱에서 그 폴더를 선택하세요. 다른 연구와 비교할 수 있도록 설명서에 나온 절차를 최대한 따라 주세요.',
+          'stimulus-kits': '일반 목적 자극 자료 세트 (Max Planck Institute)',
+          'i18n-stimulus-mpi-desc': '여러 비디오 세트를 포함한 다양한 매뉴얼과 자극 자료 모음으로, 서술 발화와 다른 종류의 언어 자료를 수집할 때 사용할 수 있습니다.',
+          'i18n-stimulus-mpi-link': 'MPI 매뉴얼과 자극 자료 보기',
+          'i18n-stimulus-staged-desc': '연출된 짧은 장면들로, 언어가 동작, 다동사 구성, 사건 구조를 어떻게 표현하는지 연구할 때 사용됩니다 (연속동사나 절 사슬을 살피기에 특히 유용함).',
+          'i18n-stimulus-staged-link': '연출된 사건 비디오 세트',
+          'i18n-stimulus-pear-desc': '약 6분 분량의 무성 영화로, 화자에게 이야기를 들려 달라고 할 때 사용됩니다. 문법, 서사 구조, 지시 표현 추적을 연구하는 데 널리 쓰입니다.',
+          'i18n-stimulus-pear-link': 'Pear Story 비디오 다운로드',
+          'i18n-stimulus-ref-heading': '참여자 지시와 격 정렬을 위한 자극 자료',
+          'i18n-stimulus-cut-desc': '매우 짧은 클립으로 자르기, 부수기 및 관련 사건을 보여 줍니다. 언어의 논항 구조, 격 표지, 정렬 유형을 살펴보는 데 유용합니다.',
+          'i18n-stimulus-cut-link': 'Cut and Break 자극 자료 세트',
+          'i18n-stimulus-caused-desc': '원인에 의해 발생하는 이동과 배치 사건을 담은 클립으로, 타동성 및 화자가 사물의 이동과 두기 동작을 어떻게 표현하는지 연구할 때 도움을 줍니다.',
+          'i18n-stimulus-caused-link': 'Caused Positions 자극 자료 세트',
+          'i18n-usage-summary': '이 자료들은 처음 현지조사를 하는 언어학도나, 직접 클립을 설계하기보다 이론적으로도 잘 검증된 자극 자료를 사용하고 싶은 연구자에게 특히 유용합니다.',
+          'i18n-troubleshooting-heading': '문제 해결',
+          'i18n-trouble-li1': '<strong>마이크가 작동하지 않을 때 (Windows):</strong> 녹음이 무음이거나 실패하면, Windows 소리 설정에서 마이크가 기본 녹음 장치로 설정되어 있는지 확인하고, Windows 설정 → 개인 정보 및 보안 → 마이크에서 앱의 마이크 접근이 허용되어 있는지 확인하세요. 이후 앱을 다시 시작하세요.',
+          'i18n-trouble-li2': '<strong>macOS (인터프리터 모드):</strong> 소스에서 실행 중이고 macOS가 터미널을 차단하면, 시스템 설정 → 개인 정보 보호 및 보안에서 허용하세요.',
+          'i18n-trouble-li3': '<strong>비디오가 보이지 않음:</strong> 폴더에 지원되는 비디오 파일(예: .mp4, .mov)이 있는지 확인하세요.',
+          'i18n-trouble-li4': '<strong>도움이 필요하신가요?</strong> <a href="https://github.com/rulingAnts/videoannotationtool/issues" target="_blank" rel="noopener">이슈 트래커</a>를 방문해 주세요. 개발자가 응답할 수 없는 경우, 앱을 경험한 다른 사용자들도 도움을 드릴 수 있습니다 — 주변에 물어보세요.',
+          'i18n-footer': '최신 릴리스: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → 릴리스</a> · 소스 코드: <a href="https://github.com/rulingAnts/videoannotationtool" target="_blank" rel="noopener">GitHub</a>',
+        },
+        nl: {
+          'i18n-brand-title': 'Visuele Stimuluskit Tool',
+          'i18n-badge': 'Gratis • Open Source',
+          'i18n-hero-download-label': 'Download',
+          'i18n-btn-download': 'Downloaden',
+          'i18n-hero-tip-which': 'De knop opent de pagina van de nieuwste release, waar u de gewenste download kiest. <b>Momenteel alleen voor Windows.</b> <b>Installer</b> (<code>-setup.exe</code>) — installeert de app, voegt een snelkoppeling in het Startmenu toe en kan normaal worden verwijderd; het beste als de computer van u is. <b>Draagbare map</b> (<code>-portable-folder.zip</code>) — eenmaal uitpakken en daarna de <code>.exe</code> erin starten; <b>start veel sneller</b> en werkt nog steeds vanaf een USB-stick. Houd de map bij elkaar (de map <code>_internal</code> moet naast de <code>.exe</code> blijven staan). <b>Enkel bestand</b> (<code>-portable.exe</code>) — niets uit te pakken, maar het <b>start traag</b> omdat Windows bij elke start het hele programma uitpakt. Het beste voor een snelle eenmalige run.',
+          'i18n-what-heading': 'Wat het doet',
+          'i18n-what-li1': 'Speel video’s af en neem de beschrijvingen van moedertaalsprekers per clip op.',
+          'i18n-what-li2': 'Bewaar eenvoudige projectinformatie in een ingebouwde metadata-editor.',
+          'i18n-what-li3': 'Exporteer al je opnames (en metadata) in één stap.',
+          'i18n-what-li4': 'Open opnames in Ocenaudio om ze bij te snijden, te normaliseren en fijn af te stellen.',
+          'i18n-what-li5': 'Combineer alle WAV-bestanden tot één audiobestand met subtiele klikmarkeringen tussen de items.',
+          'i18n-what-li5b': 'Normaliseer elke opname bij het exporteren met één vinkje — piekniveau voor akoestische analyse of LUFS om te luisteren — terwijl uw originelen onaangetast blijven.',
+          'i18n-what-li6': 'Kies de taal van de gebruikersinterface.',
+          'i18n-carousel-cap1': 'Standaard Video Annotatie-weergave: neem beschrijvingen van video’s één voor één op.',
+          'i18n-carousel-cap2': 'Afbeeldingsannotatie-weergave: beschrijf stilstaande beelden in dezelfde map.',
+          'i18n-carousel-cap3': 'Exporteer alle opnames als één WAV-bestand om ze eenvoudig in SayMore of ELAN te importeren. Automatische klikjes markeren hoorbaar en zichtbaar de grenzen tussen clips.',
+          'i18n-carousel-cap4': 'Open alle opnames in Ocenaudio voor bijsnijden, normaliseren en verdere bewerking.',
+          'i18n-quick-heading': 'Snel aan de slag',
+          'i18n-quick-li1': 'Maak een map met je videobestanden (MP4, MOV, AVI, MKV, enz.).',
+          'i18n-quick-li2': 'Open de app en klik op "Select Folder". Kies je videomap.',
+          'i18n-quick-li3': 'Selecteer een video uit de lijst om de eerste frame te bekijken.',
+          'i18n-quick-li4': 'Druk op "Record Audio" om de beschrijving van de spreker op te nemen; druk nogmaals om te stoppen en op te slaan. De app slaat een WAV op met dezelfde naam als de video.',
+          'i18n-quick-li5': 'Gebruik "Export Recorded Data" om alle WAV-bestanden en metadata.txt naar een map naar keuze te kopiëren.',
+          'i18n-install-win-heading': 'Installeren op Windows',
+          'i18n-install-win-li1': 'Download het <strong>.exe</strong>-bestand hierboven.',
+          'i18n-install-win-li2': 'Dubbelklik om het uit te voeren. Als SmartScreen verschijnt, kies "More info" → "Run anyway".',
+          'i18n-install-win-li3': 'Er is geen aparte installatie nodig.',
+          'i18n-install-mac-heading': 'macOS (alleen geïnterpreteerde modus)',
+          'i18n-install-mac-li1': 'Er is momenteel geen officiële installer voor macOS.',
+          'i18n-install-mac-li2': 'Gevorderde gebruikers kunnen de tool vanaf de bron draaien met Python 3.11+; zie de README op GitHub voor de installatie‑stappen.',
+          'i18n-install-mac-li3': 'Heb je macOS‑ondersteuning nodig, open dan een issue op GitHub zodat we de vraag kunnen volgen.',
+          'i18n-working-heading': 'Werken binnen een project',
+          'i18n-working-li1': '<strong>Mapweergave:</strong> De app toont de huidige projectmap bovenaan; zweef erover om het volledige pad te zien.',
+          'i18n-working-li2': '<strong>Videovoorbeeld & afspelen:</strong> Kies een video om de eerste frame te bekijken en speel/stop naar behoefte.',
+          'i18n-working-li3': '<strong>Audionotities:</strong> Neem één kort WAV-bestand per video op. Opnames worden automatisch opgeslagen op het moment dat ze worden vastgelegd — er is geen aparte opslagstap. Opnieuw opnemen overschrijft onmiddellijk het bestaande bestand. Gebruik de verwijderknop om een opname te wissen, of de bewerkknop om het in Ocenaudio te openen.',
+          'i18n-working-li4': '<strong>Metadata:</strong> Bewerk projectinformatie in het zijpaneel; deze wordt opgeslagen in <code>metadata.txt</code> in je map.',
+          'i18n-working-li5': '<strong>Open in Ocenaudio:</strong> Open alle WAV-bestanden uit de huidige set in bulk in Ocenaudio voor bijsnijden, normalisatie en volume-aanpassing. Voor het simpelweg gelijktrekken van het niveau hebt u geen extern programma meer nodig: zie <em>Normaliseren bij exporteren</em> hieronder.',
+          'i18n-working-li6': '<strong>Exporteren / Importeren:</strong> Exporteer alle WAV’s + metadata, of importeer WAV-bestanden die overeenkomen met je videonamen.',
+          'i18n-working-li7': '<strong>WAV’s samenvoegen:</strong> Maak één WAV-bestand van alle items, met subtiele klikjes als scheiding tussen clips.',
+          'i18n-working-li7b': '<strong>Normaliseren bij exporteren:</strong> Vink <em>Audio normaliseren bij exporteren</em> aan, en zowel <em>Opgenomen Data Exporteren</em> als <em>Exporteren als Enkel Geluidsbestand</em> brengen elke opname bij het exporteren op niveau, in één stap — dezelfde bewerking als de Bulk Audio Normalizer. Kies piekniveau (voor Praat en akoestische analyse) of LUFS met een limiter (om te luisteren), knip desgewenst stilte weg en behoud of wijzig de bitdiepte. In het enkele bestand wordt elke opname genormaliseerd voordat de klikjes worden toegevoegd, en elk klikje wordt afgestemd op de zachtere opname ernaast. Uw originele opnames worden nooit gewijzigd.',
+          'i18n-working-li8': '<strong>Talen:</strong> Gebruik de keuzelijst bovenaan om de interfacetaal te wijzigen.',
+          'i18n-usage-heading': 'Gebruik en aanbevolen stimulussets',
+          'i18n-usage-p1': 'Deze tool is bedoeld voor taalkundig veldwerk. Je speelt korte videoclips af (of toont stilstaande beelden) en vraagt een moedertaalspreker te beschrijven wat er gebeurt. De app neemt per clip één audiobestand op, zodat je later grammatica, betekenis en discours kunt analyseren.',
+          'i18n-usage-p2': 'Een eenvoudige manier om te beginnen is bestaande stimulussets te gebruiken die al in veel talen zijn getest. Download een set, plaats de videobestanden in één map en selecteer die map in de app. Volg de instructies van de set zo nauw mogelijk zodat je resultaten vergelijkbaar zijn met andere studies.',
+          'stimulus-kits': 'Algemeen bruikbare stimulussets (Max Planck Institute)',
+          'i18n-stimulus-mpi-desc': 'Een grote verzameling handleidingen en stimuli (waaronder veel videosets) om verbale beschrijvingen en andere soorten taalkundige data uit te lokken.',
+          'i18n-stimulus-mpi-link': 'Bekijk MPI-handleidingen en stimuli',
+          'i18n-stimulus-staged-desc': 'Korte nagespeelde gebeurtenissen die worden gebruikt om te bestuderen hoe talen spreken over handelingen, meerwerkwoordconstructies en gebeurtenisstructuur (vooral nuttig voor seriële werkwoorden en zinsketens).',
+          'i18n-stimulus-staged-link': 'Videosets met nagespeelde gebeurtenissen',
+          'i18n-stimulus-pear-desc': 'Een geluidloze film van ongeveer 6 minuten die wordt gebruikt om narratieven uit te lokken. Breed ingezet om grammatica, verhaallijn en referenttracking te bestuderen.',
+          'i18n-stimulus-pear-link': 'Pear Story-video downloaden',
+          'i18n-stimulus-ref-heading': 'Sets voor deelnemersreferentie en casusuitlijning',
+          'i18n-stimulus-cut-desc': 'Zeer korte clips die knip-, breek- en gerelateerde gebeurtenissen tonen. Geschikt om te onderzoeken hoe je taal omgaat met argumentstructuur, naamvalmarkering en alignementpatronen.',
+          'i18n-stimulus-cut-link': 'Cut and Break-stimulusset',
+          'i18n-stimulus-caused-desc': 'Clips met veroorzaakte beweging en plaatsingsgebeurtenissen, nuttig om transitiviteit en manieren waarop sprekers het neerzetten en verplaatsen van voorwerpen beschrijven te bestuderen.',
+          'i18n-stimulus-caused-link': 'Caused Positions-stimulusset',
+          'i18n-usage-summary': 'Deze materialen zijn bijzonder geschikt voor beginnende taalkundestudenten of veldwerkers die kant-en-klare, theoretisch onderbouwde stimuli willen gebruiken in plaats van zelf clips te ontwerpen.',
+          'i18n-troubleshooting-heading': 'Probleemoplossing',
+          'i18n-trouble-li1': '<strong>Microfoon werkt niet (Windows):</strong> Als de opname stil is of mislukt, controleer dan of je microfoon is ingesteld als standaard opnameapparaat in Windows Geluidsinstellingen, en of de app microfontoegang heeft via Windows-instellingen → Privacy en beveiliging → Microfoon. Start de app daarna opnieuw.',
+          'i18n-trouble-li2': '<strong>macOS (geïnterpreteerde modus):</strong> Als je de app vanuit de broncode uitvoert en macOS de terminal blokkeert, sta dit toe via Systeeminstellingen → Privacy en beveiliging.',
+          'i18n-trouble-li3': '<strong>Geen video’s zichtbaar:</strong> Controleer of de map ondersteunde videobestanden bevat (bijv. .mp4, .mov).',
+          'i18n-trouble-li4': '<strong>Hulp nodig?</strong> Bezoek de <a href="https://github.com/rulingAnts/videoannotationtool/issues" target="_blank" rel="noopener">issue tracker</a>. Als de ontwikkelaar niet beschikbaar is, kunnen andere ervaren gebruikers van de app mogelijk ook helpen — vraag het gerust.',
+          'i18n-footer': 'Laatste release: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → Releases</a> · Broncode: <a href="https://github.com/rulingAnts/videoannotationtool" target="_blank" rel="noopener">GitHub</a>',
+        },
+        'pt-BR': {
+          'i18n-brand-title': 'Ferramenta de Estímulos Visuais',
+          'i18n-badge': 'Gratuito • Código Aberto',
+          'i18n-hero-download-label': 'Baixar',
+          'i18n-btn-download': 'Baixar',
+          'i18n-hero-tip-which': 'O botão abre a página da versão mais recente, onde você escolhe o download desejado. <b>Atualmente apenas para Windows.</b> <b>Instalador</b> (<code>-setup.exe</code>) — instala o aplicativo, adiciona um atalho no Menu Iniciar e pode ser desinstalado normalmente; ideal se o computador for seu. <b>Pasta portátil</b> (<code>-portable-folder.zip</code>) — extraia uma vez e execute o <code>.exe</code> que está dentro; <b>abre muito mais rápido</b> e ainda roda de um pendrive. Mantenha a pasta inteira (a pasta <code>_internal</code> precisa ficar ao lado do <code>.exe</code>). <b>Arquivo único</b> (<code>-portable.exe</code>) — nada para extrair, mas <b>demora para abrir</b>, porque o Windows descompacta o programa inteiro a cada execução. Ideal para um uso rápido e pontual.',
+          'i18n-what-heading': 'O que ele faz',
+          'i18n-what-li1': 'Reproduz vídeos e grava descrições de cada um feitas por falantes nativos.',
+          'i18n-what-li2': 'Mantém informações simples do projeto em um editor de metadados integrado.',
+          'i18n-what-li3': 'Exporta todas as gravações (e metadados) em uma única etapa.',
+          'i18n-what-li4': 'Abre as gravações no Ocenaudio para corte, normalização e ajustes finos.',
+          'i18n-what-li5': 'Combina todos os arquivos WAV em um único arquivo de áudio com cliques sutis entre os itens.',
+          'i18n-what-li5b': 'Normalize todas as gravações ao exportar com uma única caixa de seleção — nível de pico para análise acústica ou LUFS para escuta — mantendo os originais intactos.',
+          'i18n-what-li6': 'Permite escolher o idioma da interface.',
+          'i18n-carousel-cap1': 'Tela principal de Anotação de Vídeo: grave descrições dos vídeos um por um.',
+          'i18n-carousel-cap2': 'Tela de Anotação de Imagem: descreva imagens estáticas na mesma pasta.',
+          'i18n-carousel-cap3': 'Exporte todas as gravações como um único arquivo WAV para importar facilmente no SayMore ou ELAN. Cliques automáticos marcam, visual e sonoramente, os limites entre os clipes.',
+          'i18n-carousel-cap4': 'Abra todas as gravações no Ocenaudio para corte, normalização e edição adicional.',
+          'i18n-quick-heading': 'Guia rápido',
+          'i18n-quick-li1': 'Prepare uma pasta com seus arquivos de vídeo (MP4, MOV, AVI, MKV etc.).',
+          'i18n-quick-li2': 'Abra o aplicativo e clique em "Select Folder". Escolha a pasta de vídeos.',
+          'i18n-quick-li3': 'Selecione um vídeo na lista para visualizar o primeiro quadro.',
+          'i18n-quick-li4': 'Pressione "Record Audio" para gravar a descrição do falante nativo; pressione novamente para parar e salvar. O aplicativo salva um WAV com o mesmo nome do vídeo.',
+          'i18n-quick-li5': 'Use "Export Recorded Data" para copiar todos os WAVs e o metadata.txt para uma pasta de sua escolha.',
+          'i18n-install-win-heading': 'Instalar no Windows',
+          'i18n-install-win-li1': 'Baixe o arquivo <strong>.exe</strong> acima.',
+          'i18n-install-win-li2': 'Clique duas vezes para executar. Se o SmartScreen aparecer, escolha "More info" → "Run anyway".',
+          'i18n-install-win-li3': 'Nenhuma instalação separada é necessária.',
+          'i18n-install-mac-heading': 'macOS (somente modo interpretado)',
+          'i18n-install-mac-li1': 'No momento, não há instalador oficial para macOS.',
+          'i18n-install-mac-li2': 'Usuários avançados podem executar a ferramenta a partir do código‑fonte com Python 3.11+; consulte o README no GitHub para ver as etapas de configuração.',
+          'i18n-install-mac-li3': 'Se você precisa de suporte para macOS, abra uma issue no GitHub para que possamos acompanhar essa demanda.',
+          'i18n-working-heading': 'Trabalhando em um projeto',
+          'i18n-working-li1': '<strong>Exibição da pasta:</strong> O aplicativo mostra a pasta de projeto atual no topo; passe o mouse para ver o caminho completo.',
+          'i18n-working-li2': '<strong>Pré-visualização e reprodução de vídeo:</strong> Escolha um vídeo para ver o primeiro quadro e reproduza/pare conforme necessário.',
+          'i18n-working-li3': '<strong>Notas de áudio:</strong> Grave um pequeno WAV para cada vídeo. As gravações são salvas automaticamente no momento em que são capturadas — não há etapa de salvar separada. Gravar novamente sobrescreve imediatamente qualquer arquivo existente. Use o botão excluir para remover uma gravação, ou o botão editar para abri-la no Ocenaudio.',
+          'i18n-working-li4': '<strong>Metadados:</strong> Edite as informações do projeto no painel lateral; elas são salvas em <code>metadata.txt</code> na sua pasta.',
+          'i18n-working-li5': '<strong>Abrir no Ocenaudio:</strong> Abra em massa todos os WAVs do conjunto atual no Ocenaudio para corte, normalização e ajuste de volume. Para simplesmente igualar o nível você não precisa mais de uma ferramenta externa: veja <em>Normalizar ao exportar</em> abaixo.',
+          'i18n-working-li6': '<strong>Exportar / Importar:</strong> Exporte todos os WAVs + metadados ou importe WAVs com nomes que coincidam com os vídeos.',
+          'i18n-working-li7': '<strong>Unir WAVs:</strong> Gere um único WAV com todos os itens, com cliques suaves separando cada clipe.',
+          'i18n-working-li7b': '<strong>Normalizar ao exportar:</strong> Marque <em>Normalizar o áudio ao exportar</em> e tanto <em>Exportar Dados Gravados</em> quanto <em>Exportar como Arquivo Único de Áudio</em> nivelam cada gravação ao exportá-la, em uma única etapa — o mesmo processamento do Bulk Audio Normalizer. Escolha nível de pico (para Praat e análise acústica) ou LUFS com limitador (para escuta), corte o silêncio se quiser e mantenha ou altere a profundidade de bits. No arquivo único, cada gravação é normalizada antes de os cliques serem adicionados, e cada clique é ajustado à gravação mais baixa ao lado dele. Suas gravações originais nunca são modificadas.',
+          'i18n-working-li8': '<strong>Idiomas:</strong> Use o menu suspenso no topo para trocar o idioma da interface.',
+          'i18n-usage-heading': 'Uso e conjuntos de estímulos recomendados',
+          'i18n-usage-p1': 'Esta ferramenta foi criada para trabalho de campo em linguística. Você reproduz pequenos clipes de vídeo (ou mostra imagens estáticas) e pede a um falante nativo que descreva o que acontece. O aplicativo grava um arquivo de áudio por clipe, para que você possa estudar depois a gramática, o significado e o discurso.',
+          'i18n-usage-p2': 'Uma forma simples de começar é usar conjuntos de estímulos já existentes, que foram testados em muitas línguas. Baixe um conjunto, coloque os arquivos de vídeo em uma pasta e selecione essa pasta no aplicativo. Siga as instruções do conjunto o mais de perto possível para que seus resultados possam ser comparados com outros estudos.',
+          'stimulus-kits': 'Conjuntos de estímulos de uso geral (Max Planck Institute)',
+          'i18n-stimulus-mpi-desc': 'Uma grande coleção de manuais e estímulos (incluindo muitos conjuntos de vídeos) para elicitar descrições orais e outros tipos de dados linguísticos.',
+          'i18n-stimulus-mpi-link': 'Ver manuais e estímulos do MPI',
+          'i18n-stimulus-staged-desc': 'Pequenas cenas encenadas usadas para estudar como as línguas falam sobre ações, construções com vários verbos e estrutura de eventos (especialmente úteis para verbos em série e cadeias de orações).',
+          'i18n-stimulus-staged-link': 'Conjuntos de vídeos de eventos encenados',
+          'i18n-stimulus-pear-desc': 'Um filme silencioso de cerca de 6 minutos usado para elicitar narrativas. É amplamente utilizado para estudar gramática, estrutura narrativa e rastreamento de referência.',
+          'i18n-stimulus-pear-link': 'Baixar o vídeo Pear Story',
+          'i18n-stimulus-ref-heading': 'Conjuntos para referência de participantes e alinhamento de caso',
+          'i18n-stimulus-cut-desc': 'Clipes muito curtos que mostram eventos de corte, quebra e outros relacionados. Úteis para explorar como a sua língua trata a estrutura argumental, a marcação de caso e os padrões de alinhamento.',
+          'i18n-stimulus-cut-link': 'Conjunto de estímulos Cut and Break',
+          'i18n-stimulus-caused-desc': 'Clipes de movimento causado e eventos de colocação, úteis para estudar transitividade e como os falantes descrevem o ato de colocar e mover objetos.',
+          'i18n-stimulus-caused-link': 'Conjunto de estímulos Caused Positions',
+          'i18n-usage-summary': 'Esses recursos são especialmente adequados para estudantes de linguística iniciantes ou pesquisadores de campo que preferem materiais prontos e teoricamente bem elaborados, em vez de produzir seus próprios clipes do zero.',
+          'i18n-troubleshooting-heading': 'Solução de problemas',
+          'i18n-trouble-li1': '<strong>Microfone não funcionando (Windows):</strong> Se a gravação estiver muda ou falhar, verifique se o microfone está definido como dispositivo de gravação padrão nas Configurações de Som do Windows, e se o aplicativo tem acesso ao microfone em Configurações do Windows → Privacidade e Segurança → Microfone. Depois, reinicie o aplicativo.',
+          'i18n-trouble-li2': '<strong>macOS (modo interpretado):</strong> Se estiver executando a partir do código-fonte e o macOS bloquear o terminal, permita-o em Configurações do Sistema → Privacidade e Segurança.',
+          'i18n-trouble-li3': '<strong>Nenhum vídeo listado:</strong> Confirme se a pasta contém arquivos de vídeo compatíveis (por exemplo, .mp4, .mov).',
+          'i18n-trouble-li4': '<strong>Precisa de ajuda?</strong> Visite o <a href="https://github.com/rulingAnts/videoannotationtool/issues" target="_blank" rel="noopener">rastreador de issues</a>. Se o desenvolvedor não estiver disponível, outros usuários experientes do aplicativo também podem ajudar — pergunte por aí.',
+          'i18n-footer': 'Última versão: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → Releases</a> · Código‑fonte: <a href="https://github.com/rulingAnts/videoannotationtool" target="_blank" rel="noopener">GitHub</a>',
+        },
+        es: {
+          'i18n-brand-title': 'Herramienta de Estímulos Visuales',
+          'i18n-badge': 'Gratis • Código Abierto',
+          'i18n-hero-download-label': 'Descargar',
+          'i18n-btn-download': 'Descargar',
+          'i18n-hero-tip-which': 'El botón abre la página de la versión más reciente, donde eliges la descarga que quieras. <b>Por ahora solo para Windows.</b> <b>Instalador</b> (<code>-setup.exe</code>) — instala la app, agrega un acceso directo al menú Inicio y se puede desinstalar normalmente; ideal si la computadora es tuya. <b>Carpeta portátil</b> (<code>-portable-folder.zip</code>) — extrae una vez y luego ejecuta el <code>.exe</code> que está adentro; <b>arranca mucho más rápido</b> y sigue funcionando desde una memoria USB. Mantén la carpeta completa (la carpeta <code>_internal</code> debe quedar junto al <code>.exe</code>). <b>Archivo único</b> (<code>-portable.exe</code>) — no hay nada que extraer, pero <b>arranca lento</b> porque Windows descomprime todo el programa cada vez que lo abres. Ideal para un uso rápido y puntual.',
+          'i18n-what-heading': 'Qué hace',
+          'i18n-what-li1': 'Reproduce videos y graba descripciones de cada clip hechas por hablantes nativos.',
+          'i18n-what-li2': 'Mantiene información sencilla del proyecto en un editor de metadatos integrado.',
+          'i18n-what-li3': 'Exporta todas tus grabaciones (y metadatos) en un solo paso.',
+          'i18n-what-li4': 'Abre las grabaciones en Ocenaudio para recortar, normalizar y hacer ajustes finos.',
+          'i18n-what-li5': 'Combina todos los archivos WAV en un solo archivo de audio con clics suaves entre los ítems.',
+          'i18n-what-li5b': 'Normaliza todas las grabaciones al exportar con una sola casilla — nivel de pico para análisis acústico o LUFS para escuchar — mientras tus originales quedan intactos.',
+          'i18n-what-li6': 'Permite elegir el idioma de la interfaz.',
+          'i18n-carousel-cap1': 'Vista principal de Anotación de Video: graba descripciones de los videos uno por uno.',
+          'i18n-carousel-cap2': 'Vista de Anotación de Imágenes: describe imágenes fijas en la misma carpeta.',
+          'i18n-carousel-cap3': 'Exporta todas las grabaciones como un solo archivo WAV para importarlas fácilmente en SayMore o ELAN. Clics automáticos marcan, de forma visible y audible, los límites entre clips.',
+          'i18n-carousel-cap4': 'Abre todas las grabaciones en Ocenaudio para recortar, normalizar y editarlas más a fondo.',
+          'i18n-quick-heading': 'Inicio rápido',
+          'i18n-quick-li1': 'Prepara una carpeta con tus archivos de video (MP4, MOV, AVI, MKV, etc.).',
+          'i18n-quick-li2': 'Abre la aplicación y haz clic en "Select Folder". Elige tu carpeta de videos.',
+          'i18n-quick-li3': 'Selecciona un video de la lista para previsualizar el primer cuadro.',
+          'i18n-quick-li4': 'Pulsa "Record Audio" para grabar la descripción del hablante nativo; pulsa de nuevo para detener y guardar. La aplicación guarda un WAV con el mismo nombre que el video.',
+          'i18n-quick-li5': 'Usa "Export Recorded Data" para copiar todos los WAV y el metadata.txt a una carpeta de tu elección.',
+          'i18n-install-win-heading': 'Instalar en Windows',
+          'i18n-install-win-li1': 'Descarga el archivo <strong>.exe</strong> de arriba.',
+          'i18n-install-win-li2': 'Haz doble clic para ejecutarlo. Si aparece SmartScreen, elige "More info" → "Run anyway".',
+          'i18n-install-win-li3': 'No se requiere una instalación adicional.',
+          'i18n-install-mac-heading': 'macOS (solo modo interpretado)',
+          'i18n-install-mac-li1': 'Actualmente no hay un instalador oficial para macOS.',
+          'i18n-install-mac-li2': 'Las personas con experiencia pueden ejecutar la herramienta desde el código fuente usando Python 3.11+; consulta el README en GitHub para ver los pasos de configuración.',
+          'i18n-install-mac-li3': 'Si necesitas soporte para macOS, abre un issue en GitHub para que podamos registrar esa necesidad.',
+          'i18n-working-heading': 'Trabajar dentro de un proyecto',
+          'i18n-working-li1': '<strong>Carpeta del proyecto:</strong> La app muestra la carpeta de proyecto activa en la parte superior; pasa el mouse para ver la ruta completa.',
+          'i18n-working-li2': '<strong>Vista previa y reproducción de video:</strong> Elige un video para ver el primer cuadro y reprodúcelo/deténlo según lo necesites.',
+          'i18n-working-li3': '<strong>Notas de audio:</strong> Graba un archivo WAV corto por video. Las grabaciones se guardan automáticamente en el momento en que se capturan — no hay un paso de guardado separado. Volver a grabar sobreescribe de inmediato el archivo existente. Usa el botón de eliminar para borrar una grabación, o el botón de editar para abrirla en Ocenaudio.',
+          'i18n-working-li4': '<strong>Metadatos:</strong> Edita la información del proyecto en el panel lateral; se guarda en <code>metadata.txt</code> dentro de tu carpeta.',
+          'i18n-working-li5': '<strong>Abrir en Ocenaudio:</strong> Abre en lote todos los WAV del conjunto actual en Ocenaudio para recortar, normalizar y ajustar el volumen. Para simplemente igualar el nivel ya no necesitas una herramienta externa: mira <em>Normalizar al exportar</em> más abajo.',
+          'i18n-working-li6': '<strong>Exportar / Importar:</strong> Exporta todos los WAV + metadatos o importa WAVs cuyos nombres coincidan con tus videos.',
+          'i18n-working-li7': '<strong>Unir WAVs:</strong> Crea un solo WAV con todos los ítems, con clics suaves que separan cada clip.',
+          'i18n-working-li7b': '<strong>Normalizar al exportar:</strong> Marca <em>Normalizar el audio al exportar</em> y tanto <em>Exportar Datos Grabados</em> como <em>Exportar como Archivo Único de Audio</em> nivelan cada grabación al exportarla, en un solo paso — el mismo procesamiento que Bulk Audio Normalizer. Elige nivel de pico (para Praat y análisis acústico) o LUFS con limitador (para escuchar), recorta el silencio si quieres y mantén o cambia la profundidad de bits. En el archivo único, cada grabación se normaliza antes de agregar los clics, y cada clic se ajusta a la grabación más baja que tiene al lado. Tus grabaciones originales nunca se modifican.',
+          'i18n-working-li8': '<strong>Idiomas:</strong> Usa el menú desplegable superior para cambiar el idioma de la interfaz.',
+          'i18n-usage-heading': 'Uso y conjuntos de estímulos recomendados',
+          'i18n-usage-p1': 'Esta herramienta está pensada para trabajo de campo lingüístico. Reproduces videoclips cortos (o muestras imágenes fijas) y pides a un hablante nativo que describa lo que ocurre. La aplicación guarda un archivo de audio por clip, de modo que luego puedas analizar la gramática, el significado y el discurso.',
+          'i18n-usage-p2': 'Una manera sencilla de empezar es usar conjuntos de estímulos ya existentes que se han probado en muchas lenguas. Descarga un conjunto, coloca los archivos de video en una carpeta y selecciónala en la aplicación. Sigue las instrucciones del conjunto lo más fielmente posible para que tus resultados sean comparables con otros estudios.',
+          'stimulus-kits': 'Conjuntos de estímulos de uso general (Max Planck Institute)',
+          'i18n-stimulus-mpi-desc': 'Una gran colección de manuales y estímulos (incluyendo muchos conjuntos de videos) para obtener descripciones orales y otros tipos de datos lingüísticos.',
+          'i18n-stimulus-mpi-link': 'Ver manuales y estímulos del MPI',
+          'i18n-stimulus-staged-desc': 'Clips actuados cortos que se usan para estudiar cómo las lenguas hablan de acciones, construcciones multi‑verbales y estructura de eventos (especialmente útiles para verbos seriales y cadenas de cláusulas).',
+          'i18n-stimulus-staged-link': 'Conjuntos de videos de eventos actuados',
+          'i18n-stimulus-pear-desc': 'Una película muda de unos 6 minutos que se usa para elicitar narraciones. Se usa ampliamente para estudiar la gramática, la estructura narrativa y el seguimiento de referentes.',
+          'i18n-stimulus-pear-link': 'Descargar el video de Pear Story',
+          'i18n-stimulus-ref-heading': 'Conjuntos para referencia de participantes y alineamiento de caso',
+          'i18n-stimulus-cut-desc': 'Clips muy cortos que muestran eventos de corte, rotura y otros relacionados. Son útiles para explorar cómo tu lengua maneja la estructura argumental, la marcación de caso y los patrones de alineamiento.',
+          'i18n-stimulus-cut-link': 'Conjunto de estímulos Cut and Break',
+          'i18n-stimulus-caused-desc': 'Clips de movimiento causado y eventos de colocación, útiles para estudiar la transitividad y cómo los hablantes hablan de poner y mover cosas.',
+          'i18n-stimulus-caused-link': 'Conjunto de estímulos Caused Positions',
+          'i18n-usage-summary': 'Estos recursos son especialmente adecuados para estudiantes de lingüística principiantes o investigadores de campo que quieren materiales listos para usar y compatibles con la teoría, en lugar de diseñar sus propios clips desde cero.',
+          'i18n-troubleshooting-heading': 'Solución de problemas',
+          'i18n-trouble-li1': '<strong>El micrófono no funciona (Windows):</strong> Si la grabación está en silencio o falla, verifica que tu micrófono esté configurado como dispositivo de grabación predeterminado en la Configuración de sonido de Windows, y que la app tenga acceso al micrófono en Configuración de Windows → Privacidad y seguridad → Micrófono. Luego vuelve a abrir la app.',
+          'i18n-trouble-li2': '<strong>macOS (modo interpretado):</strong> Si estás ejecutando desde el código fuente y macOS bloquea la terminal, permítelo en Configuración del Sistema → Privacidad y seguridad.',
+          'i18n-trouble-li3': '<strong>No se muestran videos:</strong> Asegúrate de que la carpeta contiene archivos de video compatibles (por ejemplo, .mp4, .mov).',
+          'i18n-trouble-li4': '<strong>¿Necesitas ayuda?</strong> Visita el <a href="https://github.com/rulingAnts/videoannotationtool/issues" target="_blank" rel="noopener">rastreador de issues</a>. Si el desarrollador no está disponible, otros usuarios con experiencia en la app también pueden ayudarte — no dudes en preguntar.',
+          'i18n-footer': 'Última versión: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → Lanzamientos</a> · Código fuente: <a href="https://github.com/rulingAnts/videoannotationtool" target="_blank" rel="noopener">GitHub</a>',
+        },
+        af: {
+          'i18n-brand-title': 'Visuele Stimulus Hulpmiddel',
+          'i18n-badge': 'Gratis • Oop Bron',
+          'i18n-hero-download-label': 'Laai af',
+          'i18n-btn-download': 'Laai af',
+          'i18n-hero-tip-which': 'Die knoppie maak die bladsy van die nuutste vrystelling oop, waar jy die aflaai kies wat jy wil hê. <b>Tans slegs vir Windows.</b> <b>Installeerder</b> (<code>-setup.exe</code>) — installeer die program, voeg ’n Start-kieslys-kortpad by en kan normaal verwyder word; die beste as die rekenaar joune is. <b>Draagbare gids</b> (<code>-portable-folder.zip</code>) — pak een keer uit en laat loop dan die <code>.exe</code> daarin; <b>begin baie vinniger</b> en werk steeds vanaf ’n USB-stokkie. Hou die gids bymekaar (die <code>_internal</code>-gids moet langs die <code>.exe</code> bly). <b>Enkele lêer</b> (<code>-portable.exe</code>) — niks om uit te pak nie, maar dit <b>begin stadig</b> omdat Windows elke keer die hele program uitpak. Die beste vir ’n vinnige eenmalige gebruik.',
+          'i18n-what-heading': 'Wat dit doen',
+          'i18n-what-li1': 'Speel video’s af en neem moedertaalsprekers se beskrywings van elke klankie op.',
+          'i18n-what-li2': 'Hou eenvoudige projekinligting in ’n ingeboude metadata‑redigeerder.',
+          'i18n-what-li3': 'Voer al jou opnames (en metadata) in een stap uit.',
+          'i18n-what-li4': 'Open opnames in Ocenaudio om dit te snoei, normaliseer en fyn aan te pas.',
+          'i18n-what-li5': 'Voeg al die WAV‑lêers saam in een oudiolêer met sagte klikke tussen items.',
+          'i18n-what-li5b': 'Normaliseer elke opname by uitvoer met een enkele merkblokkie — piekvlak vir akoestiese analise of LUFS om na te luister — terwyl jou oorspronklikes onaangeraak bly.',
+          'i18n-what-li6': 'Laat jou die taal van die koppelvlak kies.',
+          'i18n-carousel-cap1': 'Verstek Video‑annotasie‑aansig: neem beskrywings van video’s een vir een op.',
+          'i18n-carousel-cap2': 'Beeldaannotasie‑aansig: beskryf stilbeelde in dieselfde gids.',
+          'i18n-carousel-cap3': 'Voer alle opnames as een WAV‑lêer uit om dit maklik in SayMore of ELAN in te voer. Outomatiese klikke wys hoorbaar en sigbaar waar die klankies skei.',
+          'i18n-carousel-cap4': 'Open alle opnames in Ocenaudio vir snoei, normalisering en verdere redigering.',
+          'i18n-quick-heading': 'Vinnige begin',
+          'i18n-quick-li1': 'Berei ’n gids voor met jou videolêers (MP4, MOV, AVI, MKV, ens.).',
+          'i18n-quick-li2': 'Maak die toepassing oop en klik "Select Folder". Kies jou videogids.',
+          'i18n-quick-li3': 'Kies ’n video uit die lys om die eerste raam te sien.',
+          'i18n-quick-li4': 'Druk "Record Audio" om die moedertaalspreker se beskrywing op te neem; druk weer om te stop en te stoor. Die toepassing stoor ’n WAV met dieselfde naam as die video.',
+          'i18n-quick-li5': 'Gebruik "Export Recorded Data" om alle WAV’s en metadata.txt na ’n gids van jou keuse te kopieer.',
+          'i18n-install-win-heading': 'Installeer op Windows',
+          'i18n-install-win-li1': 'Laai die <strong>.exe</strong>-lêer hierbo af.',
+          'i18n-install-win-li2': 'Dubbelklik om dit te hardloop. As SmartScreen verskyn, kies "More info" → "Run anyway".',
+          'i18n-install-win-li3': 'Geen afsonderlike installasie is nodig nie.',
+          'i18n-install-mac-heading': 'macOS (slegs geïnterpreteerde modus)',
+          'i18n-install-mac-li1': 'Daar is tans geen amptelike installeerder vir macOS nie.',
+          'i18n-install-mac-li2': 'Gevorderde gebruikers kan die hulpmiddel vanaf die bronkode met Python 3.11+ laat loop; sien die README op GitHub vir die opstelstappe.',
+          'i18n-install-mac-li3': 'As jy macOS‑ondersteuning nodig het, open asseblief ’n issue op GitHub sodat ons die aanvraag kan dophou.',
+          'i18n-working-heading': 'Werk binne ’n projek',
+          'i18n-working-li1': '<strong>Gidsvertoning:</strong> Die toepassing wys die huidige projekgids bo‑aan; hou jou muis daaroor om die volle pad te sien.',
+          'i18n-working-li2': '<strong>Videovoorskou & afspeel:</strong> Kies ’n video om die eerste raam te sien en speel/stop soos nodig.',
+          'i18n-working-li3': '<strong>Oudionotas:</strong> Neem een kort WAV‑lêer per video op. Opnames word outomaties gestoor die oomblik wat dit vasgevang word — daar is geen afsonderlike stoarstap nie. Om weer op te neem, oorskryf onmiddellik enige bestaande lêer. Gebruik die skrapknoppie om ’n opname te verwyder, of die redigeerknoppie om dit in Ocenaudio oop te maak.',
+          'i18n-working-li4': '<strong>Metadata:</strong> Redigeer projekinligting in die sypaneel; dit word in <code>metadata.txt</code> in jou gids gestoor.',
+          'i18n-working-li5': '<strong>Open in Ocenaudio:</strong> Maak alle WAV‑lêers van die huidige stel in Ocenaudio oop vir snoei, normalisering en volume-aanpassing. Om bloot die vlakke gelyk te maak het jy nie meer ’n eksterne program nodig nie: sien <em>Normaliseer by uitvoer</em> hieronder.',
+          'i18n-working-li6': '<strong>Voer uit / Voer in:</strong> Voer alle WAV’s + metadata uit, of voer WAV’s in wat by jou videoname pas.',
+          'i18n-working-li7': '<strong>Voeg WAV’s saam:</strong> Skep een WAV‑lêer met al die items, met sagte klikke as skeiding tussen klankies.',
+          'i18n-working-li7b': '<strong>Normaliseer by uitvoer:</strong> Merk <em>Normaliseer oudio wanneer uitgevoer word</em>, en beide <em>Voer Opname Data Uit</em> en <em>Voer uit as Enkel Klanklêer</em> bring elke opname tydens die uitvoer op vlak, in een stap — dieselfde verwerking as die Bulk Audio Normalizer. Kies piekvlak (vir Praat en akoestiese analise) of LUFS met ’n begrenser (om na te luister), knip stilte af as jy wil, en behou of verander die bisdiepte. In die enkele lêer word elke opname genormaliseer voordat die klikke bygevoeg word, en elke klik word aangepas by die sagter opname langs dit. Jou oorspronklike opnames word nooit verander nie.',
+          'i18n-working-li8': '<strong>Tale:</strong> Gebruik die aftreklys bo‑aan om die koppelvlaktaal te verander.',
+          'i18n-usage-heading': 'Gebruik en aanbevole stimulusstelle',
+          'i18n-usage-p1': 'Hierdie hulpmiddel is ontwerp vir taalkundige veldwerk. Jy speel kort videoklankies af (of wys stilbeelde) en vra ’n moedertaalspreker om te beskryf wat gebeur. Die toepassing neem een oudiolêer per klankie op, sodat jy later grammatika, betekenis en diskoers kan ontleed.',
+          'i18n-usage-p2': '’n Maklike manier om te begin, is om bestaande stimulusstelle te gebruik wat reeds in baie tale getoets is. Laai ’n stel af, plaas die videolêers in ’n gids en kies daardie gids in die toepassing. Volg die stel se instruksies so noukeurig as moontlik, sodat jou resultate vergelykbaar is met ander studies.',
+          'stimulus-kits': 'Algemene stimulusstelle (Max Planck Institute)',
+          'i18n-stimulus-mpi-desc': '’n Groot versameling handleidings en stimuli (insluitend baie videos stelle) om mondelinge beskrywings en ander tipes taalkundige data te ontlok.',
+          'i18n-stimulus-mpi-link': 'Blaai deur MPI‑handleidings en stimuli',
+          'i18n-stimulus-staged-desc': 'Kort geënskeneerde gebeure wat gebruik word om te bestudeer hoe tale oor handelinge, meervoudige werkwoordkonstruksies en gebeurtenisstruktuur praat (veral nuttig vir seriële werkwoorde en sinskettings).',
+          'i18n-stimulus-staged-link': 'Geënskeneerde gebeurtenis‑videos stelle',
+          'i18n-stimulus-pear-desc': '’n Stil film van ongeveer 6 minute wat gebruik word om vertellings te ontlok. Dit word wyd gebruik om grammatika, narratiewe struktuur en verwysingsopsporing te bestudeer.',
+          'i18n-stimulus-pear-link': 'Laai die Pear Story‑video af',
+          'i18n-stimulus-ref-heading': 'Stelle vir deelnemerverwysing en kasus-belyning',
+          'i18n-stimulus-cut-desc': 'Baie kort klankies wat sny, breek en verwante gebeurtenisse wys. Dit is nuttig om te ondersoek hoe jou taal argumentstruktuur, kasusmerke en alignementpatrone hanteer.',
+          'i18n-stimulus-cut-link': 'Cut and Break‑stimulusstel',
+          'i18n-stimulus-caused-desc': 'Klankies van veroorsakte beweging en plaasgebeure, nuttig om transitiviteit en hoe sprekers oor die sit en skuif van voorwerpe praat, te bestudeer.',
+          'i18n-stimulus-caused-link': 'Caused Positions‑stimulusstel',
+          'i18n-usage-summary': 'Hierdie hulpbronne is veral geskik vir beginner‑linguïstiekstudente of veldwerkers wat klaargemaakte, teorie‑vriendelike materiale wil gebruik in plaas daarvan om hul eie klankies van nuuts af te ontwerp.',
+          'i18n-troubleshooting-heading': 'Foutopsporing',
+          'i18n-trouble-li1': '<strong>Mikrofoon werk nie (Windows):</strong> As opnames stil is of misluk, kyk of jou mikrofoon as die verstek opname-toestel in Windows-klankinstelling ingestel is, en of die toepassing mikrofoontoegang het in Windows-instellings → Privaatheid en sekuriteit → Mikrofoon. Herbegin dan die toepassing.',
+          'i18n-trouble-li2': '<strong>macOS (geïnterpreteerde modus):</strong> As jy vanaf die bronkode hardloop en macOS die terminaal blokkeer, laat dit toe by Stelselinstellings → Privaatheid en sekuriteit.',
+          'i18n-trouble-li3': '<strong>Geen video’s gelys nie:</strong> Maak seker die gids bevat ondersteunde videolêers (bv. .mp4, .mov).',
+          'i18n-trouble-li4': '<strong>Het jy hulp nodig?</strong> Besoek die <a href="https://github.com/rulingAnts/videoannotationtool/issues" target="_blank" rel="noopener">kwessievolger</a>. As die ontwikkelaar nie beskikbaar is nie, kan ander ervare gebruikers van die toepassing ook help — vra gerus rond.',
+          'i18n-footer': 'Nuutste vrystelling: <a href="https://github.com/rulingAnts/videoannotationtool/releases/latest" target="_blank" rel="noopener">GitHub → Vrystellings</a> · Bronkode: <a href="https://github.com/rulingAnts/videoannotationtool" target="_blank" rel="noopener">GitHub</a>',
+        },
+      };
+
+      function detectLanguage() {
+        const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('vatSiteLang') : null;
+        if (stored && LANGS[stored]) return stored;
+        const nav = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
+        const parts = nav.split('-');
+        const base = parts[0];
+        if (base === 'id') return 'id';
+        if (base === 'ko') return 'ko';
+        if (base === 'nl') return 'nl';
+        if (base === 'pt') return 'pt-BR';
+        if (base === 'es') return 'es';
+        if (base === 'af') return 'af';
+        return 'en';
+      }
+
+      function captureOriginals() {
+        const ids = new Set();
+        Object.values(TRANSLATIONS).forEach(dict => {
+          Object.keys(dict).forEach(id => ids.add(id));
+        });
+        ids.forEach(id => {
+          if (Object.prototype.hasOwnProperty.call(ORIGINAL_HTML, id)) return;
+          const el = document.getElementById(id);
+          if (el) {
+            ORIGINAL_HTML[id] = el.innerHTML;
+          }
+        });
+      }
+
+      function applyTranslations(lang) {
+        if (lang === 'en') {
+          // Restore original English content
+          Object.keys(ORIGINAL_HTML).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+              el.innerHTML = ORIGINAL_HTML[id];
+            }
+          });
+        } else {
+          const dict = TRANSLATIONS[lang] || {};
+          Object.keys(dict).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+              el.innerHTML = dict[id];
+            }
+          });
+        }
+        document.documentElement.lang = lang;
+      }
+
+      function initLanguage() {
+        const select = document.getElementById('langSelect');
+        if (!select) return;
+        // Populate dropdown
+        Object.keys(LANGS).forEach(code => {
+          const opt = document.createElement('option');
+          opt.value = code;
+          opt.textContent = LANGS[code].label;
+          select.appendChild(opt);
+        });
+        const lang = detectLanguage();
+        // Capture original English markup before applying any translations
+        captureOriginals();
+        select.value = lang;
+        applyTranslations(lang);
+        select.addEventListener('change', () => {
+          const newLang = select.value;
+          if (LANGS[newLang]) {
+            if (typeof localStorage !== 'undefined') {
+              localStorage.setItem('vatSiteLang', newLang);
+            }
+            applyTranslations(newLang);
+          }
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initLanguage);
+      } else {
+        initLanguage();
+      }
+    })();
+  </script>
   <script>
     // Carousel logic with arrow buttons and swipe/drag
     (function() {
